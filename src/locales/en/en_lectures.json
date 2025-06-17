@@ -1,0 +1,46 @@
+{
+  "navigation": {
+    "lectures": "Lectures"
+  },
+  "subtitle": "Here's some stuff that I teach.",
+  "burial": {
+    "name": "Burial",
+    "description": "Learn to create a track in Burial style."
+  },
+  "crowdsourced": {
+    "name": "Crowdsourced",
+    "description": "Let's create a track from your selection."
+  },
+  "generative": {
+    "name": "Generative\nSound Design",
+    "description": "Dive into sound design\nand create a generative track."
+  },
+  "hometown": {
+    "name": "Hometown",
+    "description": "Presentation of my creative process\nand artistic direction"
+  },
+  "intro_sound_design": {
+    "name": "Intro to Sound Design",
+    "description": "Brief introduction to my tools\nand workflow"
+  },
+  "halftime": {
+    "name": "Halftime",
+    "description": "No words needed. Let's create something extraordinary."
+  },
+    "fuji-gen": {
+    "name": "FU-JI: generative sound design",
+    "description": "A ddep dive into the fascinating world of generative patches."
+  },
+      "fuji-dubstep": {
+    "name": "FU-JI: dubstep",
+    "description": "Let's learn the influences of some nasty wobbles."
+  },
+  "mw-gendes": {
+    "name": "MW: Generative sound design",
+    "description": "Another deep dive into generative fields."
+  },
+    "my_streams": {
+    "name": "My production streams",
+    "description": "Hang out with me while I finish music"
+  }
+}

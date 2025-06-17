@@ -1,0 +1,76 @@
+import { FC, memo, useMemo } from "react";
+import Image from "next/image";
+import ProjectTitle from "./ProjectTitle";
+import ArrowIcon from "./ArrowIcon";
+import dynamic from "next/dynamic";
+
+const SquircleImage = dynamic(() => import("./SquircleImage"), {
+  loading: () => <div className="aspect-video w-full bg-gray-200 animate-pulse rounded-lg" />
+});
+
+interface MobileLayoutProps {
+  name: string;
+  description: string;
+  image: string;
+  width: number;
+  height: number;
+  className?: string;
+  useSquircle?: boolean;
+  borderRadius?: number;
+  smoothing?: number;
+}
+
+const MobileLayout: FC<MobileLayoutProps> = memo(({ 
+  name, 
+  description, 
+  image, 
+  width, 
+  height, 
+  className = "",
+  useSquircle = true,
+  borderRadius = 12,
+  smoothing = 0.8
+}) => {
+  const altText = `${name} image`;
+  const containerClasses = className 
+    ? `group-hover/project:text-stone-900 md:hidden flex flex-col h-full w-full ${className}`
+    : "group-hover/project:text-stone-900 md:hidden flex flex-col h-full w-full";
+
+  return (
+    <div className={containerClasses}>
+      <div className="image-container aspect-video w-full relative">
+        {useSquircle ? (
+          <SquircleImage
+            src={image}
+            alt={altText}
+            width={width}
+            height={height}
+            className="w-full h-full"
+            borderRadius={borderRadius}
+            smoothing={smoothing}
+          />
+        ) : (
+          <Image
+            src={image}
+            alt={altText}
+            width={width}
+            height={height}
+            className="w-full h-full object-cover"
+          />
+        )}
+      </div>
+
+      <div className="relative mt-auto p-12 w-full">
+        <div className="absolute left-0 -bottom-1 flex flex-col">
+          <ProjectTitle name={name} description={description} />
+        </div>
+        <div className="absolute right-0 bottom-0">
+          <ArrowIcon />
+        </div>
+      </div>
+    </div>
+  );
+});
+
+MobileLayout.displayName = 'MobileLayout';
+export default MobileLayout;

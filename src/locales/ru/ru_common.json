@@ -1,0 +1,21 @@
+{
+  "navigation": {
+    "commercialCases": "Коммерческие работы",
+    "lectures": "Образование",
+    "events": "События",
+    "music": "Моя музыка",
+    "contact": "Контакты"
+  },
+  "common": {
+    "listen": "Слушать"
+  },
+  "header": {
+    "contactButton": "Связаться"
+  },
+  "footer": {
+    "copyright": "© 2025 Deescawa. Все права защищены.",
+    "sendMessage": "Отправь сообщение по контактам ниже",
+    "heading": "Обсудим ваш проект \n и сделаем что-то крутое?",
+    "shoutout": "сайт сделан bugraphism labs ☺"
+  }
+}

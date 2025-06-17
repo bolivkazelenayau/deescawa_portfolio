@@ -1,0 +1,22 @@
+{
+  "haval": {
+    "name": "Haval",
+    "description": "Making of the Haval TANK 500 video."
+  },
+  "kinopoisk": {
+    "name": "Kinopoisk",
+    "description": "TV Series 'Tonkiy Vkus' ('Refined Taste'), second season."
+  },
+  "alliance": {
+    "name": "Alliance-Service",
+    "description": "Tender video for Alliance-Service."
+  },
+  "yoko": {
+    "name": "YOKO",
+    "description": "Full music production for an artist. Tracks «Черные змеи» and «По-другому»"
+  },
+  "more_cases": {
+    "name": "More cases",
+    "description": "available upon request"
+  }
+}

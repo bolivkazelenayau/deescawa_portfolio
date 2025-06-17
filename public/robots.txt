@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+
+# Block admin and system directories
+Disallow: /admin/
+Disallow: /api/
+Disallow: /_next/
+Disallow: /private/
+
+# Block search and filter parameters to prevent duplicate content
+Disallow: /*?*s=*
+Disallow: /*?*search=*
+Disallow: /*?*filter=*
+Disallow: /*?*sort=*
+
+# Block user-specific pages
+Disallow: /user/login/
+Disallow: /user/register/
+Disallow: /user/password/
+
+# Sitemap reference
+Sitemap: https://deescawa.com/sitemap.xml

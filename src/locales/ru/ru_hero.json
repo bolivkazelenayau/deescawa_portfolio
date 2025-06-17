@@ -1,0 +1,29 @@
+{
+  "heading": "Привет, \nя Лев Deescawa.",
+  "subtitle": "Многопрофильный аудиоспециалист\n из Москвы, транслирующий\nсвоё уникальное видение через:",
+  "services": [
+    {
+      "title": "Создание музыки и саунд-дизайна на заказ для брендов и артистов",
+      "href": "#projects",
+      "external": false
+    },
+    {
+      "title": "Преподавание, менторинг и обучающий контент",
+      "href": "#lectures",
+      "external": false
+    },
+        {
+      "title": "Диджей-сеты и лайв-выступления",
+      "href": "#events",
+      "external": false
+    },
+    {
+      "title": "Написание собственной музыки",
+      "href": "#music",
+      "external": false
+    }
+  ],
+  "viewWorkButton": "Портфолио",
+  "contactButton": "Написать мне",
+  "portraitAlt": "Мой портрет"
+}

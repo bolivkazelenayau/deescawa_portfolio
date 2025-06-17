@@ -1,0 +1,21 @@
+{
+  "navigation": {
+    "commercialCases": "Commercial cases",
+    "lectures": "Lectures",
+    "events": "Events",
+    "music": "My music",
+    "contact": "Contact"
+  },
+  "common": {
+    "listen": "Listen"
+  },
+  "header": {
+    "contactButton": "Contact Me"
+  },
+  "footer": {
+    "copyright": "© 2025 Deescawa. All rights reserved.",
+    "sendMessage": "Send a message. I tend to answer quickly!",
+    "heading": "Wanna create\nsomething together?\nFire me a letter.",
+    "shoutout": "made by bugraphism labs ☺"
+  }
+}
