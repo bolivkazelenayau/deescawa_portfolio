@@ -1,15 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export', // Добавьте эту строку
+  output: 'export',
   eslint: {
     ignoreDuringBuilds: true,
   },
   images: {
     formats: ['image/webp', 'image/avif'],
-    unoptimized: true, // Необходимо для статического экспорта
+    unoptimized: true,
   },
   compress: true,
-  trailingSlash: true, // Рекомендуется для статических сайтов
+  trailingSlash: true,
+  // Добавьте эти строки для статического экспорта с i18n
+  basePath: '', // Если используете поддомен
+  assetPrefix: '', // Для CDN или поддомена
 };
 
 export default nextConfig;
