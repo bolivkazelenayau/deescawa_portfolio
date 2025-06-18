@@ -1,4 +1,4 @@
-// page.tsx
+// src/app/[locale]/page.tsx
 
 import Hero from "@/sections/Hero";
 import Projects from "@/sections/Projects";
@@ -6,9 +6,9 @@ import Footer from "@/sections/Footer";
 import Lectures from "@/sections/Lectures";
 import Events from "@/sections/Events";
 import Music from "@/sections/Music";
-import { getEventsTranslations } from "@/lib/events/Translations";
+// ЗАМЕНИТЬ импорт на новый файл
+import { getEventsTranslations } from "@/lib/events/HybridTranslations";
 
-// page.tsx
 export default async function Home({ 
   params 
 }: { 
@@ -23,12 +23,11 @@ export default async function Home({
       <Hero locale={locale} /> 
       <Projects locale={locale} />
       <Lectures locale={locale} />
-<Events 
+      <Events 
         locale={locale} 
         serverTranslations={eventsTranslations} 
       />
-      <Music
-      locale={locale}/>
+      <Music locale={locale}/>
       <Footer locale={locale} />
     </>
   );

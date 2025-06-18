@@ -3,7 +3,8 @@ import React from 'react';
 import { lectures } from '@/lib/LecturesData';
 import { AppleStyleCarousel } from '@/components/apple-style-carousel';
 import { SquircleVideo } from '@/components/video/SquircleVideo';
-import { getServerTranslations } from '@/lib/translations/serverTranslations';
+import { getHybridTranslations, type Locale } from '@/lib/translations/StaticTranslationsLoader';
+
 import { type SupportedLocale } from '@/i18nconfig';
 
 type LecturesProps = {
@@ -73,15 +74,15 @@ const processTextWithBreaks = (() => {
 // Enhanced translation loader with error handling
 async function loadTranslations(locale: SupportedLocale) {
   try {
-    const [lecturesResult, commonResult] = await Promise.allSettled([
-      getServerTranslations(locale, 'lectures'),
-      getServerTranslations(locale, 'common')
+    const [lecturesT, commonT] = await Promise.all([
+      getHybridTranslations(locale as Locale, 'lectures'),
+      getHybridTranslations(locale as Locale, 'common')
     ]);
 
     return {
-      t: lecturesResult.status === 'fulfilled' ? lecturesResult.value : null,
-      commonT: commonResult.status === 'fulfilled' ? commonResult.value : null,
-      hasError: lecturesResult.status === 'rejected' || commonResult.status === 'rejected'
+      t: lecturesT,     // Уже готовая функция перевода
+      commonT: commonT, // Уже готовая функция перевода
+      hasError: false
     };
   } catch (error) {
     console.error('Failed to load translations:', error);
@@ -97,8 +98,9 @@ function translateLecture(
 ) {
   return {
     ...lecture,
-    name: t?.(`${lecture.id}.name`) || lecture.id,
-    description: t?.(`${lecture.id}.description`) || '',
+    // ✅ ПРАВИЛЬНО: прямой вызов функции
+    name: t ? t(`${lecture.id}.name`) : lecture.id,
+    description: t ? t(`${lecture.id}.description`) : '',
   };
 }
 
@@ -107,8 +109,8 @@ export async function Lectures({ locale }: LecturesProps) {
   const { t, commonT, hasError } = await loadTranslations(locale);
 
   // Get content with fallbacks
-  const heading = commonT?.('navigation.lectures') || FALLBACKS[locale].heading;
-  const subtitle = t?.('subtitle') || FALLBACKS[locale].subtitle;
+const heading = (commonT ? commonT('navigation.lectures') : null) || FALLBACKS[locale].heading;
+const subtitle = (t ? t('subtitle') : null) || FALLBACKS[locale].subtitle;
 
   // Translate lectures efficiently
   const translatedLectures = lectures.map(lecture =>

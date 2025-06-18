@@ -10,9 +10,25 @@ const nextConfig = {
   },
   compress: true,
   trailingSlash: true,
-  // Добавьте эти строки для статического экспорта с i18n
-  basePath: '', // Если используете поддомен
-  assetPrefix: '', // Для CDN или поддомена
+  
+  // Для вашей структуры с [locale]
+  async generateStaticParams() {
+    return [
+      { locale: 'ru' },
+      { locale: 'en' }
+    ];
+  },
+  
+  // Редирект корневого пути на дефолтную локаль
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/ru',
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

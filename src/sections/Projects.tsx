@@ -1,7 +1,7 @@
 import { FC } from "react";
 import ProjectCard from "@/components/ui/projects/ProjectCard";
 import { projects } from "@/lib/ProjectData";
-import { getServerTranslations } from "@/lib/translations/serverTranslations";
+import { getHybridTranslations, type Locale } from '@/lib/translations/StaticTranslationsLoader';
 import { type SupportedLocale } from "@/i18nconfig";
 
 interface Project {
@@ -44,20 +44,20 @@ function isSupportedLocale(locale: string): locale is SupportedLocale {
   return locale === 'en' || locale === 'ru';
 }
 
-// Optimized translation fetcher with error handling
+// ✅ ИСПРАВЛЕННАЯ функция получения переводов
 async function getProjectTranslations(locale: string) {
   const safeLocale: SupportedLocale = isSupportedLocale(locale) ? locale : 'en';
   
   try {
-    // Single translation call with error handling
-    const [projectsT, commonT] = await Promise.allSettled([
-      getServerTranslations(safeLocale, 'projects'),
-      getServerTranslations(safeLocale, 'common')
+    // ✅ ПРАВИЛЬНО: Promise.all возвращает массив функций перевода
+    const [projectsT, commonT] = await Promise.all([
+      getHybridTranslations(safeLocale as Locale, 'projects'),
+      getHybridTranslations(safeLocale as Locale, 'common')
     ]);
     
     return {
-      projectsT: projectsT.status === 'fulfilled' ? projectsT.value : null,
-      commonT: commonT.status === 'fulfilled' ? commonT.value : null,
+      projectsT, // Это уже TranslationFunction
+      commonT,   // Это уже TranslationFunction
       locale: safeLocale
     };
   } catch (error) {
@@ -70,7 +70,7 @@ async function getProjectTranslations(locale: string) {
   }
 }
 
-// Optimized project translator
+// ✅ ИСПРАВЛЕННАЯ функция перевода проектов
 function translateProject(
   project: typeof projects[0], 
   projectsT: any, 
@@ -80,22 +80,23 @@ function translateProject(
   
   return {
     ...project,
-    name: projectsT?.(`${project.id}.name`) || fallback?.name || project.id,
-    description: projectsT?.(`${project.id}.description`) || fallback?.description || "",
+    // ✅ ПРАВИЛЬНО: вызов функции перевода
+    name: projectsT ? projectsT(`${project.id}.name`) : (fallback?.name || project.id),
+    description: projectsT ? projectsT(`${project.id}.description`) : (fallback?.description || ""),
   };
 }
 
 interface ProjectsProps {
-  locale: string;
+  locale: SupportedLocale; // ✅ ИСПРАВЛЕНО: строгая типизация
 }
 
 const Projects: FC<ProjectsProps> = async ({ locale }) => {
   // Get translations with error handling
   const { projectsT, commonT, locale: safeLocale } = await getProjectTranslations(locale);
   
-  // Get heading with fallback chain
+  // ✅ ИСПРАВЛЕНО: правильный вызов функции перевода
   const heading = 
-    commonT?.('navigation.commercialCases') || 
+    (commonT ? commonT('navigation.commercialCases') : null) || 
     STATIC_FALLBACKS[safeLocale].heading;
   
   // Translate projects efficiently

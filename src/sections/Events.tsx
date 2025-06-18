@@ -1,6 +1,7 @@
 import React, { memo, useMemo, lazy, Suspense } from "react";
 import SquircleContainer from "@/components/SquircleContainer";
 
+
 // Lazy load EventStack component
 const EventStack_1 = lazy(() => import("@/components/ui/events/EventStack_1"));
 
@@ -146,17 +147,18 @@ EventsContent.displayName = 'EventsContent';
 
 interface EventsProps {
     locale: 'en' | 'ru';
-    serverTranslations?: {
+    serverTranslations: {  // ✅ УБРАТЬ знак вопроса - теперь обязательно
         heading: string;
         subtitle: string;
         description: string;
     };
 }
 
+
 const Events = memo(({ locale, serverTranslations }: EventsProps) => {
-    // Combined memoization for translations and container classes
     const config = useMemo(() => {
-        const translations = serverTranslations || FALLBACK_CONTENT[locale];
+        // ✅ УПРОСТИТЬ - serverTranslations теперь всегда есть
+        const translations = serverTranslations;
         
         const containerClasses = (() => {
             const baseClasses = "flex flex-col gap-4 lg:flex-row lg:gap-12 relative isolate";
