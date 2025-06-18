@@ -10,25 +10,8 @@ const nextConfig = {
   },
   compress: true,
   trailingSlash: true,
-  
-  // Для вашей структуры с [locale]
-  async generateStaticParams() {
-    return [
-      { locale: 'ru' },
-      { locale: 'en' }
-    ];
-  },
-  
-  // Редирект корневого пути на дефолтную локаль
-  async redirects() {
-    return [
-      {
-        source: '/',
-        destination: '/ru',
-        permanent: false,
-      },
-    ];
-  },
+  basePath: '',
+  assetPrefix: '',
 };
 
 export default nextConfig;
