@@ -11,6 +11,8 @@ interface Project {
   image: string;
   width: number;
   height: number;
+  redirectUrl?: string;
+  showImage?: boolean;
 }
 
 // Static constants
@@ -47,14 +49,14 @@ function isSupportedLocale(locale: string): locale is SupportedLocale {
 // ✅ ИСПРАВЛЕННАЯ функция получения переводов
 async function getProjectTranslations(locale: string) {
   const safeLocale: SupportedLocale = isSupportedLocale(locale) ? locale : 'en';
-  
+
   try {
     // ✅ ПРАВИЛЬНО: Promise.all возвращает массив функций перевода
     const [projectsT, commonT] = await Promise.all([
       getHybridTranslations(safeLocale as Locale, 'projects'),
       getHybridTranslations(safeLocale as Locale, 'common')
     ]);
-    
+
     return {
       projectsT, // Это уже TranslationFunction
       commonT,   // Это уже TranslationFunction
@@ -72,19 +74,21 @@ async function getProjectTranslations(locale: string) {
 
 // ✅ ИСПРАВЛЕННАЯ функция перевода проектов
 function translateProject(
-  project: typeof projects[0], 
-  projectsT: any, 
+  project: typeof projects[0],
+  projectsT: any,
   locale: SupportedLocale
 ): Project {
   const fallback = STATIC_FALLBACKS[locale].projects[project.id as keyof typeof STATIC_FALLBACKS.en.projects];
   
   return {
     ...project,
-    // ✅ ПРАВИЛЬНО: вызов функции перевода
     name: projectsT ? projectsT(`${project.id}.name`) : (fallback?.name || project.id),
     description: projectsT ? projectsT(`${project.id}.description`) : (fallback?.description || ""),
+    redirectUrl: projectsT ? projectsT(`${project.id}.redirectUrl`) : (project.redirectUrl || ""),
+    showImage: project.showImage
   };
 }
+
 
 interface ProjectsProps {
   locale: SupportedLocale; // ✅ ИСПРАВЛЕНО: строгая типизация
@@ -93,14 +97,14 @@ interface ProjectsProps {
 const Projects: FC<ProjectsProps> = async ({ locale }) => {
   // Get translations with error handling
   const { projectsT, commonT, locale: safeLocale } = await getProjectTranslations(locale);
-  
+
   // ✅ ИСПРАВЛЕНО: правильный вызов функции перевода
-  const heading = 
-    (commonT ? commonT('navigation.commercialCases') : null) || 
+  const heading =
+    (commonT ? commonT('navigation.commercialCases') : null) ||
     STATIC_FALLBACKS[safeLocale].heading;
-  
+
   // Translate projects efficiently
-  const translatedProjects = projects.map(project => 
+  const translatedProjects = projects.map(project =>
     translateProject(project, projectsT, safeLocale)
   );
 
@@ -110,11 +114,22 @@ const Projects: FC<ProjectsProps> = async ({ locale }) => {
         <h2 className={HEADING_CLASSES}>
           {heading}
         </h2>
-        
+
         <div className={GRID_CLASSES}>
           {translatedProjects.map((project) => (
-            <ProjectCard key={project.id} {...project} />
+            <ProjectCard
+              key={project.id}
+              name={project.name}
+              image={project.image}
+              width={project.width}
+              height={project.height}
+              description={project.description}
+              redirectUrl={project.redirectUrl}
+              showImage={project.showImage}
+            />
           ))}
+
+
         </div>
       </div>
     </section>

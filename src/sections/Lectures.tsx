@@ -109,8 +109,8 @@ export async function Lectures({ locale }: LecturesProps) {
   const { t, commonT, hasError } = await loadTranslations(locale);
 
   // Get content with fallbacks
-const heading = (commonT ? commonT('navigation.lectures') : null) || FALLBACKS[locale].heading;
-const subtitle = (t ? t('subtitle') : null) || FALLBACKS[locale].subtitle;
+  const heading = (commonT ? commonT('navigation.lectures') : null) || FALLBACKS[locale].heading;
+  const subtitle = (t ? t('subtitle') : null) || FALLBACKS[locale].subtitle;
 
   // Translate lectures efficiently
   const translatedLectures = lectures.map(lecture =>
@@ -162,26 +162,26 @@ const subtitle = (t ? t('subtitle') : null) || FALLBACKS[locale].subtitle;
                 className="w-full h-full shadow-lg aspect-video"
               />
             </div>
-            
-<div className={VERTICAL_VIDEO_CLASSES}>
-  <SquircleVideo
-    src="video/sept_reels.mp4"
-    poster="/video/reels.jpg"
-    title="Sound Design Example"
-    size="md"
-    className="w-full h-full shadow-lg aspect-[9/16] [&>video]:object-cover [&>video]:object-center"
-  />
-</div>
+
+            <div className={VERTICAL_VIDEO_CLASSES}>
+              <SquircleVideo
+                src="/video/sept_reels.mp4"
+                poster="/video/reels.jpg"
+                title="Sound Design Example"
+                size="md"
+                className="w-full h-full shadow-lg aspect-[9/16] [&>video]:object-cover [&>video]:object-center"
+              />
+            </div>
           </div>
 
           {/* Mobile Layout: Only Vertical Video */}
           <div className={MOBILE_LAYOUT_CLASSES}>
             <div className={MOBILE_VIDEO_WRAPPER_CLASSES}>
               <SquircleVideo
-                 src="video/sept_reels.mp4"
-    poster="/video/reels.jpg"
-    title="Sound Design Example"
-    size="md"
+                src="/video/sept_reels.mp4"
+                poster="/video/reels.jpg"
+                title="Sound Design Example"
+                size="md"
                 className="w-full shadow-lg aspect-[9/16]"
               />
             </div>

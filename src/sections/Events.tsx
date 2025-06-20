@@ -8,7 +8,7 @@ const EventStack_1 = lazy(() => import("@/components/ui/events/EventStack_1"));
 // Static class names - removed background classes
 const SECTION_CLASSES = "overflow-hidden -mb-64 relative";
 const MAIN_CLASSES = "relative";
-const EVENT_STACK_CLASSES = "xs:-mt-24 w-full xs:w-[80vw] lg:w-[60vw] min-w-300 relative z-5";
+const EVENT_STACK_CLASSES = "xs:-mt-24 w-full xs:w-[80vw] lg:w-[60vw] min-w-300 relative";
 
 // Fallback content for better UX
 const FALLBACK_CONTENT = {
@@ -69,7 +69,7 @@ const EventsContent = memo(({ translations, locale }: {
     const config = useMemo(() => {
         // Style calculations
         const squircleClasses = (() => {
-            const baseClasses = "py-12 h-auto transition-colors duration-100 relative z-10";
+            const baseClasses = "py-12 h-auto transition-colors duration-100 relative";
             const widthClasses = locale === 'ru' 
                 ? "w-[85vw] max-w-[720px] mx-auto"
                 : "w-[85vw] max-w-[750px] mx-auto";
@@ -79,8 +79,8 @@ const EventsContent = memo(({ translations, locale }: {
         const contentWrapperClasses = (() => {
             const baseClasses = "flex flex-col gap-2 xs:gap-4 md:gap-8 lg:-py-4";
             const spacingClasses = locale === 'ru' 
-                ? "xs:mx-6 lg:mx-12"
-                : "xs:mx-10 lg:mx-24";
+                ? "xs:mx-6 xl:mx-12"
+                : "xs:mx-10 xl:mx-24";
             return `${baseClasses} ${spacingClasses}`;
         })();
 

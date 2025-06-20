@@ -4,19 +4,28 @@
     "description": "Making of the Haval TANK 500 video."
   },
   "kinopoisk": {
-    "name": "Kinopoisk",
-    "description": "TV Series 'Tonkiy Vkus' ('Refined Taste'), second season."
+    "name": "Kinopoisk, Yandex Ultima",
+    "description": "Creating music with Cinematica production",
+    "redirectUrl": "https://www.kinopoisk.ru/series/5403554/"
   },
   "alliance": {
     "name": "Alliance-Service",
-    "description": "Tender video for Alliance-Service."
+    "description": "Tender video for Alliance-Service.",
+    "redirectUrl": "https://alliance-service.pro/"
   },
-  "yoko": {
+  "yoko_single": {
     "name": "YOKO",
-    "description": "Full music production for an artist. Tracks «Черные змеи» and «По-другому»"
+    "description": "Full music production of «По-другому» track",
+    "redirectUrl": "https://band.link/po_drugomy"
+  },
+  "yoko_vk": {
+    "name": "VK, YOKO",
+    "description": "Creating music and audio jingles for audio book series «Kinashibari»",
+    "redirectUrl": "https://vk.com/audiobook8837"
   },
   "more_cases": {
     "name": "More cases",
-    "description": "available upon request"
+    "description": " ",
+    "redirectUrl": "https://t.me/deescawa"
   }
 }

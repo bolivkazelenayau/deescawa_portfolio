@@ -1,22 +1,32 @@
 {
   "haval": {
     "name": "Haval",
-    "description": "Создание видео для Haval TANK 500."
+    "description": "Саунд-дизайн making-of HAVAL TANK 500",
+    "redirectUrl": ""
   },
   "kinopoisk": {
-    "name": "Кинопоиск",
-    "description": "Сериал «Тонкий вкус», второй сезон."
+    "name": "Кинопоиск, Яндекс Ultima",
+    "description": "Написание музыки в составе Cinematica",
+        "redirectUrl": "https://www.kinopoisk.ru/series/5403554/"
   },
   "alliance": {
     "name": "Альянс-Сервис",
-    "description": "Тендерное видео для Альянс-Сервис."
+    "description": "Тендерное видео для Альянс-Сервис.",
+        "redirectUrl": "https://alliance-service.pro/"
   },
-  "yoko": {
+  "yoko_single": {
     "name": "ЙОКО",
-    "description": "музыкальный продакшн для артиста. треки «Черные змеи» и «По-другому»"
+    "description": "Музыкальный продакшн трека «По-другому»",
+        "redirectUrl": "https://band.link/po_drugomy"
+  },
+    "yoko_vk": {
+    "name": "VK, ЙОКО",
+    "description": "Создание музыки и джинглов для аудио сериала «Канашибари»",
+        "redirectUrl": "https://vk.com/audiobook8837"
   },
   "more_cases": {
-    "name": "Больше кейсов",
-    "description": "доступно по запросу"
+    "name": "Больше кейсов доступно по запросу",
+    "description": " ",
+        "redirectUrl": "https://t.me/deescawa"
   }
 }

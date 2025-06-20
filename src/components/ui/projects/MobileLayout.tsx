@@ -1,4 +1,4 @@
-import { FC, memo, useMemo } from "react";
+import { FC, memo } from "react";
 import Image from "next/image";
 import ProjectTitle from "./ProjectTitle";
 import ArrowIcon from "./ArrowIcon";
@@ -18,6 +18,7 @@ interface MobileLayoutProps {
   useSquircle?: boolean;
   borderRadius?: number;
   smoothing?: number;
+  showImage?: boolean;
 }
 
 const MobileLayout: FC<MobileLayoutProps> = memo(({ 
@@ -29,7 +30,8 @@ const MobileLayout: FC<MobileLayoutProps> = memo(({
   className = "",
   useSquircle = true,
   borderRadius = 12,
-  smoothing = 0.8
+  smoothing = 0.8,
+  showImage = true
 }) => {
   const altText = `${name} image`;
   const containerClasses = className 
@@ -38,30 +40,32 @@ const MobileLayout: FC<MobileLayoutProps> = memo(({
 
   return (
     <div className={containerClasses}>
-      <div className="image-container aspect-video w-full relative">
-        {useSquircle ? (
-          <SquircleImage
-            src={image}
-            alt={altText}
-            width={width}
-            height={height}
-            className="w-full h-full"
-            borderRadius={borderRadius}
-            smoothing={smoothing}
-          />
-        ) : (
-          <Image
-            src={image}
-            alt={altText}
-            width={width}
-            height={height}
-            className="w-full h-full object-cover"
-          />
-        )}
-      </div>
+      {showImage && (
+        <div className="image-container aspect-video w-full relative">
+          {useSquircle ? (
+            <SquircleImage
+              src={image}
+              alt={altText}
+              width={width}
+              height={height}
+              className="w-full h-full"
+              borderRadius={borderRadius}
+              smoothing={smoothing}
+            />
+          ) : (
+            <Image
+              src={image}
+              alt={altText}
+              width={width}
+              height={height}
+              className="w-full h-full object-cover"
+            />
+          )}
+        </div>
+      )}
 
       <div className="relative mt-auto p-12 w-full">
-        <div className="absolute left-0 -bottom-1 flex flex-col">
+        <div className="absolute left-0 -bottom-1 flex flex-col max-w-[calc(100%-20px)]">
           <ProjectTitle name={name} description={description} />
         </div>
         <div className="absolute right-0 bottom-0">
