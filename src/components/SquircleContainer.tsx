@@ -60,7 +60,7 @@ const SquircleContainer: React.FC<SquircleContainerProps> = memo(({
     style={{ 
       ...CONTAINER_STYLE, 
       ...style,
-      zIndex: 10, // Higher z-index
+      zIndex: 1, // Higher z-index
       isolation: 'isolate' // Force new stacking context
     }}
     clip={true}
