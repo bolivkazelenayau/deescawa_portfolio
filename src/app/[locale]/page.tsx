@@ -18,7 +18,7 @@ export default async function Home({
     <>
       <Hero locale={locale} /> 
       <Projects locale={locale} />
-      <Lectures locale={locale} />
+      {/* <Lectures locale={locale} /> */}
       <EventsServerWrapper locale={locale} />
       <Music locale={locale}/>
       <Footer locale={locale} />
