@@ -8,7 +8,7 @@ const nextConfig = {
   },
   images: {
     formats: ['image/webp', 'image/avif'],
-    // Убрали unoptimized: true - теперь оптимизация будет работать
+    unoptimized: false, // Явно указываем false
   },
   compress: true,
   trailingSlash: true,
