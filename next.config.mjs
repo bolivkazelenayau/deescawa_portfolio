@@ -6,14 +6,12 @@ const nextConfig = {
   },
   images: {
     formats: ['image/webp', 'image/avif'],
-    unoptimized: true, // Временно вернули
+    unoptimized: false, // Включили оптимизацию для поиска проблемы, тестируем конфигу
   },
   compress: true,
   trailingSlash: true,
   basePath: '',
   assetPrefix: '',
 };
-
-
 
 export default nextConfig;
