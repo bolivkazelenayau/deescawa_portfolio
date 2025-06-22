@@ -1,5 +1,3 @@
-import withExportImages from 'next-export-optimize-images';
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'export',
@@ -8,7 +6,7 @@ const nextConfig = {
   },
   images: {
     formats: ['image/webp', 'image/avif'],
-    unoptimized: false, // Явно указываем false
+    unoptimized: true, // Временно вернули
   },
   compress: true,
   trailingSlash: true,
@@ -16,4 +14,4 @@ const nextConfig = {
   assetPrefix: '',
 };
 
-export default withExportImages(nextConfig);
+export default nextConfig;
