@@ -9,14 +9,13 @@ import image7 from "@/assets/images/lectures/fuji_gen_design.jpg";
 import image8 from "@/assets/images/lectures/fuji_dubstep.jpg";
 import image9 from "@/assets/images/lectures/mw_gen_design.jpg";
 import image10 from "@/assets/images/lectures/streams.jpeg";
-import { StaticImageData } from "next/image";
 
 // Define a type for the lecture data structure
 export interface LectureData {
   id: string; // Changed to string for better translation keys
   name: string;
   description: string;
-image: string | StaticImageData;
+  image: string;
   width: number;
   height: number;
   transform?: {
@@ -72,7 +71,7 @@ export const lectures: LectureData[] = [
   {
     id: "burial",
     name: "", // Will be filled from translations
-    image: image1,
+    image: image1.src,
     description: "", // Will be filled from translations
     width: 600,
     height: 600,
@@ -83,7 +82,7 @@ export const lectures: LectureData[] = [
     id: "crowdsourced",
     name: "", // Will be filled from translations
     description: "", // Will be filled from translations
-    image: image2,
+    image: image2.src,
     width: 600,
     height: 600,
     transform: {
@@ -96,11 +95,11 @@ export const lectures: LectureData[] = [
     id: "generative",
     name: "", // Will be filled from translations
     description: "", // Will be filled from translations
-    image: image3,
+    image: image3.src,
     width: 600,
     height: 600,
-    transform: { 
-      ...defaultTransforms.bottom, 
+    transform: {
+      ...defaultTransforms.bottom,
       translateY: "translate-y-[0%]",
       translateX: "translate-x-2", // Example: nudge 8px to the right
     },
@@ -111,7 +110,7 @@ export const lectures: LectureData[] = [
     id: "hometown",
     name: "", // Will be filled from translations
     description: "", // Will be filled from translations
-    image: image4,
+    image: image4.src,
     width: 800,
     height: 800,
     transform: {
@@ -125,7 +124,7 @@ export const lectures: LectureData[] = [
     id: "intro_sound_design",
     name: "", // Will be filled from translations
     description: "", // Will be filled from translations
-    image: image5,
+    image: image5.src,
     width: 600,
     height: 600,
     transform: { ...defaultTransforms.top },
@@ -135,7 +134,7 @@ export const lectures: LectureData[] = [
     id: "halftime",
     name: "", // Will be filled from translations
     description: "", // Will be filled from translations
-    image: image6,
+    image: image6.src,
     width: 600,
     height: 600,
     transform: {
@@ -149,7 +148,7 @@ export const lectures: LectureData[] = [
     id: "fuji-gen",
     name: "",
     description: "",
-    image: image7,
+    image: image7.src,
     width: 1500,
     height: 1500,
     transform: {
@@ -164,7 +163,7 @@ export const lectures: LectureData[] = [
     id: "fuji-dubstep",
     name: "",
     description: "",
-    image: image8,
+    image: image8.src,
     width: 1500,
     height: 1500,
     transform: {
@@ -180,7 +179,7 @@ export const lectures: LectureData[] = [
     id: "mw-gendes",
     name: "",
     description: "",
-    image: image9,
+    image: image9.src,
     width: 1500,
     height: 1500,
     transform: {
@@ -194,7 +193,7 @@ export const lectures: LectureData[] = [
     id: "my_streams",
     name: "",
     description: "",
-    image: image10,
+    image: image10.src,
     width: 1500,
     height: 1500,
     transform: {
