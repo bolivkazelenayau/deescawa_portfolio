@@ -21,7 +21,7 @@ export default async function Home({
       <Lectures locale={locale} />
       <EventsServerWrapper locale={locale} />
       <Music locale={locale}/>
-      {/* <Footer locale={locale} /> */}
+      <Footer locale={locale} />
     </>
   );
 }
