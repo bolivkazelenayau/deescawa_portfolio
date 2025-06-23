@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import RootPageClient from './RootPageClient';
 
 export const metadata: Metadata = {
-  title: 'Loading... | Your Site Name',
+  title: 'Loading... | Deescawa',
   description: 'Redirecting to your preferred language',
 };
 
