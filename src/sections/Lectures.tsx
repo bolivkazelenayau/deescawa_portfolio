@@ -171,7 +171,7 @@ export async function Lectures({ locale }: LecturesProps) {
             <div className={HORIZONTAL_VIDEO_CLASSES}>
               <SquircleVideo
                 src="youtube/sofrWzftDNs&"
-                poster="/video/streams.jpeg"
+                poster="/images/video_posters/streams.jpeg"
                 title="Finishing new music with Deescawa [Part 1]"
                 size="lg"
                 className="w-full h-full shadow-lg aspect-video"
@@ -181,7 +181,7 @@ export async function Lectures({ locale }: LecturesProps) {
             <div className={VERTICAL_VIDEO_CLASSES}>
               <SquircleVideo
                 src="/video/sept_reels.webm"
-                poster="/video/reels.jpg"
+                poster="/images/video_posters/reels.jpg"
                 title="Sound Design Example"
                 size="md"
                 className="w-full h-full shadow-lg aspect-[9/16] [&>video]:object-cover [&>video]:object-center"
@@ -194,7 +194,7 @@ export async function Lectures({ locale }: LecturesProps) {
             <div className={MOBILE_VIDEO_WRAPPER_CLASSES}>
               <SquircleVideo
                 src="/video/sept_reels.webm"
-                poster="/video/reels.jpg"
+                poster="/images/video_posters/reels.jpg"
                 title="Sound Design Example"
                 size="md"
                 className="w-full shadow-lg aspect-[9/16]"
