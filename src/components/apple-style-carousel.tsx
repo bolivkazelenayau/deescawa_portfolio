@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
-import ExportedImage from "next-image-export-optimizer";
+import ConditionalImage from "./ConditionalImage";
 import type { ImageLoaderProps } from 'next/image';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Card, CardContent } from "@/components/ui/card";
@@ -180,7 +180,7 @@ const ImageContainer = ({ lecture, isActive, isHovered }: { lecture: Lecture; is
   // Create the image element with all necessary classes and properties
   const imageElement = (
     <>
-      <ExportedImage
+      <ConditionalImage
         src={lecture.image || "/placeholder.svg"}
         alt={altText}
         width={lecture.width}
