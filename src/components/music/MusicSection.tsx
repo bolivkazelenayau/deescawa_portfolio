@@ -3,12 +3,17 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react'
 import { useStableTranslation } from '@/hooks/useStableTranslation'
 import Image from 'next/image'
+import type { ImageLoaderProps } from 'next/image';
 import { Card, CardContent } from '@/components/ui/card'
 import Button from '@/components/Button'
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel"
 import type { CarouselApi } from "@/components/ui/carousel"
 import { cn } from "@/lib/utils"
 import { musicData, CAROUSEL_CONFIG, BREAKPOINTS, type Album } from '@/lib/MusicData'
+
+const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
+  return src;
+};
 
 // Utility functions
 const getSlidesToShow = (width: number): number => {
@@ -19,10 +24,10 @@ const getSlidesToShow = (width: number): number => {
 
 const renderTextWithFragments = (text: string | React.ReactNode): React.ReactNode => {
   if (typeof text !== 'string') return text
-  
+
   const parts = text.split('\n')
   if (parts.length === 1) return text
-  
+
   return (
     <>
       {parts.map((part, index) => (
@@ -87,11 +92,11 @@ interface MusicCardProps {
   locale: 'en' | 'ru' // Add locale prop
 }
 
-const MusicCard: React.FC<MusicCardProps> = React.memo(({ 
-  album, 
-  className = "", 
-  isActive = false, 
-  isHovered = false, 
+const MusicCard: React.FC<MusicCardProps> = React.memo(({
+  album,
+  className = "",
+  isActive = false,
+  isHovered = false,
   onCardClick,
   locale // Use locale prop instead of useParams
 }) => {
@@ -119,7 +124,7 @@ const MusicCard: React.FC<MusicCardProps> = React.memo(({
           observer.disconnect()
         }
       },
-      { 
+      {
         rootMargin: '700px',
         threshold: 0.1
       }
@@ -150,10 +155,10 @@ const MusicCard: React.FC<MusicCardProps> = React.memo(({
   }, [])
 
   return (
-    <div 
+    <div
       ref={cardRef}
       className={cn(
-        "transition-all duration-200 ease-out will-change-transform", 
+        "transition-all duration-200 ease-out will-change-transform",
         isActive ? "scale-100 z-10" : "scale-95 z-0"
       )}
     >
@@ -171,18 +176,19 @@ const MusicCard: React.FC<MusicCardProps> = React.memo(({
         {/* Background image */}
         {shouldLoadImages && (
           <>
-            <Image 
-              src={album.albumCover} 
-              alt="" 
-              className="sr-only" 
-              onLoad={handleBackgroundImageLoad} 
-              loading="lazy" 
-              width={1} 
-              height={1} 
+            <Image
+              loader={imageLoader}
+              src={album.albumCover}
+              alt=""
+              className="sr-only"
+              onLoad={handleBackgroundImageLoad}
+              loading="lazy"
+              width={1}
+              height={1}
             />
             <div
               className={cn(
-                "absolute inset-0 transition-opacity duration-300 ease-out", 
+                "absolute inset-0 transition-opacity duration-300 ease-out",
                 backgroundImageLoaded ? "opacity-10 dark:opacity-5" : "opacity-0"
               )}
               style={{
@@ -196,44 +202,46 @@ const MusicCard: React.FC<MusicCardProps> = React.memo(({
             />
           </>
         )}
-        
+
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/3 to-white/8 dark:via-black/1 dark:to-black/5" style={{ zIndex: 1 }} />
-        
+
         <CardContent className="p-0 h-full flex flex-col relative" style={{ zIndex: 2 }}>
           <div className="relative h-[60%] overflow-hidden flex items-center justify-center bg-white/5">
             {shouldLoadImages ? (
               <>
-                <Image 
-                  src={album.albumCover} 
-                  alt="" 
+                <Image
+                  loader={imageLoader}
+                  src={album.albumCover}
+                  alt=""
                   className={cn(
-                    "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ease-out", 
+                    "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ease-out",
                     imageLoaded ? "opacity-100" : "opacity-0"
-                  )} 
-                  style={{ 
-                    filter: 'blur(15px) brightness(1.05)', 
-                    zIndex: 1, 
-                    willChange: 'opacity' 
-                  }} 
-                  draggable={false} 
+                  )}
+                  style={{
+                    filter: 'blur(15px) brightness(1.05)',
+                    zIndex: 1,
+                    willChange: 'opacity'
+                  }}
+                  draggable={false}
                   loading={isActive ? "eager" : "lazy"}
-                  fill 
+                  fill
                 />
                 <div className="absolute inset-0 bg-white/15 dark:bg-black/8" style={{ zIndex: 2 }} />
-                <Image 
-                  src={album.albumCover} 
-                  alt={album.name} 
+                <Image
+                  loader={imageLoader}
+                  src={album.albumCover}
+                  alt={album.name}
                   className={cn(
-                    "max-w-full max-h-full object-contain transition-all duration-300 group-hover:scale-105 relative", 
+                    "max-w-full max-h-full object-contain transition-all duration-300 group-hover:scale-105 relative",
                     imageLoaded ? "opacity-100" : "opacity-0"
-                  )} 
-                  style={{ zIndex: 3, willChange: 'transform, opacity' }} 
-                  draggable={false} 
-                  onLoad={handleImageLoad} 
+                  )}
+                  style={{ zIndex: 3, willChange: 'transform, opacity' }}
+                  draggable={false}
+                  onLoad={handleImageLoad}
                   loading={isActive ? "eager" : "lazy"}
                   priority={isActive}
-                  width={400} 
-                  height={400} 
+                  width={400}
+                  height={400}
                 />
               </>
             ) : (
@@ -243,7 +251,7 @@ const MusicCard: React.FC<MusicCardProps> = React.memo(({
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" style={{ zIndex: 4 }} />
           </div>
-          
+
           <div className="flex-1 p-6 md:p-8 lg:p-10 flex flex-col justify-between bg-gradient-to-t from-card via-card/95 to-card/80">
             <div className="space-y-4">
               <h3 className="text-2xl md:text-3xl lg:text-4xl font-medium tracking-[-1px] text-left">
@@ -254,11 +262,11 @@ const MusicCard: React.FC<MusicCardProps> = React.memo(({
               </p>
             </div>
             <div className="mt-8">
-              <Button 
-                variant="primary" 
-                isSquircle={true} 
-                squircleSize="lg" 
-                className="w-full text-lg font-medium uppercase tracking-wide" 
+              <Button
+                variant="primary"
+                isSquircle={true}
+                squircleSize="lg"
+                className="w-full text-lg font-medium uppercase tracking-wide"
                 onClick={handleButtonClick}
               >
                 {renderTextWithFragments(t('common.listen'))}
@@ -337,7 +345,7 @@ const MusicCarousel: React.FC<MusicCarouselProps> = ({ albums, locale }) => {
 
     updateSlidesToShow()
     window.addEventListener('resize', updateSlidesToShow, { passive: true })
-    
+
     return () => {
       window.removeEventListener('resize', updateSlidesToShow)
       clearTimeout(timeoutId)
@@ -380,7 +388,7 @@ const MusicCarousel: React.FC<MusicCarouselProps> = ({ albums, locale }) => {
           className={cn(
             "pl-2 md:pl-4",
             slidesToShow === 1 ? "basis-full" :
-            slidesToShow === 2 ? "basis-1/2" : "basis-1/3",
+              slidesToShow === 2 ? "basis-1/2" : "basis-1/3",
             "flex items-center justify-center will-change-transform"
           )}
           onMouseEnter={() => handleMouseEnter(index)}
@@ -415,9 +423,9 @@ const MusicCarousel: React.FC<MusicCarouselProps> = ({ albums, locale }) => {
 
   return (
     <div className="relative w-full">
-      <Carousel 
-        setApi={setApi} 
-        className="w-full" 
+      <Carousel
+        setApi={setApi}
+        className="w-full"
         opts={{
           ...CAROUSEL_CONFIG,
           skipSnaps: false,

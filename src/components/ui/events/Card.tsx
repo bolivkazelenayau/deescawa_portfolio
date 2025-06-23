@@ -1,6 +1,10 @@
 import { Monoco } from '@monokai/monoco-react';
-import Image from "next/image";
+import Image, { ImageLoaderProps } from "next/image";
 import { useMemo, memo } from "react";
+
+const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
+  return src;
+};
 
 interface CardProps {
   image: string
@@ -45,6 +49,7 @@ const Card: React.FC<CardProps> = memo(({
     
     // Enhanced Next.js Image props
     const imageProps = {
+      loader: imageLoader,
       src: image || "/placeholder.svg",
       alt,
       fill: true,
@@ -52,8 +57,6 @@ const Card: React.FC<CardProps> = memo(({
       priority,
       sizes,
       quality,
-      placeholder: "blur" as const,
-      blurDataURL: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q==",
       // Add explicit loading control if provided
       ...(loading && { loading }),
       // Add error handling
