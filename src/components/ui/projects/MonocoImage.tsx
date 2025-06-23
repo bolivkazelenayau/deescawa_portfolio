@@ -1,9 +1,14 @@
-// components/MonocoImage.tsx
 "use client"
 
 import { FC, memo, useMemo } from "react"
 import Image from "next/image"
+import type { ImageLoaderProps } from 'next/image'  // ← Добавить
 import { Monoco } from '@monokai/monoco-react'
+
+// Добавить loader функцию:
+const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
+  return src;
+};
 
 interface MonocoImageProps {
   src: string
@@ -46,6 +51,7 @@ const MonocoImage: FC<MonocoImageProps> = memo(({
   return (
     <Monoco {...monocoProps}>
       <Image
+        loader={imageLoader}  // ← Добавить эту строку
         src={src}
         alt={alt}
         width={width}

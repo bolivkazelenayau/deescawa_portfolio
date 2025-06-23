@@ -1,9 +1,13 @@
-// components/SquircleImage.tsx
 "use client"
 
 import { FC, memo } from "react"
 import Image from "next/image"
 import { Monoco } from '@monokai/monoco-react'
+import type { ImageLoaderProps } from 'next/image'
+
+const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
+  return src;
+};
 
 interface SquircleImageProps {
   src: string
@@ -33,6 +37,7 @@ const SquircleImage: FC<SquircleImageProps> = memo(({
     className={className}
   >
     <Image
+      loader={imageLoader}  // ← Исправлен отступ
       src={src}
       alt={alt}
       width={width}

@@ -1,8 +1,14 @@
 import { FC, memo } from "react";
 import Image from "next/image";
+import type { ImageLoaderProps } from 'next/image';  // ← Добавить
 import ProjectTitle from "./ProjectTitle";
 import ArrowIcon from "./ArrowIcon";
 import dynamic from "next/dynamic";
+
+// Добавить loader функцию:
+const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
+  return src;
+};
 
 const SquircleImage = dynamic(() => import("./SquircleImage"), {
   loading: () => <div className="aspect-video w-full bg-gray-200 animate-pulse rounded-lg" />
@@ -54,6 +60,7 @@ const MobileLayout: FC<MobileLayoutProps> = memo(({
             />
           ) : (
             <Image
+              loader={imageLoader}  // ← Добавить эту строку
               src={image}
               alt={altText}
               width={width}

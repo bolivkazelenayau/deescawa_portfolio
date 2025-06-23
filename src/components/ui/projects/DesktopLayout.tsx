@@ -1,14 +1,18 @@
 import { FC, memo } from "react";
 import Image from "next/image";
+import type { ImageLoaderProps } from 'next/image';  // ← Добавить
 import ProjectTitle from "./ProjectTitle";
 import ArrowIcon from "./ArrowIcon";
 import dynamic from "next/dynamic";
 
+// Добавить loader функцию:
+const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
+  return src;
+};
 
 const SquircleImage = dynamic(() => import("./SquircleImage"), {
   loading: () => <div className="aspect-video w-full bg-gray-200 animate-pulse rounded-lg" />
 });
-
 
 interface DesktopLayoutProps {
   name: string;
@@ -21,7 +25,6 @@ interface DesktopLayoutProps {
   smoothing?: number;
   showImage?: boolean;
 }
-
 
 const DesktopLayout: FC<DesktopLayoutProps> = memo(({ 
   name, 
@@ -41,21 +44,19 @@ const DesktopLayout: FC<DesktopLayoutProps> = memo(({
   const isSquare = aspectRatio >= 0.8 && aspectRatio <= 1.2;
   const isVertical = aspectRatio < 0.8;
   
-const getContainerClass = () => {
-  if (isHorizontal) return "w-full max-h-[180px]";
-  if (isSquare) return "w-[180px] h-[180px]";
-  if (isVertical) return "h-[200px] w-auto max-w-[150px]"; // Фиксируем высоту, а не ширину
-  return "w-full max-h-[180px]";
-};
+  const getContainerClass = () => {
+    if (isHorizontal) return "w-full max-h-[180px]";
+    if (isSquare) return "w-[180px] h-[180px]";
+    if (isVertical) return "h-[200px] w-auto max-w-[150px]";
+    return "w-full max-h-[180px]";
+  };
 
-
-const getPositionClass = () => {
-  if (isHorizontal) return "top-[55%] -translate-y-1/2";
-  if (isSquare) return "top-1/2 -translate-y-[45%]"; // Оффсет вниз для квадратных
-  if (isVertical) return "top-1/2 -translate-y-[45%]"; // Оффсет вниз для вертикальных
-  return "top-[55%] -translate-y-1/2";
-};
-
+  const getPositionClass = () => {
+    if (isHorizontal) return "top-[55%] -translate-y-1/2";
+    if (isSquare) return "top-1/2 -translate-y-[45%]";
+    if (isVertical) return "top-1/2 -translate-y-[45%]";
+    return "top-[55%] -translate-y-1/2";
+  };
 
   return (
     <div className="hidden md:grid md:grid-cols-[1fr_300px_max-content] md:gap-8 w-full h-full group/project">
@@ -65,27 +66,27 @@ const getPositionClass = () => {
       <div className="relative md:group/project flex items-center justify-center">
         {showImage && (
           <div className={`absolute ${getContainerClass()} ${getPositionClass()} mx-auto opacity-0 scale-90 group-hover/project:opacity-100 group-hover/project:scale-110 transition-all duration-300 z-5`}>
-{useSquircle ? (
-  <SquircleImage
-    src={image}
-    alt={altText}
-    width={width}
-    height={height}
-    className="w-full h-full"
-    borderRadius={borderRadius}
-    smoothing={smoothing}
-    objectFit={isVertical ? "object-contain" : "object-cover"} // object-contain для вертикальных
-  />
-) : (
-  <Image
-    src={image}
-    alt={altText}
-    width={width}
-    height={height}
-    className={`w-full h-full ${isVertical ? "object-contain" : "object-cover"}`}
-  />
-)}
-
+            {useSquircle ? (
+              <SquircleImage
+                src={image}
+                alt={altText}
+                width={width}
+                height={height}
+                className="w-full h-full"
+                borderRadius={borderRadius}
+                smoothing={smoothing}
+                objectFit={isVertical ? "object-contain" : "object-cover"}
+              />
+            ) : (
+              <Image
+                loader={imageLoader}  // ← Добавить эту строку
+                src={image}
+                alt={altText}
+                width={width}
+                height={height}
+                className={`w-full h-full ${isVertical ? "object-contain" : "object-cover"}`}
+              />
+            )}
           </div>
         )}
       </div>
@@ -96,6 +97,5 @@ const getPositionClass = () => {
   );
 });
 
-
 DesktopLayout.displayName = 'DesktopLayout';
-export default DesktopLayout
+export default DesktopLayout;
