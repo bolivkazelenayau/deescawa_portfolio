@@ -180,7 +180,7 @@ export async function Lectures({ locale }: LecturesProps) {
 
             <div className={VERTICAL_VIDEO_CLASSES}>
               <SquircleVideo
-                src="/video/sept_reels.mp4"
+                src="/video/sept_reels.webm"
                 poster="/video/reels.jpg"
                 title="Sound Design Example"
                 size="md"
@@ -193,7 +193,7 @@ export async function Lectures({ locale }: LecturesProps) {
           <div className={MOBILE_LAYOUT_CLASSES}>
             <div className={MOBILE_VIDEO_WRAPPER_CLASSES}>
               <SquircleVideo
-                src="/video/sept_reels.mp4"
+                src="/video/sept_reels.webm"
                 poster="/video/reels.jpg"
                 title="Sound Design Example"
                 size="md"
