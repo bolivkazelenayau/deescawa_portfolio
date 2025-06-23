@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 
 // Добавить loader функцию:
 const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
-  return src;
+  return src.replace(/\.(png|jpg|jpeg)$/i, '.webp');
 };
 
 const SquircleImage = dynamic(() => import("./SquircleImage"), {

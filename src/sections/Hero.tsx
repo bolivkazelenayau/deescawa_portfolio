@@ -13,7 +13,7 @@ import dynamic from 'next/dynamic'
 import type { ImageLoaderProps } from 'next/image';
 
 const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
-  return src;
+  return src.replace(/\.(png|jpg|jpeg)$/i, '.webp');
 };
 
 

@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils"
 import { musicData, CAROUSEL_CONFIG, BREAKPOINTS, type Album } from '@/lib/MusicData'
 
 const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
-  return src;
+  return src.replace(/\.(png|jpg|jpeg)$/i, '.webp');
 };
 
 // Utility functions

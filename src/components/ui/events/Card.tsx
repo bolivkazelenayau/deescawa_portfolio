@@ -3,7 +3,7 @@ import Image, { ImageLoaderProps } from "next/image";
 import { useMemo, memo } from "react";
 
 const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
-  return src;
+  return src.replace(/\.(png|jpg|jpeg)$/i, '.webp');
 };
 
 interface CardProps {

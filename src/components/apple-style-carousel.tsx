@@ -10,8 +10,9 @@ import type { CarouselApi } from "@/components/ui/carousel";
 import { Monoco } from '@monokai/monoco-react';
 
 const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
-  return src;
+  return src.replace(/\.(png|jpg|jpeg)$/i, '.webp');
 };
+
 
 interface Lecture {
   id: string;

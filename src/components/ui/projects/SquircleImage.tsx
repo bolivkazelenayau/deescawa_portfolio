@@ -6,7 +6,7 @@ import { Monoco } from '@monokai/monoco-react'
 import type { ImageLoaderProps } from 'next/image'
 
 const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
-  return src;
+  return src.replace(/\.(png|jpg|jpeg)$/i, '.webp');
 };
 
 interface SquircleImageProps {

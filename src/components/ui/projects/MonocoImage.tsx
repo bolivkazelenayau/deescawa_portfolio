@@ -7,7 +7,7 @@ import { Monoco } from '@monokai/monoco-react'
 
 // Добавить loader функцию:
 const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
-  return src;
+  return src.replace(/\.(png|jpg|jpeg)$/i, '.webp');
 };
 
 interface MonocoImageProps {
