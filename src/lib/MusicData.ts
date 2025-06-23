@@ -25,38 +25,38 @@ export const BREAKPOINTS = {
   lg: 1024,
 } as const
 
-// Preload critical images
+// Preload critical images - ИСПРАВЛЕНО
 export const CRITICAL_IMAGES = [
-  "/music/bashnya.png",
-  "/music/finding_balance.png",
-  "/music/hometown.png"
+  "/images/music/bashnya.png",
+  "/images/music/finding_balance.png",
+  "/images/music/hometown.png"
 ] as const
 
 export const musicData = [
   {
     id: 1,
-    albumCover: "/music/bashnya.png",
+    albumCover: "/images/music/bashnya.png",
     name: "Башня",
     description: "Надо найти пресс-релиз, а пока напишу что-то умное, дабы заполнить негативное пространство",
     bandLink: "https://band.link/album3"
   },
   {
     id: 2,
-    albumCover: "/music/finding_balance.png",
+    albumCover: "/images/music/finding_balance.png",
     name: "Finding Balance",
     description: "Второй мини-альбом Finding Balance — танцевальная бейс-музыка (дабстеп, хафтайм, фьюче битс) про нахождение баланса в творчестве \nи жизни",
     bandLink: "https://band.link/album2"
   },
   {
     id: 3,
-    albumCover: "/music/hometown.png",
+    albumCover: "/images/music/hometown.png",
     name: "Hometown EP",
     description: "Дебютный мини-альбом Hometown — деконструкция эмбиента и танцевальной музыки \nс многослойным сюжетом об обсессиях и эскапизме",
     bandLink: "https://band.link/hometown"
   },
   {
     id: 4,
-    albumCover: "/music/album4.jpg",
+    albumCover: "/images/music/album4.jpg",
     name: "SoundCloud Vault",
     description: "Сборник старых приколов для заполнения карточки",
     bandLink: "https://band.link/album4"

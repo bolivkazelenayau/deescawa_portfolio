@@ -1,14 +1,6 @@
 // LectureData.ts
-import image1 from "@/assets/images/lectures/burial.png";
-import image2 from "@/assets/images/lectures/crowdsourced.png";
-import image3 from "@/assets/images/lectures/gen.png";
-import image4 from "@/assets/images/lectures/ht.png";
-import image5 from "@/assets/images/lectures/intro_sd.png";
-import image6 from "@/assets/images/lectures/tramplin_small.jpg";
-import image7 from "@/assets/images/lectures/fuji_gen_design.jpg";
-import image8 from "@/assets/images/lectures/fuji_dubstep.jpg";
-import image9 from "@/assets/images/lectures/mw_gen_design.jpg";
-import image10 from "@/assets/images/lectures/streams.jpeg";
+
+// Убираем все импорты изображений - файлы из public/ нельзя импортировать как модули
 
 // Define a type for the lecture data structure
 export interface LectureData {
@@ -71,7 +63,7 @@ export const lectures: LectureData[] = [
   {
     id: "burial",
     name: "", // Will be filled from translations
-    image: image1.src,
+    image: "/images/lectures/burial.png",
     description: "", // Will be filled from translations
     width: 600,
     height: 600,
@@ -82,7 +74,7 @@ export const lectures: LectureData[] = [
     id: "crowdsourced",
     name: "", // Will be filled from translations
     description: "", // Will be filled from translations
-    image: image2.src,
+    image: "/images/lectures/crowdsourced.png",
     width: 600,
     height: 600,
     transform: {
@@ -95,7 +87,7 @@ export const lectures: LectureData[] = [
     id: "generative",
     name: "", // Will be filled from translations
     description: "", // Will be filled from translations
-    image: image3.src,
+    image: "/images/lectures/gen.png",
     width: 600,
     height: 600,
     transform: {
@@ -110,7 +102,7 @@ export const lectures: LectureData[] = [
     id: "hometown",
     name: "", // Will be filled from translations
     description: "", // Will be filled from translations
-    image: image4.src,
+    image: "/images/lectures/ht.png",
     width: 800,
     height: 800,
     transform: {
@@ -124,7 +116,7 @@ export const lectures: LectureData[] = [
     id: "intro_sound_design",
     name: "", // Will be filled from translations
     description: "", // Will be filled from translations
-    image: image5.src,
+    image: "/images/lectures/intro_sd.png",
     width: 600,
     height: 600,
     transform: { ...defaultTransforms.top },
@@ -134,7 +126,7 @@ export const lectures: LectureData[] = [
     id: "halftime",
     name: "", // Will be filled from translations
     description: "", // Will be filled from translations
-    image: image6.src,
+    image: "/images/lectures/tramplin_small.jpg",
     width: 600,
     height: 600,
     transform: {
@@ -148,7 +140,7 @@ export const lectures: LectureData[] = [
     id: "fuji-gen",
     name: "",
     description: "",
-    image: image7.src,
+    image: "/images/lectures/fuji_gen_design.jpg",
     width: 1500,
     height: 1500,
     transform: {
@@ -163,7 +155,7 @@ export const lectures: LectureData[] = [
     id: "fuji-dubstep",
     name: "",
     description: "",
-    image: image8.src,
+    image: "/images/lectures/fuji_dubstep.jpg",
     width: 1500,
     height: 1500,
     transform: {
@@ -179,7 +171,7 @@ export const lectures: LectureData[] = [
     id: "mw-gendes",
     name: "",
     description: "",
-    image: image9.src,
+    image: "/images/lectures/mw_gen_design.jpg",
     width: 1500,
     height: 1500,
     transform: {
@@ -193,7 +185,7 @@ export const lectures: LectureData[] = [
     id: "my_streams",
     name: "",
     description: "",
-    image: image10.src,
+    image: "/images/lectures/streams.jpeg",
     width: 1500,
     height: 1500,
     transform: {

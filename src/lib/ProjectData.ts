@@ -1,17 +1,13 @@
 // ProjectData.ts
-import image1 from "@/assets/images/project-1.jpg";
-import image2 from "@/assets/images/project-2.webp";
-import image3 from "@/assets/images/project-3.jpg";
-import image4 from "@/assets/images/yoko chernie zmei.jpg";
-import image5 from "@/assets/images/project-5.jpg";
-import image6 from "@/assets/images/yoko po drugomu.jpg"
+
+// Убираем импорты изображений, так как файлы в public нельзя импортировать
 
 export const projects = [
   {
     id: "kinopoisk",
     name: "", // Will be filled from translations
     description: "", // Will be filled from translations
-    image: image2.src,
+    image: "/images/projects/project-2.webp",
     width: 1920,
     height: 2880,
     redirectUrl: "",
@@ -21,17 +17,17 @@ export const projects = [
     id: "yoko_single",
     name: "",
     description: "",
-    image: image6.src,
+    image: "/images/projects/yoko po drugomu.jpg",
     width: 3840,
     height: 3840,
     redirectUrl: "",
     showImage: true
   },
-    {
+  {
     id: "yoko_vk",
     name: "",
     description: "",
-    image: image4.src,
+    image: "/images/projects/yoko chernie zmei.jpg",
     width: 3685,
     height: 3685,
     redirectUrl: "",
@@ -41,7 +37,7 @@ export const projects = [
     id: "haval",
     name: "", // Will be filled from translations
     description: "", // Will be filled from translations
-    image: image1.src,
+    image: "/images/projects/project-1.jpg",
     width: 1920,
     height: 1080,
     redirectUrl: "",
@@ -51,7 +47,7 @@ export const projects = [
     id: "alliance",
     name: "", // Will be filled from translations
     description: "", // Will be filled from translations
-    image: image3.src,
+    image: "/images/projects/project-3.jpg",
     width: 1920,
     height: 1080,
     redirectUrl: "",
@@ -61,7 +57,7 @@ export const projects = [
     id: "more_cases",
     name: "",
     description: "",
-    image: image5.src,
+    image: "/images/projects/project-5.jpg",
     width: 1600,
     height: 1200,
     redirectUrl: "",
