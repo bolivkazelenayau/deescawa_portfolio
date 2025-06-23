@@ -1,13 +1,13 @@
 import { FC, memo } from "react";
-import Image from "next/image";
 import type { ImageLoaderProps } from 'next/image';  // ← Добавить
 import ProjectTitle from "./ProjectTitle";
 import ArrowIcon from "./ArrowIcon";
 import dynamic from "next/dynamic";
+import ExportedImage from "next-image-export-optimizer";
 
 // Добавить loader функцию:
 const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
-  return src.replace(/\.(png|jpg|jpeg)$/i, '.webp');
+  return src; // Пакет сам управляет оптимизацией
 };
 
 const SquircleImage = dynamic(() => import("./SquircleImage"), {
@@ -59,8 +59,7 @@ const MobileLayout: FC<MobileLayoutProps> = memo(({
               smoothing={smoothing}
             />
           ) : (
-            <Image
-              loader={imageLoader}  // ← Добавить эту строку
+            <ExportedImage
               src={image}
               alt={altText}
               width={width}

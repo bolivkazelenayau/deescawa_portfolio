@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react'
 import { useStableTranslation } from '@/hooks/useStableTranslation'
-import Image from 'next/image'
 import type { ImageLoaderProps } from 'next/image';
 import { Card, CardContent } from '@/components/ui/card'
 import Button from '@/components/Button'
@@ -10,9 +9,10 @@ import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carouse
 import type { CarouselApi } from "@/components/ui/carousel"
 import { cn } from "@/lib/utils"
 import { musicData, CAROUSEL_CONFIG, BREAKPOINTS, type Album } from '@/lib/MusicData'
+import ExportedImage from 'next-image-export-optimizer';
 
 const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
-  return src.replace(/\.(png|jpg|jpeg)$/i, '.webp');
+  return src; // Пакет сам управляет оптимизацией
 };
 
 // Utility functions
@@ -176,8 +176,7 @@ const MusicCard: React.FC<MusicCardProps> = React.memo(({
         {/* Background image */}
         {shouldLoadImages && (
           <>
-            <Image
-              loader={imageLoader}
+            <ExportedImage
               src={album.albumCover}
               alt=""
               className="sr-only"
@@ -209,8 +208,7 @@ const MusicCard: React.FC<MusicCardProps> = React.memo(({
           <div className="relative h-[60%] overflow-hidden flex items-center justify-center bg-white/5">
             {shouldLoadImages ? (
               <>
-                <Image
-                  loader={imageLoader}
+                <ExportedImage
                   src={album.albumCover}
                   alt=""
                   className={cn(
@@ -227,8 +225,7 @@ const MusicCard: React.FC<MusicCardProps> = React.memo(({
                   fill
                 />
                 <div className="absolute inset-0 bg-white/15 dark:bg-black/8" style={{ zIndex: 2 }} />
-                <Image
-                  loader={imageLoader}
+                <ExportedImage
                   src={album.albumCover}
                   alt={album.name}
                   className={cn(

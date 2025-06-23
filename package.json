@@ -4,10 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build && next-export-optimize-images",
+    "build": "next build && next-image-export-optimizer",
     "start": "next start",
-    "lint": "next lint",
-    "export": "next build && next export && next-export-optimize-images"
+    "lint": "next lint"
   },
   "dependencies": {
     "@monokai/monoco": "^0.2.2",
@@ -27,8 +26,8 @@
     "lucide-react": "^0.474.0",
     "motion": "^12.16.0",
     "next": "15.3.3",
-    "next-export-optimize-images": "^4.6.2",
     "next-i18n-router": "^5.5.2",
+    "next-image-export-optimizer": "^1.19.0",
     "next-themes": "^0.4.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",

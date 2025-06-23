@@ -1,13 +1,13 @@
 "use client"
 
 import { FC, memo, useMemo } from "react"
-import Image from "next/image"
+import ExportedImage from "next-image-export-optimizer"
 import type { ImageLoaderProps } from 'next/image'  // ← Добавить
 import { Monoco } from '@monokai/monoco-react'
 
 // Добавить loader функцию:
 const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
-  return src.replace(/\.(png|jpg|jpeg)$/i, '.webp');
+  return src; // Пакет сам управляет оптимизацией
 };
 
 interface MonocoImageProps {
@@ -50,8 +50,7 @@ const MonocoImage: FC<MonocoImageProps> = memo(({
 
   return (
     <Monoco {...monocoProps}>
-      <Image
-        loader={imageLoader}  // ← Добавить эту строку
+      <ExportedImage
         src={src}
         alt={alt}
         width={width}

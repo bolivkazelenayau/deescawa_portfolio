@@ -1,12 +1,12 @@
 "use client"
 
 import { FC, memo } from "react"
-import Image from "next/image"
+import ExportedImage from "next-image-export-optimizer"
 import { Monoco } from '@monokai/monoco-react'
 import type { ImageLoaderProps } from 'next/image'
 
 const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
-  return src.replace(/\.(png|jpg|jpeg)$/i, '.webp');
+  return src; // Пакет сам управляет оптимизацией
 };
 
 interface SquircleImageProps {
@@ -36,8 +36,7 @@ const SquircleImage: FC<SquircleImageProps> = memo(({
     clip={true}
     className={className}
   >
-    <Image
-      loader={imageLoader}  // ← Исправлен отступ
+    <ExportedImage
       src={src}
       alt={alt}
       width={width}

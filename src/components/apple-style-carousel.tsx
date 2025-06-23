@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
-import Image from "next/image";
+import ExportedImage from "next-image-export-optimizer";
 import type { ImageLoaderProps } from 'next/image';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,8 +10,9 @@ import type { CarouselApi } from "@/components/ui/carousel";
 import { Monoco } from '@monokai/monoco-react';
 
 const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
-  return src.replace(/\.(png|jpg|jpeg)$/i, '.webp');
+  return src; // Пакет сам управляет оптимизацией
 };
+
 
 
 interface Lecture {
@@ -179,8 +180,7 @@ const ImageContainer = ({ lecture, isActive, isHovered }: { lecture: Lecture; is
   // Create the image element with all necessary classes and properties
   const imageElement = (
     <>
-      <Image
-        loader={imageLoader}
+      <ExportedImage
         src={lecture.image || "/placeholder.svg"}
         alt={altText}
         width={lecture.width}
