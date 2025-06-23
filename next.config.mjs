@@ -7,7 +7,7 @@ const nextConfig = {
   images: {
     formats: ['image/webp', 'image/avif'],
     loader: 'custom',
-    loaderFile: './image-loader.js', // ← Путь относительно корня
+    loaderFile: '/image-loader.js', // ← Путь относительно корня
   },
   compress: true,
   trailingSlash: true,
