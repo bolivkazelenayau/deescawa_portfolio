@@ -115,7 +115,7 @@ const cardElements = useMemo(() =>
     
     return (
       <Card
-        image={item.image.src}
+        image={item.image}
         alt={`Event ${idx + 1}`}
         isSquircle 
         squircleSize="lg"
