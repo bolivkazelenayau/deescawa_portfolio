@@ -6,18 +6,12 @@ const nextConfig = {
   },
   images: {
     formats: ['image/webp', 'image/avif'],
-    loader: 'custom',
-    loaderFile: './inline-loader.js', // Создадим встроенный loader
+    unoptimized: true, // Это точно работает!
   },
   compress: true,
   trailingSlash: true,
   basePath: '',
   assetPrefix: '',
-};
-
-// Встроенный loader
-export const imageLoader = ({ src, width, quality }) => {
-  return src;
 };
 
 export default nextConfig;
