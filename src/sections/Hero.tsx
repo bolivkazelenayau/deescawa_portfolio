@@ -547,7 +547,7 @@ const Hero: FC<HeroProps> = memo(({
             style={{ width: portraitWidth }}
           >
             <Image
-              src={heroImage}
+              src={heroImage.src}
               alt={config.content.portraitAlt || "Hero image"}
               className={IMAGE_CLASSES}
               priority
