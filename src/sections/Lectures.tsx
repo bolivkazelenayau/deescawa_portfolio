@@ -113,22 +113,24 @@ export async function Lectures({ locale }: LecturesProps) {
   const subtitle = (t ? t('subtitle') : null) || FALLBACKS[locale].subtitle;
 
   // Translate lectures efficiently
-  const translatedLectures = lectures.map(lecture => {
-    const translated = translateLecture(lecture, t, locale);
-    // Ensure image is a string (URL)
-    let image: string;
-    if (typeof translated.image === 'string') {
-      image = translated.image;
-    } else if (translated.image && typeof translated.image === 'object' && 'src' in translated.image) {
-      image = translated.image.src;
-    } else {
-      image = '';
-    }
-    return {
-      ...translated,
-      image,
-    };
-  });
+ const translatedLectures = lectures.map(lecture => {
+  const translated = translateLecture(lecture, t, locale);
+  
+  // Ensure image is a string (URL)
+  let image: string;
+  if (typeof translated.image === 'string') {
+    image = translated.image;
+  } else if (translated.image && typeof translated.image === 'object' && 'src' in translated.image) {
+    image = (translated.image as { src: string }).src; // ← Исправили здесь
+  } else {
+    image = '';
+  }
+  
+  return {
+    ...translated,
+    image,
+  };
+});
 
   // Log warning if translations failed (for debugging)
   if (hasError && process.env.NODE_ENV === 'development') {
