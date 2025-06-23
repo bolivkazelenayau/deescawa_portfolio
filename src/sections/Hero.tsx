@@ -1,7 +1,7 @@
 "use client"
 
 import { type FC, useEffect, useRef, useState, useCallback, memo, useMemo } from "react"
-import ExportedImage from "next-image-export-optimizer"
+import ConditionalImage from "@/components/ConditionalImage"
 import { motion, useScroll, useTransform } from "motion/react"
 import Link from "next/link"
 import Button from "@/components/Button"
@@ -552,7 +552,7 @@ const Hero: FC<HeroProps> = memo(({
             className={IMAGE_WRAPPER_CLASSES}
             style={{ width: portraitWidth }}
           >
-            <ExportedImage
+            <ConditionalImage
               src={heroImage.src}
               alt={config.content.portraitAlt || "Hero image"}
               className={IMAGE_CLASSES}

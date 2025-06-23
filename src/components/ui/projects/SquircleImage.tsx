@@ -1,7 +1,7 @@
 "use client"
 
 import { FC, memo } from "react"
-import ExportedImage from "next-image-export-optimizer"
+import ConditionalImage from "@/components/ConditionalImage"
 import { Monoco } from '@monokai/monoco-react'
 import type { ImageLoaderProps } from 'next/image'
 
@@ -36,7 +36,7 @@ const SquircleImage: FC<SquircleImageProps> = memo(({
     clip={true}
     className={className}
   >
-    <ExportedImage
+    <ConditionalImage
       src={src}
       alt={alt}
       width={width}

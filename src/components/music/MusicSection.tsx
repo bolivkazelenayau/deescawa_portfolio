@@ -9,7 +9,7 @@ import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carouse
 import type { CarouselApi } from "@/components/ui/carousel"
 import { cn } from "@/lib/utils"
 import { musicData, CAROUSEL_CONFIG, BREAKPOINTS, type Album } from '@/lib/MusicData'
-import ExportedImage from 'next-image-export-optimizer';
+import ConditionalImage from '../ConditionalImage';
 
 const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
   return src; // Пакет сам управляет оптимизацией
@@ -176,7 +176,7 @@ const MusicCard: React.FC<MusicCardProps> = React.memo(({
         {/* Background image */}
         {shouldLoadImages && (
           <>
-            <ExportedImage
+            <ConditionalImage
               src={album.albumCover}
               alt=""
               className="sr-only"
@@ -208,7 +208,7 @@ const MusicCard: React.FC<MusicCardProps> = React.memo(({
           <div className="relative h-[60%] overflow-hidden flex items-center justify-center bg-white/5">
             {shouldLoadImages ? (
               <>
-                <ExportedImage
+                <ConditionalImage
                   src={album.albumCover}
                   alt=""
                   className={cn(
@@ -225,7 +225,7 @@ const MusicCard: React.FC<MusicCardProps> = React.memo(({
                   fill
                 />
                 <div className="absolute inset-0 bg-white/15 dark:bg-black/8" style={{ zIndex: 2 }} />
-                <ExportedImage
+                <ConditionalImage
                   src={album.albumCover}
                   alt={album.name}
                   className={cn(

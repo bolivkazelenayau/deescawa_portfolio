@@ -3,7 +3,7 @@ import type { ImageLoaderProps } from 'next/image';  // ← Добавить
 import ProjectTitle from "./ProjectTitle";
 import ArrowIcon from "./ArrowIcon";
 import dynamic from "next/dynamic";
-import ExportedImage from "next-image-export-optimizer";
+import ConditionalImage from "@/components/ConditionalImage";
 
 // Добавить loader функцию:
 const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
@@ -59,7 +59,7 @@ const MobileLayout: FC<MobileLayoutProps> = memo(({
               smoothing={smoothing}
             />
           ) : (
-            <ExportedImage
+            <ConditionalImage
               src={image}
               alt={altText}
               width={width}

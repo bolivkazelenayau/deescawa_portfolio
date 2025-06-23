@@ -1,7 +1,7 @@
 "use client"
 
 import { FC, memo, useMemo } from "react"
-import ExportedImage from "next-image-export-optimizer"
+import ConditionalImage from "@/components/ConditionalImage"
 import type { ImageLoaderProps } from 'next/image'  // ← Добавить
 import { Monoco } from '@monokai/monoco-react'
 
@@ -50,7 +50,7 @@ const MonocoImage: FC<MonocoImageProps> = memo(({
 
   return (
     <Monoco {...monocoProps}>
-      <ExportedImage
+      <ConditionalImage
         src={src}
         alt={alt}
         width={width}

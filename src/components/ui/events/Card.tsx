@@ -1,7 +1,7 @@
 import { Monoco } from '@monokai/monoco-react';
 import { ImageLoaderProps } from "next/image";
 import { useMemo, memo } from "react";
-import ExportedImage from 'next-image-export-optimizer';
+import ConditionalImage from '@/components/ConditionalImage';
 
 const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
   return src; // Пакет сам управляет оптимизацией
@@ -80,14 +80,14 @@ const Card: React.FC<CardProps> = memo(({
         className={config.combinedClasses}
         style={MONOCO_STYLE}
       >
-        <ExportedImage {...config.imageProps} />
+        <ConditionalImage {...config.imageProps} />
       </Monoco>
     );
   }
 
   return (
     <div className={`${config.combinedClasses} overflow-hidden rounded-xl`}>
-      <ExportedImage {...config.imageProps} />
+      <ConditionalImage {...config.imageProps} />
     </div>
   );
 });

@@ -1,9 +1,9 @@
 import { FC, memo } from "react";
-import ExportedImage from "next-image-export-optimizer";
 import type { ImageLoaderProps } from 'next/image';  // ← Добавить
 import ProjectTitle from "./ProjectTitle";
 import ArrowIcon from "./ArrowIcon";
 import dynamic from "next/dynamic";
+import ConditionalImage from "@/components/ConditionalImage";
 
 // Добавить loader функцию:
 const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
@@ -77,7 +77,7 @@ const DesktopLayout: FC<DesktopLayoutProps> = memo(({
                 objectFit={isVertical ? "object-contain" : "object-cover"}
               />
             ) : (
-              <ExportedImage
+              <ConditionalImage
                 src={image}
                 alt={altText}
                 width={width}
