@@ -5,7 +5,7 @@ import Image from "next/image"
 import { motion, useScroll, useTransform } from "motion/react"
 import Link from "next/link"
 import Button from "@/components/Button"
-import heroImage from "/images/hero_image.jpg"
+const heroImage = { src: "/images/hero_image.jpg" };
 import useTextRevealAnimation from "@/hooks/useTextRevealAnimation"
 import { useStableTranslation } from "@/hooks/useStableTranslation"
 import React from "react"
