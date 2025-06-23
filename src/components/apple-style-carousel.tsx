@@ -2,11 +2,16 @@
 
 import React, { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
+import type { ImageLoaderProps } from 'next/image';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { CarouselApi } from "@/components/ui/carousel";
 import { Monoco } from '@monokai/monoco-react';
+
+const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
+  return src;
+};
 
 interface Lecture {
   id: string;
@@ -41,15 +46,15 @@ export function AppleStyleCarousel({ lectures }: AppleStyleCarouselProps) {
 
   useEffect(() => {
     if (!api) return;
-    
+
     const updateIndex = () => setActiveIndex(api.selectedScrollSnap());
-    
+
     // Set initial index
     updateIndex();
-    
+
     // Listen for changes
     api.on("select", updateIndex);
-    
+
     // Cleanup
     return () => {
       api.off("select", updateIndex);
@@ -85,7 +90,7 @@ export function AppleStyleCarousel({ lectures }: AppleStyleCarouselProps) {
 
   const handleKeyNavigation = useCallback((e: React.KeyboardEvent) => {
     if (!api) return;
-    
+
     if (e.key === "ArrowLeft") {
       api.scrollPrev();
     } else if (e.key === "ArrowRight") {
@@ -105,10 +110,10 @@ export function AppleStyleCarousel({ lectures }: AppleStyleCarouselProps) {
     >
       <GradientOverlay side="left" hoverSide={hoverSide} />
       <GradientOverlay side="right" hoverSide={hoverSide} />
-      
-      <Carousel 
+
+      <Carousel
         setApi={setApi}
-        className="w-full max-w-9xl mt-8" 
+        className="w-full max-w-9xl mt-8"
         opts={{ loop: true, align: "center" }}
       >
         <CarouselContent>
@@ -137,8 +142,8 @@ const GradientOverlay = ({ side, hoverSide }: { side: "left" | "right"; hoverSid
   <div
     className={cn(
       "absolute top-0 bottom-0 w-1/6 pointer-events-none transition-opacity duration-700 z-10",
-      side === "left" 
-        ? "left-0 bg-linear-to-r from-background via-background/30 to-transparent" 
+      side === "left"
+        ? "left-0 bg-linear-to-r from-background via-background/30 to-transparent"
         : "right-0 bg-linear-to-l from-background via-background/30 to-transparent",
       hoverSide === side ? "opacity-0" : "opacity-60"
     )}
@@ -164,36 +169,37 @@ const ImageContainer = ({ lecture, isActive, isHovered }: { lecture: Lecture; is
     // Remove line breaks for alt text
     altText = lecture.name.replace(/\n/g, ' ');
   }
-  
+
   // Use lecture properties or defaults
   const useSquircle = lecture.isSquircle !== undefined ? lecture.isSquircle : true;
   const borderRadius = lecture.borderRadius || 40;
   const smoothing = lecture.smoothing || 0.8;
-  
+
   // Create the image element with all necessary classes and properties
   const imageElement = (
     <>
-<Image
-  src={lecture.image || "/placeholder.svg"}
-  alt={altText}
-  width={lecture.width}
-  height={lecture.height}
-  className={cn(
-    "w-full h-full object-cover transition-all duration-300 ease-out",
-    "transform-gpu",
-    // Apply zoom and full opacity for both active AND hovered states
-    isActive || isHovered ? 
-      "opacity-100 scale-105" : 
-      "opacity-50 scale-100",
-    lecture.transform?.objectPosition === "center" ? "object-center" : 
-    lecture.transform?.objectPosition === "top" ? "object-top" : "object-bottom",
-  )}
-  style={{ objectPosition: lecture.transform?.objectPosition || "center" }}
-  loading="eager"
-  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-/>
+      <Image
+        loader={imageLoader}
+        src={lecture.image || "/placeholder.svg"}
+        alt={altText}
+        width={lecture.width}
+        height={lecture.height}
+        className={cn(
+          "w-full h-full object-cover transition-all duration-300 ease-out",
+          "transform-gpu",
+          // Apply zoom and full opacity for both active AND hovered states
+          isActive || isHovered ?
+            "opacity-100 scale-105" :
+            "opacity-50 scale-100",
+          lecture.transform?.objectPosition === "center" ? "object-center" :
+            lecture.transform?.objectPosition === "top" ? "object-top" : "object-bottom",
+        )}
+        style={{ objectPosition: lecture.transform?.objectPosition || "center" }}
+        loading="eager"
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+      />
 
-      <div 
+      <div
         className={cn(
           "absolute inset-0 bg-linear-to-t from-black/30 to-transparent backdrop-blur-[6px] transition-all duration-300",
           isActive || isHovered ? "opacity-0" : "opacity-100"
@@ -202,7 +208,7 @@ const ImageContainer = ({ lecture, isActive, isHovered }: { lecture: Lecture; is
       />
     </>
   );
-  
+
   // If not using squircle, render with regular rounded corners
   if (!useSquircle) {
     return (
@@ -211,7 +217,7 @@ const ImageContainer = ({ lecture, isActive, isHovered }: { lecture: Lecture; is
       </div>
     );
   }
-  
+
   // Otherwise use Monoco for squircle shape
   return (
     <Monoco
@@ -235,7 +241,7 @@ const ImageContainer = ({ lecture, isActive, isHovered }: { lecture: Lecture; is
 const LectureText = ({ lecture, isActive, isHovered }: { lecture: Lecture; isActive: boolean; isHovered: boolean }) => {
   // Handle empty strings and ensure we have an array to work with for description
   const descriptionLines = lecture.description?.split("\n").filter(Boolean) || [];
-  
+
   // Handle name with line breaks if it's a string
   const renderName = () => {
     if (typeof lecture.name === 'string') {
