@@ -13,13 +13,26 @@ function isSupportedLocale(locale: string): locale is SupportedLocale {
   return i18nConfig.locales.includes(locale as SupportedLocale);
 }
 
-// Optimized Accept-Language parser with caching
+// Optimized Accept-Language parser with LRU cache
 const parseAcceptLanguage = (() => {
+  const MAX_CACHE_SIZE = 50;
   const cache = new Map<string, SupportedLocale>();
   
   return (acceptLanguageHeader: string): SupportedLocale => {
     if (cache.has(acceptLanguageHeader)) {
-      return cache.get(acceptLanguageHeader)!;
+      // Move to end (LRU behavior)
+      const value = cache.get(acceptLanguageHeader)!;
+      cache.delete(acceptLanguageHeader);
+      cache.set(acceptLanguageHeader, value);
+      return value;
+    }
+    
+    // Clear oldest entries if cache is full
+    if (cache.size >= MAX_CACHE_SIZE) {
+      const firstKey = cache.keys().next().value;
+      if (typeof firstKey === 'string') {
+        cache.delete(firstKey);
+      }
     }
     
     const languages = acceptLanguageHeader
@@ -61,9 +74,10 @@ export function getDefaultLocale(acceptLanguageHeader?: string): SupportedLocale
   return i18nConfig.fallbackLocale;
 }
 
-// Enhanced localStorage wrapper with error handling
+// Enhanced localStorage wrapper with memory cache
 class LanguageStorage {
   private isAvailable: boolean | null = null;
+  private memoryCache = new Map<string, string>();
   
   private checkAvailability(): boolean {
     if (this.isAvailable !== null) return this.isAvailable;
@@ -86,16 +100,28 @@ class LanguageStorage {
   }
   
   get(key: string): string | null {
+    // Check memory cache first
+    if (this.memoryCache.has(key)) {
+      return this.memoryCache.get(key)!;
+    }
+    
     if (!this.checkAvailability()) return null;
     
     try {
-      return localStorage.getItem(key);
+      const value = localStorage.getItem(key);
+      if (value) {
+        this.memoryCache.set(key, value);
+      }
+      return value;
     } catch {
       return null;
     }
   }
   
   set(key: string, value: string): boolean {
+    // Update memory cache immediately
+    this.memoryCache.set(key, value);
+    
     if (!this.checkAvailability()) return false;
     
     try {
@@ -105,6 +131,11 @@ class LanguageStorage {
       console.warn('Failed to save language preference:', e);
       return false;
     }
+  }
+  
+  // Method to clear memory cache if needed
+  clearCache(): void {
+    this.memoryCache.clear();
   }
 }
 
@@ -137,8 +168,26 @@ export function getUserLanguage(): SupportedLocale {
   return detected;
 }
 
-// Debounced language setting to prevent rapid localStorage writes
-let setLanguageTimeout: NodeJS.Timeout | null = null;
+// More efficient debounced language setting
+const createDebouncedSetter = () => {
+  let timeoutId: NodeJS.Timeout | null = null;
+  
+  return (locale: SupportedLocale) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    
+    timeoutId = setTimeout(() => {
+      const success = storage.set(i18nConfig.storageKey, locale);
+      if (!success) {
+        console.warn('Failed to persist language preference');
+      }
+      timeoutId = null;
+    }, 100);
+  };
+};
+
+const debouncedSetStorage = createDebouncedSetter();
 
 export function setUserLanguage(locale: string): boolean {
   if (typeof window === 'undefined' || !isSupportedLocale(locale)) {
@@ -149,50 +198,68 @@ export function setUserLanguage(locale: string): boolean {
   sessionCache = locale;
   
   // Debounce localStorage writes
-  if (setLanguageTimeout) {
-    clearTimeout(setLanguageTimeout);
-  }
-  
-  setLanguageTimeout = setTimeout(() => {
-    const success = storage.set(i18nConfig.storageKey, locale);
-    if (!success) {
-      console.warn('Failed to persist language preference');
-    }
-  }, 100);
+  debouncedSetStorage(locale);
   
   return true;
 }
 
-// Optimized path locale extraction
+// Memoized path locale extraction
+const pathLocaleCache = new Map<string, ReturnType<typeof getLocaleFromPath>>();
+const MAX_PATH_CACHE_SIZE = 100;
+
 export function getLocaleFromPath(pathname: string): {
   locale: SupportedLocale;
   isValid: boolean;
   pathWithoutLocale: string;
 } {
+  // Check cache first
+  if (pathLocaleCache.has(pathname)) {
+    return pathLocaleCache.get(pathname)!;
+  }
+  
+  // Clear cache if it gets too large
+  if (pathLocaleCache.size >= MAX_PATH_CACHE_SIZE) {
+    pathLocaleCache.clear();
+  }
+  
   const segments = pathname.split('/').filter(Boolean);
   const potentialLocale = segments[0];
   
-  if (potentialLocale && isSupportedLocale(potentialLocale)) {
-    return {
-      locale: potentialLocale,
-      isValid: true,
-      pathWithoutLocale: '/' + segments.slice(1).join('/')
-    };
-  }
+  const result = potentialLocale && isSupportedLocale(potentialLocale)
+    ? {
+        locale: potentialLocale,
+        isValid: true,
+        pathWithoutLocale: '/' + segments.slice(1).join('/')
+      }
+    : {
+        locale: getDefaultLocale(),
+        isValid: false,
+        pathWithoutLocale: pathname
+      };
   
-  return {
-    locale: getDefaultLocale(),
-    isValid: false,
-    pathWithoutLocale: pathname
-  };
+  pathLocaleCache.set(pathname, result);
+  return result;
 }
 
 // Utility function to clear cache (useful for testing)
 export function clearLanguageCache(): void {
   sessionCache = null;
+  pathLocaleCache.clear();
   if (typeof window !== 'undefined') {
-    storage.set(i18nConfig.storageKey, '');
+    storage.clearCache();
   }
+}
+
+// Cleanup function for proper resource management
+export function cleanup(): void {
+  sessionCache = null;
+  pathLocaleCache.clear();
+  storage.clearCache();
+}
+
+// Auto-cleanup on page unload (optional)
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', cleanup);
 }
 
 // Hook for React components to get current locale with reactivity

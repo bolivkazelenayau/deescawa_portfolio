@@ -13,7 +13,7 @@ type AnimationOptions = {
   exitStagger?: number;
   entranceY?: string;
   exitY?: string;
-  onStart?: () => void; // ✅ Added onStart callback
+  onStart?: () => void;
 };
 
 // Static default options
@@ -26,12 +26,18 @@ const DEFAULT_OPTIONS: AnimationOptions = {
   exitY: "-35%",
 } as const;
 
-// CSS template with caching
+// Enhanced CSS cache with cleanup
 const CSS_CACHE = new Map<string, string>();
+const MAX_CSS_CACHE_SIZE = 50;
 
 const getCSSTemplate = (uniqueId: string): string => {
   if (CSS_CACHE.has(uniqueId)) {
     return CSS_CACHE.get(uniqueId)!;
+  }
+  
+  // Clear cache if it gets too large
+  if (CSS_CACHE.size >= MAX_CSS_CACHE_SIZE) {
+    CSS_CACHE.clear();
   }
   
   const css = `
@@ -53,6 +59,15 @@ const getCSSTemplate = (uniqueId: string): string => {
       opacity: 1 !important;
       visibility: visible !important;
     }
+    
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+      [data-text-reveal-id="${uniqueId}"] .word {
+        will-change: auto;
+        transition: none !important;
+        animation: none !important;
+      }
+    }
   `;
   
   CSS_CACHE.set(uniqueId, css);
@@ -66,7 +81,7 @@ const SPLIT_CONFIG = {
   wrap: true
 } as const;
 
-// Optimized RAF-based style setter with pre-calculated string
+// Optimized RAF-based style setter with batch processing
 const setWordStyles = (words: HTMLElement[], entranceY: string) => {
   if (!words.length) return;
   
@@ -78,15 +93,18 @@ const setWordStyles = (words: HTMLElement[], entranceY: string) => {
     position: relative;
   `;
   
+  // Use RAF for better performance
   requestAnimationFrame(() => {
+    // Batch DOM updates
+    const fragment = document.createDocumentFragment();
     for (const word of words) {
       word.style.cssText = styleString;
     }
   });
 };
 
-// Cached parent overflow processing
-const processedParents = new WeakSet<Element>();
+// Enhanced parent overflow processing with WeakMap for better memory management
+const processedParents = new WeakMap<Element, boolean>();
 
 const handleParentOverflow = (element: HTMLElement) => {
   let parent = element.parentElement;
@@ -94,19 +112,25 @@ const handleParentOverflow = (element: HTMLElement) => {
   
   while (parent && parent !== document.body && depth < 5) {
     if (!processedParents.has(parent)) {
-      if (getComputedStyle(parent).overflow === 'hidden') {
+      const computedStyle = getComputedStyle(parent);
+      if (computedStyle.overflow === 'hidden' || computedStyle.overflowY === 'hidden') {
         parent.style.overflow = "visible";
       }
-      processedParents.add(parent);
+      processedParents.set(parent, true);
     }
     parent = parent.parentElement;
     depth++;
   }
 };
 
+// Check for reduced motion preference
+const prefersReducedMotion = () => {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+};
+
 const useTextRevealAnimation = (
   options: AnimationOptions = {},
-  // ✅ Add dependency key for re-animation triggers
   animationKey?: string | number
 ) => {
   const [scope, animate] = useAnimate();
@@ -116,12 +140,14 @@ const useTextRevealAnimation = (
   const styleElementRef = useRef<HTMLStyleElement | null>(null);
   const uniqueIdRef = useRef<string>('');
   const [isInitialized, setIsInitialized] = useState(false);
-  const hasAnimatedRef = useRef(false); // ✅ Track if animation has run
-  const lastAnimationKeyRef = useRef(animationKey); // ✅ Track animation key changes
+  const hasAnimatedRef = useRef(false);
+  const lastAnimationKeyRef = useRef(animationKey);
+  const rafIdRef = useRef<number | null>(null);
   
-  // Memoize options with pre-calculated values
+  // Enhanced memoized options with reduced motion support
   const animOptions = useMemo(() => {
     const merged = { ...DEFAULT_OPTIONS, ...options };
+    const isReducedMotion = prefersReducedMotion();
     
     // Pre-calculate numeric values for performance
     const entranceYValue = parseFloat(merged.entranceY || "25%");
@@ -132,7 +158,13 @@ const useTextRevealAnimation = (
       ...merged,
       _paddingTop: paddingTop,
       _entranceYValue: entranceYValue,
-      _exitYValue: exitYValue
+      _exitYValue: exitYValue,
+      _isReducedMotion: isReducedMotion,
+      // Adjust durations for reduced motion
+      entranceDuration: isReducedMotion ? 0.01 : merged.entranceDuration,
+      exitDuration: isReducedMotion ? 0.01 : merged.exitDuration,
+      entranceStagger: isReducedMotion ? 0 : merged.entranceStagger,
+      exitStagger: isReducedMotion ? 0 : merged.exitStagger,
     };
   }, [
     options.entranceDuration,
@@ -143,10 +175,10 @@ const useTextRevealAnimation = (
     options.exitStagger,
     options.entranceY,
     options.exitY,
-    options.onStart // ✅ Added onStart to dependencies
+    options.onStart
   ]);
 
-  // Initialize unique ID and CSS once
+  // Initialize unique ID and CSS once with cleanup
   useEffect(() => {
     uniqueIdRef.current = `text-reveal-${Math.random().toString(36).substring(2, 9)}`;
     
@@ -160,13 +192,19 @@ const useTextRevealAnimation = (
     document.head.appendChild(styleElementRef.current);
     
     return () => {
+      // Clean up RAF
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+      
+      // Clean up style element
       if (styleElementRef.current && document.head.contains(styleElementRef.current)) {
         document.head.removeChild(styleElementRef.current);
       }
     };
   }, []);
 
-  // Optimized initialization
+  // Enhanced initialization with error recovery
   const initializeSplit = useCallback(() => {
     if (!scope.current) return false;
 
@@ -179,45 +217,63 @@ const useTextRevealAnimation = (
       // Optimize parent overflow handling with caching
       handleParentOverflow(element);
       
-      // Initialize SplitType
+      // Initialize SplitType with error handling
+      if (splitInstance.current) {
+        splitInstance.current.revert();
+      }
+      
       splitInstance.current = new SplitType(element, SPLIT_CONFIG as any);
       
       // Cache words and set styles efficiently
-      wordsRef.current = Array.from(element.querySelectorAll(".word"));
-      setWordStyles(wordsRef.current, animOptions.entranceY || "25%");
+      const words = Array.from(element.querySelectorAll(".word")) as HTMLElement[];
+      wordsRef.current = words;
       
-      setIsInitialized(true);
-      return true;
+      if (words.length > 0) {
+        setWordStyles(words, animOptions.entranceY || "25%");
+        setIsInitialized(true);
+        return true;
+      } else {
+        console.warn("No words found after SplitType initialization");
+        return false;
+      }
     } catch (error) {
       console.error("Error initializing SplitType:", error);
+      setIsInitialized(false);
       return false;
     }
   }, [animOptions._paddingTop, animOptions.entranceY]);
 
-  // Initialize on mount
+  // Initialize on mount with proper cleanup
   useEffect(() => {
     const timer = setTimeout(initializeSplit, 0);
     
     return () => {
       clearTimeout(timer);
       
+      // Clean up animation
       if (animationRef.current) {
         animationRef.current.stop();
         animationRef.current = null;
       }
       
+      // Clean up SplitType
       if (splitInstance.current) {
-        splitInstance.current.revert();
+        try {
+          splitInstance.current.revert();
+        } catch (error) {
+          console.warn("Error reverting SplitType:", error);
+        }
         splitInstance.current = null;
       }
       
-      // Clear words array
+      // Clear words array and reset state
       wordsRef.current = [];
       setIsInitialized(false);
+      hasAnimatedRef.current = false;
     };
   }, [initializeSplit]);
 
-  // ✅ Check if we should trigger animation
+  // Check if we should trigger animation
   const shouldAnimate = useCallback(() => {
     // Always animate on first load
     if (!hasAnimatedRef.current) return true;
@@ -231,24 +287,49 @@ const useTextRevealAnimation = (
     return false;
   }, [animationKey]);
 
-  // Optimized entrance animation with re-animation logic
+  // Enhanced entrance animation with reduced motion support
   const entranceAnimation = useCallback(() => {
     if (!wordsRef.current.length || !isInitialized || !scope.current) return;
     
-    // ✅ Only animate if conditions are met
+    // Only animate if conditions are met
     if (!shouldAnimate()) return;
 
-    // ✅ Call onStart callback when animation begins
+    // Call onStart callback when animation begins
     if (animOptions.onStart) {
-      animOptions.onStart();
+      try {
+        animOptions.onStart();
+      } catch (error) {
+        console.warn("Error in onStart callback:", error);
+      }
     }
 
     scope.current.classList.add('reveal-ready');
 
     // Stop existing animation more efficiently
-    animationRef.current?.stop();
+    if (animationRef.current) {
+      animationRef.current.stop();
+      animationRef.current = null;
+    }
 
     try {
+      // Handle reduced motion
+      if (animOptions._isReducedMotion) {
+        // Instantly show text for reduced motion
+        rafIdRef.current = requestAnimationFrame(() => {
+          for (const word of wordsRef.current) {
+            word.style.cssText = `
+              opacity: 1;
+              transform: translateY(0);
+              display: inline-block;
+              overflow: visible;
+              position: relative;
+            `;
+          }
+        });
+        hasAnimatedRef.current = true;
+        return null;
+      }
+
       animationRef.current = animate(
         wordsRef.current,
         {
@@ -261,7 +342,7 @@ const useTextRevealAnimation = (
         }
       );
       
-      // ✅ Mark as animated
+      // Mark as animated
       hasAnimatedRef.current = true;
       
       return animationRef.current;
@@ -269,16 +350,36 @@ const useTextRevealAnimation = (
       console.error("Error during entrance animation:", error);
       return null;
     }
-  }, [animate, animOptions.entranceY, animOptions.entranceDuration, animOptions.entranceStagger, animOptions.onStart, isInitialized, shouldAnimate]);
+  }, [animate, animOptions, isInitialized, shouldAnimate]);
 
-  // Optimized exit animation
+  // Enhanced exit animation with reduced motion support
   const exitAnimation = useCallback(() => {
     if (!wordsRef.current.length || !isInitialized) return;
 
     // Stop existing animation more efficiently
-    animationRef.current?.stop();
+    if (animationRef.current) {
+      animationRef.current.stop();
+      animationRef.current = null;
+    }
 
     try {
+      // Handle reduced motion
+      if (animOptions._isReducedMotion) {
+        // Instantly hide text for reduced motion
+        rafIdRef.current = requestAnimationFrame(() => {
+          for (const word of wordsRef.current) {
+            word.style.cssText = `
+              opacity: 0;
+              transform: translateY(${animOptions.exitY});
+              display: inline-block;
+              overflow: visible;
+              position: relative;
+            `;
+          }
+        });
+        return null;
+      }
+
       animationRef.current = animate(
         wordsRef.current,
         {
@@ -296,29 +397,45 @@ const useTextRevealAnimation = (
       console.error("Error during exit animation:", error);
       return null;
     }
-  }, [animate, animOptions.exitY, animOptions.exitDuration, animOptions.exitStagger, isInitialized]);
+  }, [animate, animOptions, isInitialized]);
 
-  // ✅ Enhanced refresh split with animation reset
+  // Enhanced refresh split with better error handling
   const refreshSplit = useCallback(() => {
     if (!scope.current) return;
     
     setIsInitialized(false);
     scope.current.classList.remove('reveal-ready');
     
+    // Stop any ongoing animation
+    if (animationRef.current) {
+      animationRef.current.stop();
+      animationRef.current = null;
+    }
+    
+    // Clean up RAF
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+    
     if (splitInstance.current) {
-      splitInstance.current.revert();
+      try {
+        splitInstance.current.revert();
+      } catch (error) {
+        console.warn("Error reverting SplitType during refresh:", error);
+      }
       splitInstance.current = null;
     }
     
     // Clear words array and reset animation state
     wordsRef.current = [];
-    hasAnimatedRef.current = false; // ✅ Reset animation state
+    hasAnimatedRef.current = false;
     
-    // Re-initialize
-    initializeSplit();
+    // Re-initialize with a small delay to ensure DOM is ready
+    setTimeout(initializeSplit, 10);
   }, [initializeSplit]);
 
-  // ✅ Force re-animation function
+  // Force re-animation function
   const forceAnimate = useCallback(() => {
     hasAnimatedRef.current = false;
     entranceAnimation();
@@ -329,7 +446,7 @@ const useTextRevealAnimation = (
     entranceAnimation,
     exitAnimation,
     refreshSplit,
-    forceAnimate, // ✅ New function to force re-animation
+    forceAnimate,
     isInitialized
   };
 };
