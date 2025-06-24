@@ -83,7 +83,7 @@ const EventStack_1: React.FC<EventStackProps> = memo(({ className = "" }) => {
 
   // Memoize container className
   const containerClassName = useMemo(() => 
-    `container mt-24 ${className}`.trim(), 
+    `container-stack mt-24 ${className}`.trim(), 
     [className]
   );
 
