@@ -2,13 +2,7 @@
 
 import { FC, memo, useMemo } from "react"
 import ConditionalImage from "@/components/ConditionalImage"
-import type { ImageLoaderProps } from 'next/image'  // ← Добавить
 import { Monoco } from '@monokai/monoco-react'
-
-// Добавить loader функцию:
-const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
-  return src; // Пакет сам управляет оптимизацией
-};
 
 interface MonocoImageProps {
   src: string
@@ -21,8 +15,11 @@ interface MonocoImageProps {
   objectFit?: "cover" | "contain" | "fill" | "none" | "scale-down"
 }
 
-// Static class to prevent recreation
-const IMAGE_CLASSES = "w-full h-full";
+// Static constants
+const DEFAULT_BORDER_RADIUS = 36;
+const DEFAULT_SMOOTHING = 0.8;
+const DEFAULT_OBJECT_FIT = "cover";
+const BASE_IMAGE_CLASSES = "w-full h-full";
 
 const MonocoImage: FC<MonocoImageProps> = memo(({
   src,
@@ -30,26 +27,23 @@ const MonocoImage: FC<MonocoImageProps> = memo(({
   width,
   height,
   className = "",
-  borderRadius = 36,
-  smoothing = 0.8,
-  objectFit = "cover"
+  borderRadius = DEFAULT_BORDER_RADIUS,
+  smoothing = DEFAULT_SMOOTHING,
+  objectFit = DEFAULT_OBJECT_FIT
 }) => {
-  // Memoize image className
+  // Memoized image className - only recalculate when objectFit changes
   const imageClassName = useMemo(() => 
-    `object-${objectFit} ${IMAGE_CLASSES}`,
+    `object-${objectFit} ${BASE_IMAGE_CLASSES}`,
     [objectFit]
   );
 
-  // Memoize Monoco props
-  const monocoProps = useMemo(() => ({
-    borderRadius,
-    smoothing,
-    clip: true,
-    className
-  }), [borderRadius, smoothing, className]);
-
   return (
-    <Monoco {...monocoProps}>
+    <Monoco
+      borderRadius={borderRadius}
+      smoothing={smoothing}
+      clip={true}
+      className={className}
+    >
       <ConditionalImage
         src={src}
         alt={alt}
@@ -58,6 +52,18 @@ const MonocoImage: FC<MonocoImageProps> = memo(({
         className={imageClassName}
       />
     </Monoco>
+  );
+}, (prevProps, nextProps) => {
+  // Optimized shallow comparison
+  return (
+    prevProps.src === nextProps.src &&
+    prevProps.alt === nextProps.alt &&
+    prevProps.width === nextProps.width &&
+    prevProps.height === nextProps.height &&
+    prevProps.className === nextProps.className &&
+    prevProps.borderRadius === nextProps.borderRadius &&
+    prevProps.smoothing === nextProps.smoothing &&
+    prevProps.objectFit === nextProps.objectFit
   );
 });
 

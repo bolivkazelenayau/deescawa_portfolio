@@ -5,68 +5,55 @@ import ConditionalImage from "@/components/ConditionalImage"
 import { motion, useScroll, useTransform } from "motion/react"
 import Link from "next/link"
 import Button from "@/components/Button"
-const heroImage = { src: "/images/hero/hero_image.jpg" };
 import useTextRevealAnimation from "@/hooks/useTextRevealAnimation"
 import { useStableTranslation } from "@/hooks/useStableTranslation"
 import React from "react"
 import dynamic from 'next/dynamic'
-import type { ImageLoaderProps } from 'next/image';
 
-const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
-  return src; // Пакет сам управляет оптимизацией
-};
+// Static constants
+const heroImage = { src: "/images/hero/hero_image.jpg" };
+const EMAIL_ADDRESS = "hello@deescawa.com";
+const HEADER_OFFSET = 80;
 
+// Animation timing constants
+const ANIMATION_TIMING = {
+  DURATION: 0.4,
+  BUTTON_DELAY_1: 0.5,
+  BUTTON_DELAY_2: 0.7,
+  SERVICE_BASE_DELAY: 0.3,
+  SERVICE_LINE_STAGGER: 0.08,
+  SERVICE_TEXT_DELAY: 0.15,
+  SERVICE_ARROW_DELAY: 0.1,
+  SERVICE_BOTTOM_LINE_DELAY: 0.15,
+  SUBTITLE_DELAY: 0.3
+} as const;
 
-// Lazy load icon with better fallback
+// Static easing curve
+const EASING = [0.25, 0.46, 0.45, 0.94] as const;
+
+// Static CSS classes
+const CSS_CLASSES = {
+  SECTION: "min-h-screen",
+  GRID: "grid md:grid-cols-12 h-screen items-stretch sticky top-0",
+  LEFT_COL: "md:col-span-7 flex flex-col justify-start md:justify-center min-h-screen md:min-h-0 xs:pt-32 md:pt-0",
+  CONTAINER: "container max-w-full! md:py-0",
+  HEADING_WRAPPER: "flex items-center md:items-start",
+  HEADING_OVERFLOW: "overflow-hidden w-full",
+  HEADING: "kern whitespace-pre-line text-5xl xs:text-6xl xl:text-6xl 2xl:text-8xl xl:mt-6 xs:-mt-12 md:mt-4 font-medium tracking-[-3px] text-hidden-initially",
+  BUTTONS_WRAPPER: "flex flex-col md:flex-row md:items-center mt-6 md:mt-16 items-start gap-6 md:gap-12",
+  RIGHT_COL: "md:col-span-5 relative",
+  IMAGE_WRAPPER: "h-full w-full md:absolute md:right-0",
+  IMAGE: "size-full object-cover",
+  SUBTITLE: "xs:text-2xl md:text-2xl xl:text-5xl max-w-4xl tracking-[-0.02em] font-normal leading-tight xl:-mt-3 xs:-mt-6"
+} as const;
+
+// Optimized dynamic import
 const DoubleChevronIcon = dynamic(() => import('@/components/DoubleChevronIcon'), {
   loading: () => <div className="w-4 h-4 bg-transparent" />,
   ssr: false
-})
+});
 
-// Static constants - UPDATED FOR SNAPPY ANIMATIONS
-const HEADER_OFFSET = 80
-const ANIMATION_DURATION = 0.4 // Faster base duration
-const ANIMATION_DELAY_BUTTON_1 = 0.5 // Snappier button timing
-const ANIMATION_DELAY_BUTTON_2 = 0.7
-const SERVICE_ANIMATION_DELAY_BASE = 0.3 // Earlier start
-const SERVICE_LINE_STAGGER = 0.08 // Fast line stagger
-const SERVICE_TEXT_DELAY = 0.15 // Quick delay between line and text
-const SERVICE_ARROW_DELAY = 0.1 // Snappy arrow appearance
-const SERVICE_BOTTOM_LINE_DELAY = 0.15 // Reduced delay for bottom line
-const EMAIL_ADDRESS = "hello@deescawa.com"
-
-// Static class names
-const SECTION_CLASSES = "min-h-screen"
-const GRID_CLASSES = "grid md:grid-cols-12 h-screen items-stretch sticky top-0"
-const LEFT_COL_CLASSES = "md:col-span-7 flex flex-col justify-start md:justify-center min-h-screen md:min-h-0 xs:pt-32 md:pt-0"
-const CONTAINER_CLASSES = "container max-w-full! md:py-0"
-const HEADING_WRAPPER_CLASSES = "flex items-center md:items-start"
-const HEADING_OVERFLOW_CLASSES = "overflow-hidden w-full"
-const HEADING_CLASSES = "kern whitespace-pre-line text-5xl xs:text-6xl xl:text-6xl 2xl:text-8xl xl:mt-6 xs:-mt-12  md:mt-4 font-medium tracking-[-3px] text-hidden-initially"
-const BUTTONS_WRAPPER_CLASSES = "flex flex-col md:flex-row md:items-center mt-6 md:mt-16 items-start gap-6 md:gap-12"
-const RIGHT_COL_CLASSES = "md:col-span-5 relative"
-const IMAGE_WRAPPER_CLASSES = "h-full w-full md:absolute md:right-0"
-const IMAGE_CLASSES = "size-full object-cover"
-
-// Static animation configs - UPDATED FOR CONSISTENCY
-const BUTTON_ANIMATION_CONFIG_1 = {
-  duration: ANIMATION_DURATION,
-  delay: ANIMATION_DELAY_BUTTON_1,
-  ease: [0.25, 0.46, 0.45, 0.94]
-} as const;
-
-const BUTTON_ANIMATION_CONFIG_2 = {
-  duration: ANIMATION_DURATION,
-  delay: ANIMATION_DELAY_BUTTON_2,
-  ease: [0.25, 0.46, 0.45, 0.94]
-} as const;
-
-const IMAGE_ANIMATION_CONFIG = {
-  duration: 0.6,
-  ease: "easeOut"
-} as const;
-
-// Service interface for type safety
+// Service interface
 interface ServiceItem {
   title: string | React.ReactNode;
   href: string;
@@ -79,7 +66,7 @@ interface HeroProps {
   showServiceContainerLines?: boolean;
 }
 
-// Smooth scroll utility
+// Optimized smooth scroll utility
 const smoothScrollTo = (targetId: string) => {
   const targetElement = document.getElementById(targetId);
   if (targetElement) {
@@ -93,7 +80,7 @@ const smoothScrollTo = (targetId: string) => {
   }
 };
 
-// ServiceLink component - UPDATED WITH SNAPPY STAGGERED ANIMATIONS
+// Enhanced ServiceLink with better performance
 const ServiceLink = memo(({
   service,
   index,
@@ -113,8 +100,8 @@ const ServiceLink = memo(({
     }
   }, [service.href]);
 
-  // Handle React elements and newlines in strings
-  const renderServiceContent = () => {
+  // Memoized service content rendering
+  const serviceContent = useMemo(() => {
     if (React.isValidElement(service.title)) {
       return service.title;
     }
@@ -129,35 +116,38 @@ const ServiceLink = memo(({
     }
 
     return <span>{service.title}</span>;
-  };
+  }, [service.title]);
 
-  // Calculate consistent timing
-  const lineDelay = SERVICE_ANIMATION_DELAY_BASE + (index * SERVICE_LINE_STAGGER);
-  const textDelay = lineDelay + SERVICE_TEXT_DELAY;
-  const arrowDelay = textDelay + SERVICE_ARROW_DELAY;
+  // Memoized timing calculations
+  const timing = useMemo(() => ({
+    lineDelay: ANIMATION_TIMING.SERVICE_BASE_DELAY + (index * ANIMATION_TIMING.SERVICE_LINE_STAGGER),
+    textDelay: ANIMATION_TIMING.SERVICE_BASE_DELAY + (index * ANIMATION_TIMING.SERVICE_LINE_STAGGER) + ANIMATION_TIMING.SERVICE_TEXT_DELAY,
+    arrowDelay: ANIMATION_TIMING.SERVICE_BASE_DELAY + (index * ANIMATION_TIMING.SERVICE_LINE_STAGGER) + ANIMATION_TIMING.SERVICE_TEXT_DELAY + ANIMATION_TIMING.SERVICE_ARROW_DELAY
+  }), [index]);
 
   return (
     <div className="relative">
-      {/* Animated separator line - FAST STAGGER */}
+      {/* Animated separator line */}
       {index > 0 && (
         <motion.div
           initial={{ width: 0 }}
           animate={isAnimating ? { width: '100%' } : { width: 0 }}
           transition={{
-            duration: 0.25, // Faster line animation
-            delay: lineDelay,
-            ease: [0.25, 0.46, 0.45, 0.94] // Consistent easing
+            duration: 0.25,
+            delay: timing.lineDelay,
+            ease: EASING
           }}
           className="border-t border-gray-400 mb-3 md:mb-2 xl:mb-4"
+          style={{ willChange: 'width' }}
         />
       )}
 
-      {/* Service content - SNAPPY TEXT APPEARANCE */}
+      {/* Service content */}
       <motion.div
         initial={{
           opacity: 0,
-          x: -30, // Less dramatic movement
-          scale: 0.98 // Subtle scale
+          x: -30,
+          scale: 0.98
         }}
         animate={isAnimating ? {
           opacity: 1,
@@ -169,11 +159,12 @@ const ServiceLink = memo(({
           scale: 0.98
         }}
         transition={{
-          duration: 0.3, // Fast text animation
-          delay: textDelay,
-          ease: [0.25, 0.46, 0.45, 0.94] // Consistent easing
+          duration: 0.3,
+          delay: timing.textDelay,
+          ease: EASING
         }}
         className="py-3 md:py-2 xl:py-2 relative group/service overflow-hidden"
+        style={{ willChange: 'transform, opacity' }}
       >
         <div className="relative flex items-center justify-between">
           <Link
@@ -183,7 +174,7 @@ const ServiceLink = memo(({
             rel={service.external ? "noopener noreferrer" : undefined}
             className="xs:text-xs md:text-xs xl:text-xl font-normal tracking-tight leading-relaxed hover:text-gray-300 transition-all duration-200 cursor-pointer group flex-1 uppercase group-hover/service:translate-x-2"
           >
-            {renderServiceContent()}
+            {serviceContent}
             {service.external && (
               <span className="inline-block ml-2 text-lg opacity-60 group-hover:opacity-100 transition-opacity duration-200">
                 ↗
@@ -191,16 +182,17 @@ const ServiceLink = memo(({
             )}
           </Link>
 
-          {/* Arrow - SNAPPY APPEARANCE */}
+          {/* Arrow */}
           <motion.div
             initial={{ opacity: 0, x: 15, scale: 0.9 }}
             animate={isAnimating ? { opacity: 1, x: 0, scale: 1 } : { opacity: 0, x: 15, scale: 0.9 }}
             transition={{
-              delay: arrowDelay,
-              duration: 0.25, // Fast arrow animation
-              ease: [0.25, 0.46, 0.45, 0.94] // Consistent easing
+              delay: timing.arrowDelay,
+              duration: 0.25,
+              ease: EASING
             }}
             className="ml-4 group-hover/service:-translate-x-2 transition-transform duration-200"
+            style={{ willChange: 'transform, opacity' }}
           >
             <svg
               width="24"
@@ -220,11 +212,20 @@ const ServiceLink = memo(({
       </motion.div>
     </div>
   );
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.service.title === nextProps.service.title &&
+    prevProps.service.href === nextProps.service.href &&
+    prevProps.service.external === nextProps.service.external &&
+    prevProps.index === nextProps.index &&
+    prevProps.isAnimating === nextProps.isAnimating &&
+    prevProps.totalServices === nextProps.totalServices
+  );
 });
 
 ServiceLink.displayName = 'ServiceLink';
 
-// Optimized button components - UPDATED WITH CONSISTENT TIMING
+// Optimized button components
 const ViewWorkButton = memo(({
   isAnimating,
   buttonText,
@@ -237,7 +238,12 @@ const ViewWorkButton = memo(({
   <motion.div
     initial={{ opacity: 0, y: "100%" }}
     animate={isAnimating ? { opacity: 1, y: 0 } : { opacity: 0, y: "100%" }}
-    transition={BUTTON_ANIMATION_CONFIG_1}
+    transition={{
+      duration: ANIMATION_TIMING.DURATION,
+      delay: ANIMATION_TIMING.BUTTON_DELAY_1,
+      ease: EASING
+    }}
+    style={{ willChange: 'transform, opacity' }}
   >
     <Button
       variant="secondary"
@@ -250,9 +256,9 @@ const ViewWorkButton = memo(({
       <span>{buttonText}</span>
     </Button>
   </motion.div>
-))
+));
 
-ViewWorkButton.displayName = 'ViewWorkButton'
+ViewWorkButton.displayName = 'ViewWorkButton';
 
 const ContactButton = memo(({
   isAnimating,
@@ -264,7 +270,12 @@ const ContactButton = memo(({
   <motion.div
     initial={{ opacity: 0, y: "100%" }}
     animate={isAnimating ? { opacity: 1, y: 0 } : { opacity: 0, y: "100%" }}
-    transition={BUTTON_ANIMATION_CONFIG_2}
+    transition={{
+      duration: ANIMATION_TIMING.DURATION,
+      delay: ANIMATION_TIMING.BUTTON_DELAY_2,
+      ease: EASING
+    }}
+    style={{ willChange: 'transform, opacity' }}
   >
     <Link href={`mailto:${EMAIL_ADDRESS}`} passHref className="inline-block">
       <Button
@@ -277,31 +288,30 @@ const ContactButton = memo(({
       </Button>
     </Link>
   </motion.div>
-))
+));
 
-ContactButton.displayName = 'ContactButton'
+ContactButton.displayName = 'ContactButton';
 
 const Hero: FC<HeroProps> = memo(({
   enableZoomAnimation = false,
   locale,
   showServiceContainerLines = true
 }) => {
-  const scrollingDiv = useRef<HTMLDivElement>(null)
-  const sectionRef = useRef<HTMLElement>(null)
-  const [isVisible, setIsVisible] = useState(false)
-  const hasTriggeredRef = useRef(false)
-  const [animationReady, setAnimationReady] = useState(false)
-  const [hasImageLoaded, setHasImageLoaded] = useState(false)
+  const scrollingDiv = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const hasTriggeredRef = useRef(false);
+  const [animationReady, setAnimationReady] = useState(false);
+  const [hasImageLoaded, setHasImageLoaded] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
 
-  const { t, isLoading } = useStableTranslation(locale, 'hero')
-  const [isAnimating, setIsAnimating] = useState(false)
+  const { t, isLoading } = useStableTranslation(locale, 'hero');
 
-  // Process services with proper typing and validation
+  // Optimized service processing
   const processServices = useCallback((servicesData: any): ServiceItem[] => {
     if (!Array.isArray(servicesData)) return [];
 
     return servicesData.map(service => {
-      // Support legacy string format with newline handling
       if (typeof service === 'string') {
         return {
           title: service,
@@ -310,7 +320,6 @@ const Hero: FC<HeroProps> = memo(({
         };
       }
 
-      // Support React element format (including Fragments)
       if (React.isValidElement(service)) {
         return {
           title: service,
@@ -319,7 +328,6 @@ const Hero: FC<HeroProps> = memo(({
         };
       }
 
-      // Validate object format and handle newlines in title
       if (service && typeof service === 'object' && service.title && service.href) {
         return {
           title: service.title,
@@ -332,7 +340,7 @@ const Hero: FC<HeroProps> = memo(({
     }).filter(Boolean) as ServiceItem[];
   }, []);
 
-  // Combined memoization for better performance
+  // Enhanced memoized configuration
   const config = useMemo(() => {
     const headingStyle = {
       width: '100%',
@@ -345,7 +353,6 @@ const Hero: FC<HeroProps> = memo(({
       transition: 'min-height 0.3s ease-in-out'
     };
 
-    // Process services with proper validation
     const servicesData = t('services', { returnObjects: true });
     const services = processServices(servicesData);
 
@@ -359,7 +366,6 @@ const Hero: FC<HeroProps> = memo(({
     };
 
     const headingLines = content.heading ? content.heading.split('\n') : [];
-
     const headingContent = headingLines.map((line, index) => (
       <React.Fragment key={index}>
         {line}
@@ -380,14 +386,15 @@ const Hero: FC<HeroProps> = memo(({
     hasTriggeredRef.current = false;
     setIsVisible(false);
     setAnimationReady(false);
+    setIsAnimating(false);
   }, [locale]);
 
-  // Only animate image on first load
+  // Image load effect
   useEffect(() => {
     if (!hasImageLoaded) {
       setHasImageLoaded(true);
     }
-  }, []);
+  }, [hasImageLoaded]);
 
   // Intersection observer
   useEffect(() => {
@@ -416,7 +423,7 @@ const Hero: FC<HeroProps> = memo(({
     locale
   );
 
-  // Button animations
+  // Animation trigger
   useEffect(() => {
     if (isLoading || !isVisible || !isInitialized) return;
 
@@ -424,34 +431,48 @@ const Hero: FC<HeroProps> = memo(({
     entranceAnimation();
   }, [isLoading, isVisible, isInitialized, entranceAnimation]);
 
+  // Scroll animation
   const { scrollYProgress } = useScroll({
     target: enableZoomAnimation ? scrollingDiv : undefined,
     offset: enableZoomAnimation ? ["start end", "end end"] : undefined,
-  })
+  });
 
   const portraitWidth = useTransform(
     scrollYProgress,
     [0, 1],
     ["100%", enableZoomAnimation ? "240%" : "100%"]
-  )
+  );
 
   const handleScrollToProjects = useCallback(() => {
     smoothScrollTo("projects");
-  }, [])
+  }, []);
+
+  // Memoized subtitle content
+  const subtitleContent = useMemo(() => {
+    if (!config.content.subtitle) return null;
+    
+    const lines = config.content.subtitle.split('\n');
+    return lines.map((line, index) => (
+      <React.Fragment key={index}>
+        {line}
+        {index < lines.length - 1 && <br />}
+      </React.Fragment>
+    ));
+  }, [config.content.subtitle]);
 
   return (
     <section
       id="about"
-      className={SECTION_CLASSES}
+      className={CSS_CLASSES.SECTION}
       ref={sectionRef}
     >
-      <div className={GRID_CLASSES}>
-        <div className={LEFT_COL_CLASSES}>
-          <div className={CONTAINER_CLASSES}>
-            <div className={HEADING_WRAPPER_CLASSES} style={config.headingContainerStyle}>
-              <div className={HEADING_OVERFLOW_CLASSES}>
+      <div className={CSS_CLASSES.GRID}>
+        <div className={CSS_CLASSES.LEFT_COL}>
+          <div className={CSS_CLASSES.CONTAINER}>
+            <div className={CSS_CLASSES.HEADING_WRAPPER} style={config.headingContainerStyle}>
+              <div className={CSS_CLASSES.HEADING_OVERFLOW}>
                 <h1
-                  className={`${HEADING_CLASSES} ${animationReady ? 'animation-ready' : ''}`}
+                  className={`${CSS_CLASSES.HEADING} ${animationReady ? 'animation-ready' : ''}`}
                   ref={scope}
                   key={`hero-heading-${locale}`}
                   style={config.headingStyle}
@@ -461,36 +482,27 @@ const Hero: FC<HeroProps> = memo(({
               </div>
             </div>
 
-            {/* Subtitle - UPDATED WITH SNAPPY TIMING */}
+            {/* Subtitle */}
             {config.content.subtitle && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={isAnimating ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
                 transition={{
-                  duration: ANIMATION_DURATION,
-                  delay: 0.3, // Faster subtitle appearance
-                  ease: [0.25, 0.46, 0.45, 0.94]
+                  duration: ANIMATION_TIMING.DURATION,
+                  delay: ANIMATION_TIMING.SUBTITLE_DELAY,
+                  ease: EASING
                 }}
+                style={{ willChange: 'transform, opacity' }}
               >
-                <p className="xs:text-2xl md:text-2xl xl:text-5xl max-w-4xl tracking-[-0.02em] font-normal leading-tight xl:-mt-3 xs:-mt-6">
-                  {(() => {
-                    const lines = config.content.subtitle.split('\n');
-                    return lines.map((line, index) => (
-                      <React.Fragment key={index}>
-                        {line}
-                        {index < lines.length - 1 && <br />}
-                      </React.Fragment>
-                    ));
-                  })()}
+                <p className={CSS_CLASSES.SUBTITLE}>
+                  {subtitleContent}
                 </p>
               </motion.div>
             )}
 
-            {/* Services Block - UPDATED WITH FAST STAGGERED LINES */}
+            {/* Services Block */}
             {config.content.services && config.content.services.length > 0 && (
               <div className="mt-12 md:mt-8 relative">
-
-                {/* Services with fast staggered lines and text */}
                 {config.content.services.map((service: ServiceItem, index: number) => (
                   <ServiceLink
                     key={`${service.title}-${index}`}
@@ -501,48 +513,40 @@ const Hero: FC<HeroProps> = memo(({
                   />
                 ))}
 
-                {/* Optional bottom container line - REDUCED DELAY */}
+                {/* Optional bottom container line */}
                 {showServiceContainerLines && (
                   <motion.div
                     initial={{ width: 0 }}
                     animate={isAnimating ? { width: '100%' } : { width: 0 }}
                     transition={{
                       duration: 0.25,
-                      delay: SERVICE_ANIMATION_DELAY_BASE + (config.content.services.length * SERVICE_LINE_STAGGER) + SERVICE_BOTTOM_LINE_DELAY,
-                      ease: [0.25, 0.46, 0.45, 0.94]
+                      delay: ANIMATION_TIMING.SERVICE_BASE_DELAY + (config.content.services.length * ANIMATION_TIMING.SERVICE_LINE_STAGGER) + ANIMATION_TIMING.SERVICE_BOTTOM_LINE_DELAY,
+                      ease: EASING
                     }}
                     className="border-b border-gray-400 mt-3 md:mt-2 lg:mt-4"
+                    style={{ willChange: 'width' }}
                   />
                 )}
               </div>
             )}
-
-            {/* Buttons - uncomment if needed */}
-            {/* <div className={BUTTONS_WRAPPER_CLASSES}>
-              <ViewWorkButton 
-                isAnimating={isAnimating}
-                buttonText={config.content.viewWorkButton}
-                onClick={handleScrollToProjects}
-              />
-              <ContactButton 
-                isAnimating={isAnimating}
-                buttonText={config.content.contactButton}
-              />
-            </div> */}
           </div>
         </div>
-        <div className={RIGHT_COL_CLASSES}>
+
+        <div className={CSS_CLASSES.RIGHT_COL}>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: hasImageLoaded ? 1 : 0 }}
-            transition={IMAGE_ANIMATION_CONFIG}
-            className={IMAGE_WRAPPER_CLASSES}
-            style={{ width: portraitWidth }}
+            transition={{
+              duration: 0.6,
+              ease: "easeOut"
+            }}
+            className={CSS_CLASSES.IMAGE_WRAPPER}
+            style={{ width: portraitWidth, willChange: 'opacity' }}
           >
             <ConditionalImage
               src={heroImage.src}
               alt={config.content.portraitAlt || "Hero image"}
-              className={IMAGE_CLASSES}
+              className={CSS_CLASSES.IMAGE}
               priority
               sizes="(max-width: 768px) 100vw, 50vw"
               width={800}
@@ -553,8 +557,14 @@ const Hero: FC<HeroProps> = memo(({
       </div>
       {enableZoomAnimation && <div className="md:h-[150dvh]" ref={scrollingDiv}></div>}
     </section>
-  )
-})
+  );
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.enableZoomAnimation === nextProps.enableZoomAnimation &&
+    prevProps.locale === nextProps.locale &&
+    prevProps.showServiceContainerLines === nextProps.showServiceContainerLines
+  );
+});
 
-Hero.displayName = 'Hero'
-export default Hero
+Hero.displayName = 'Hero';
+export default Hero;

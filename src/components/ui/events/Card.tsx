@@ -1,11 +1,6 @@
 import { Monoco } from '@monokai/monoco-react';
-import { ImageLoaderProps } from "next/image";
 import { useMemo, memo, useState, useCallback } from "react";
 import ConditionalImage from '@/components/ConditionalImage';
-
-const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
-  return src; // Пакет сам управляет оптимизацией
-};
 
 interface CardProps {
   image: string
@@ -19,7 +14,7 @@ interface CardProps {
   loading?: "eager" | "lazy"
 }
 
-// Static configurations
+// Static configurations moved outside component
 const SQUIRCLE_CONFIG = {
   default: { borderRadius: 24, smoothing: 0.6 },
   md: { borderRadius: 32, smoothing: 0.8 },
@@ -27,10 +22,26 @@ const SQUIRCLE_CONFIG = {
 } as const;
 
 const BASE_CLASSES = "relative h-[50px] min-w-[50px] xs:h-[150px] xs:min-w-[150px] md:h-[300px] md:min-w-[300px] lg:min-w-[400px] lg:min-h-[400px] bg-slate-400 flex justify-center items-center";
-const MONOCO_STYLE = { overflow: 'hidden' } as const;
-
-// Optimized sizes for your responsive breakpoints
 const DEFAULT_SIZES = "(max-width: 640px) 50px, (max-width: 768px) 150px, (max-width: 1024px) 300px, 400px";
+const PLACEHOLDER_IMAGE = "/placeholder.svg";
+
+// Static styles for better performance
+const GPU_ACCELERATION_STYLE = {
+  transform: 'translateZ(0)',
+  backfaceVisibility: 'hidden' as const
+} as const;
+
+const MONOCO_STYLE = { 
+  overflow: 'hidden',
+  ...GPU_ACCELERATION_STYLE
+} as const;
+
+const IMAGE_TRANSITION_STYLE = {
+  objectFit: "cover" as const,
+  transition: 'opacity 0.3s ease-in-out',
+  willChange: 'opacity',
+  ...GPU_ACCELERATION_STYLE
+} as const;
 
 const Card: React.FC<CardProps> = memo(({ 
   image, 
@@ -43,112 +54,115 @@ const Card: React.FC<CardProps> = memo(({
   quality = 85,
   loading
 }) => {
-  // Состояние для отслеживания загрузки изображения
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  // Обработчики загрузки
+  // Optimized handlers with useCallback
   const handleLoad = useCallback(() => {
     setIsLoaded(true);
     setHasError(false);
   }, []);
 
   const handleError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    console.warn(`Failed to load image: ${image}`);
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`Failed to load image: ${image}`);
+    }
     setHasError(true);
     setIsLoaded(false);
-    // Fallback image
-    e.currentTarget.src = "/placeholder.svg";
+    e.currentTarget.src = PLACEHOLDER_IMAGE;
   }, [image]);
 
-  // Combined memoization for better performance
-  const config = useMemo(() => {
-    const combinedClasses = className ? `${BASE_CLASSES} ${className}` : BASE_CLASSES;
-    const squircleConfig = isSquircle ? SQUIRCLE_CONFIG[squircleSize] : null;
-    
-    // Enhanced Next.js Image props with anti-flickering optimizations
-    const imageProps = {
-      loader: imageLoader,
-      src: image || "/placeholder.svg",
-      alt,
-      fill: true,
-      style: { 
-        objectFit: "cover" as const,
-        // GPU acceleration для уменьшения flickering
-        transform: 'translateZ(0)',
-        backfaceVisibility: 'hidden' as const,
-        // Плавный переход появления
-        opacity: isLoaded ? 1 : 0,
-        transition: 'opacity 0.3s ease-in-out',
-        // Предотвращение layout shift
-        willChange: 'opacity'
-      },
-      priority,
-      sizes,
-      quality,
-      // Оптимизированные атрибуты для уменьшения flickering
-      decoding: "async" as const,
-      // Add explicit loading control if provided
-      ...(loading && { loading }),
-      // Обработчики событий
-      onLoad: handleLoad,
-      onError: handleError
-    };
+  // Memoized combined classes
+  const combinedClasses = useMemo(() => 
+    className ? `${BASE_CLASSES} ${className}` : BASE_CLASSES,
+    [className]
+  );
 
-    return { combinedClasses, squircleConfig, imageProps };
-  }, [className, isSquircle, squircleSize, image, alt, priority, sizes, quality, loading, isLoaded, handleLoad, handleError]);
+  // Memoized squircle configuration
+  const squircleConfig = useMemo(() => 
+    isSquircle ? SQUIRCLE_CONFIG[squircleSize] : null,
+    [isSquircle, squircleSize]
+  );
 
-  // Стили контейнера с оптимизацией для GPU
+  // Memoized image props
+  const imageProps = useMemo(() => ({
+    src: image || PLACEHOLDER_IMAGE,
+    alt,
+    fill: true,
+    style: {
+      ...IMAGE_TRANSITION_STYLE,
+      opacity: isLoaded ? 1 : 0
+    },
+    priority,
+    sizes,
+    quality,
+    decoding: "async" as const,
+    ...(loading && { loading }),
+    onLoad: handleLoad,
+    onError: handleError
+  }), [image, alt, isLoaded, priority, sizes, quality, loading, handleLoad, handleError]);
+
+  // Memoized container style
   const containerStyle = useMemo(() => ({
-    // GPU acceleration для контейнера
-    transform: 'translateZ(0)',
-    backfaceVisibility: 'hidden' as const,
-    // Показываем фон только пока изображение не загружено
+    ...GPU_ACCELERATION_STYLE,
     backgroundColor: isLoaded ? 'transparent' : undefined,
     transition: 'background-color 0.3s ease-in-out'
   }), [isLoaded]);
 
-  // Skeleton/placeholder пока изображение загружается
-  const LoadingSkeleton = useMemo(() => {
+  // Memoized loading skeleton
+  const loadingSkeleton = useMemo(() => {
     if (isLoaded || hasError) return null;
     
     return (
       <div 
         className="absolute inset-0 bg-gradient-to-r from-slate-300 via-slate-200 to-slate-300 animate-pulse"
-        style={{
-          transform: 'translateZ(0)',
-          backfaceVisibility: 'hidden'
-        }}
+        style={GPU_ACCELERATION_STYLE}
+        aria-hidden="true"
       />
     );
   }, [isLoaded, hasError]);
 
-  if (isSquircle && config.squircleConfig) {
+  // Render squircle version
+  if (isSquircle && squircleConfig) {
     return (
       <Monoco
-        borderRadius={config.squircleConfig.borderRadius}
-        smoothing={config.squircleConfig.smoothing}
+        borderRadius={squircleConfig.borderRadius}
+        smoothing={squircleConfig.smoothing}
         clip={true}
-        className={config.combinedClasses}
+        className={combinedClasses}
         style={{
           ...MONOCO_STYLE,
           ...containerStyle
         }}
       >
-        {LoadingSkeleton}
-        <ConditionalImage {...config.imageProps} />
+        {loadingSkeleton}
+        <ConditionalImage {...imageProps} />
       </Monoco>
     );
   }
 
+  // Render regular version
   return (
     <div 
-      className={`${config.combinedClasses} overflow-hidden rounded-xl`}
+      className={`${combinedClasses} overflow-hidden rounded-xl`}
       style={containerStyle}
     >
-      {LoadingSkeleton}
-      <ConditionalImage {...config.imageProps} />
+      {loadingSkeleton}
+      <ConditionalImage {...imageProps} />
     </div>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison for better memoization
+  return (
+    prevProps.image === nextProps.image &&
+    prevProps.className === nextProps.className &&
+    prevProps.priority === nextProps.priority &&
+    prevProps.sizes === nextProps.sizes &&
+    prevProps.isSquircle === nextProps.isSquircle &&
+    prevProps.squircleSize === nextProps.squircleSize &&
+    prevProps.alt === nextProps.alt &&
+    prevProps.quality === nextProps.quality &&
+    prevProps.loading === nextProps.loading
   );
 });
 

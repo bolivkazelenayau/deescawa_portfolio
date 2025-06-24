@@ -2,16 +2,11 @@
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import ConditionalImage from "./ConditionalImage";
-import type { ImageLoaderProps } from 'next/image';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { CarouselApi } from "@/components/ui/carousel";
 import { Monoco } from '@monokai/monoco-react';
-
-const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
-  return src;
-};
 
 interface Lecture {
   id: string;
@@ -37,17 +32,49 @@ interface AppleStyleCarouselProps {
 
 type HoverSide = "left" | "center" | "right" | null;
 
-// Кастомный хук для дебаунсинга с улучшенной безопасностью
+// Static constants moved outside component
+const CONTAINER_WIDTH_THIRDS = {
+  LEFT: 1/3,
+  RIGHT: 2/3
+} as const;
+
+const DEBOUNCE_DELAY = 16; // ~60fps
+const PRELOAD_RANGE = 1; // How many items to preload on each side
+
+const DEFAULT_SQUIRCLE_CONFIG = {
+  borderRadius: 40,
+  smoothing: 0.8,
+  monocoBorderRadius: 48
+} as const;
+
+const CSS_CLASSES = {
+  CONTAINER: "relative w-full max-w-9xl scale-90 -mx-4 xs:mx-1",
+  CAROUSEL: "w-full max-w-9xl mt-8",
+  CARD_WRAPPER: "p-1",
+  CARD: "border-0 shadow-none relative",
+  CARD_CONTENT: "flex flex-col p-6",
+  IMAGE_CONTAINER_REGULAR: "relative w-full aspect-square overflow-hidden rounded-[24px] mb-4",
+  IMAGE_CONTAINER_SQUIRCLE: "relative w-full aspect-square mb-4",
+  IMAGE_BASE: "w-full h-full object-cover transition-all duration-300 ease-out transform-gpu",
+  OVERLAY: "absolute inset-0 bg-linear-to-t from-black/30 to-transparent backdrop-blur-[6px] transition-all duration-300",
+  TITLE: "text-2xl md:text-6xl lg:text-5xl md:mt-4 font-medium tracking-[-1px] transition-all duration-300",
+  DESCRIPTION: "mt-2 md:text-md lg:text-2xl font-regular text-muted-foreground transition-all duration-300",
+  GRADIENT_BASE: "absolute top-0 bottom-0 w-1/6 pointer-events-none transition-opacity duration-700 z-10",
+  GRADIENT_LEFT: "left-0 bg-linear-to-r from-background via-background/30 to-transparent",
+  GRADIENT_RIGHT: "right-0 bg-linear-to-l from-background via-background/30 to-transparent",
+  NAVIGATION: "absolute left-0 right-0 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none z-5 -mt-12"
+} as const;
+
+// Enhanced debounce hook with cleanup
 const useDebounce = (callback: (...args: any[]) => void, delay: number) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const callbackRef = useRef(callback);
   
-  // Обновляем ref при изменении callback
   useEffect(() => {
     callbackRef.current = callback;
   }, [callback]);
   
-  return useCallback((...args: any[]) => {
+  const debouncedCallback = useCallback((...args: any[]) => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
@@ -56,62 +83,103 @@ const useDebounce = (callback: (...args: any[]) => void, delay: number) => {
       callbackRef.current(...args);
     }, delay);
   }, [delay]);
+
+  // Cleanup function
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+  
+  return debouncedCallback;
 };
 
-// Кастомный хук для предзагрузки изображений
+// Enhanced image preloader with batch processing
 const useImagePreloader = (lectures: Lecture[]) => {
   const preloadedImages = useRef(new Set<string>());
+  const preloadingQueue = useRef(new Set<string>());
 
   const preloadImage = useCallback((src: string) => {
-    if (!preloadedImages.current.has(src)) {
-      const img = new Image();
-      img.src = src;
-      preloadedImages.current.add(src);
+    if (!src || preloadedImages.current.has(src) || preloadingQueue.current.has(src)) {
+      return Promise.resolve();
     }
+
+    preloadingQueue.current.add(src);
+    
+    return new Promise<void>((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        preloadedImages.current.add(src);
+        preloadingQueue.current.delete(src);
+        resolve();
+      };
+      img.onerror = () => {
+        preloadingQueue.current.delete(src);
+        resolve(); // Don't fail the entire preload process
+      };
+      img.src = src;
+    });
   }, []);
 
   const preloadNearbyImages = useCallback((currentIndex: number) => {
-    const indicesToPreload = [currentIndex - 1, currentIndex, currentIndex + 1]
-      .filter(i => i >= 0 && i < lectures.length);
+    const indicesToPreload = [];
     
-    indicesToPreload.forEach(index => {
-      const lecture = lectures[index];
-      if (lecture?.image) {
-        preloadImage(lecture.image);
+    for (let i = -PRELOAD_RANGE; i <= PRELOAD_RANGE; i++) {
+      const index = currentIndex + i;
+      if (index >= 0 && index < lectures.length) {
+        indicesToPreload.push(index);
       }
+    }
+    
+    // Batch preload with Promise.all for better performance
+    const preloadPromises = indicesToPreload.map(index => {
+      const lecture = lectures[index];
+      return lecture?.image ? preloadImage(lecture.image) : Promise.resolve();
     });
+    
+    Promise.all(preloadPromises).catch(console.warn);
   }, [lectures, preloadImage]);
 
-  return { preloadNearbyImages };
+  return { preloadNearbyImages, preloadedImages: preloadedImages.current };
 };
 
-// Мемоизированный компонент GradientOverlay
+// Optimized GradientOverlay with static classes
 const GradientOverlay = React.memo<{ side: "left" | "right"; hoverSide: HoverSide }>(
-  ({ side, hoverSide }) => (
-    <div
-      className={cn(
-        "absolute top-0 bottom-0 w-1/6 pointer-events-none transition-opacity duration-700 z-10",
-        side === "left"
-          ? "left-0 bg-linear-to-r from-background via-background/30 to-transparent"
-          : "right-0 bg-linear-to-l from-background via-background/30 to-transparent",
-        hoverSide === side ? "opacity-0" : "opacity-60"
-      )}
-      aria-hidden="true"
-    />
-  )
+  ({ side, hoverSide }) => {
+    const sideClasses = useMemo(() => 
+      side === "left" ? CSS_CLASSES.GRADIENT_LEFT : CSS_CLASSES.GRADIENT_RIGHT,
+      [side]
+    );
+
+    const opacityClass = useMemo(() => 
+      hoverSide === side ? "opacity-0" : "opacity-60",
+      [hoverSide, side]
+    );
+
+    return (
+      <div
+        className={cn(CSS_CLASSES.GRADIENT_BASE, sideClasses, opacityClass)}
+        aria-hidden="true"
+      />
+    );
+  }
 );
 
 GradientOverlay.displayName = 'GradientOverlay';
 
-// Мемоизированный компонент ImageContainer
+// Enhanced ImageContainer with better performance
 const ImageContainer = React.memo<{ 
   lecture: Lecture; 
   isActive: boolean; 
   isHovered: boolean;
-}>(({ lecture, isActive, isHovered }) => {
-  const [imageLoaded, setImageLoaded] = useState(false);
+  preloadedImages: Set<string>;
+}>(({ lecture, isActive, isHovered, preloadedImages }) => {
+  const [imageLoaded, setImageLoaded] = useState(() => 
+    preloadedImages.has(lecture.image)
+  );
 
-  // Мемоизированный alt text
   const altText = useMemo(() => {
     if (typeof lecture.name === 'string') {
       return lecture.name.replace(/\n/g, ' ');
@@ -119,18 +187,28 @@ const ImageContainer = React.memo<{
     return 'Lecture image';
   }, [lecture.name]);
 
-  // Мемоизированные параметры squircle
   const squircleConfig = useMemo(() => ({
     useSquircle: lecture.isSquircle !== undefined ? lecture.isSquircle : true,
-    borderRadius: lecture.borderRadius || 40,
-    smoothing: lecture.smoothing || 0.8
+    borderRadius: lecture.borderRadius || DEFAULT_SQUIRCLE_CONFIG.borderRadius,
+    smoothing: lecture.smoothing || DEFAULT_SQUIRCLE_CONFIG.smoothing
   }), [lecture.isSquircle, lecture.borderRadius, lecture.smoothing]);
+
+  const imageClasses = useMemo(() => cn(
+    CSS_CLASSES.IMAGE_BASE,
+    isActive || isHovered ? "opacity-100 scale-105" : "opacity-50 scale-100",
+    lecture.transform?.objectPosition === "center" ? "object-center" :
+      lecture.transform?.objectPosition === "top" ? "object-top" : "object-bottom"
+  ), [isActive, isHovered, lecture.transform?.objectPosition]);
+
+  const overlayClasses = useMemo(() => cn(
+    CSS_CLASSES.OVERLAY,
+    isActive || isHovered ? "opacity-0" : "opacity-100"
+  ), [isActive, isHovered]);
 
   const handleImageLoad = useCallback(() => {
     setImageLoaded(true);
   }, []);
 
-  // Мемоизированный элемент изображения
   const imageElement = useMemo(() => (
     <>
       <ConditionalImage
@@ -138,12 +216,7 @@ const ImageContainer = React.memo<{
         alt={altText}
         width={lecture.width}
         height={lecture.height}
-        className={cn(
-          "w-full h-full object-cover transition-all duration-300 ease-out transform-gpu",
-          isActive || isHovered ? "opacity-100 scale-105" : "opacity-50 scale-100",
-          lecture.transform?.objectPosition === "center" ? "object-center" :
-            lecture.transform?.objectPosition === "top" ? "object-top" : "object-bottom"
-        )}
+        className={imageClasses}
         style={{ 
           objectPosition: lecture.transform?.objectPosition || "center",
           willChange: isActive || isHovered ? 'transform, opacity' : 'auto'
@@ -155,19 +228,16 @@ const ImageContainer = React.memo<{
       />
 
       <div
-        className={cn(
-          "absolute inset-0 bg-linear-to-t from-black/30 to-transparent backdrop-blur-[6px] transition-all duration-300",
-          isActive || isHovered ? "opacity-0" : "opacity-100"
-        )}
+        className={overlayClasses}
         style={{ willChange: isActive || isHovered ? 'opacity' : 'auto' }}
         aria-hidden="true"
       />
     </>
-  ), [lecture, altText, isActive, isHovered, imageLoaded]);
+  ), [lecture, altText, imageClasses, overlayClasses, isActive, isHovered, handleImageLoad]);
 
   if (!squircleConfig.useSquircle) {
     return (
-      <div className="relative w-full aspect-square overflow-hidden rounded-[24px] mb-4">
+      <div className={CSS_CLASSES.IMAGE_CONTAINER_REGULAR}>
         {imageElement}
       </div>
     );
@@ -175,10 +245,10 @@ const ImageContainer = React.memo<{
 
   return (
     <Monoco
-      borderRadius={48}
+      borderRadius={DEFAULT_SQUIRCLE_CONFIG.monocoBorderRadius}
       smoothing={squircleConfig.smoothing}
       clip={true}
-      className="relative w-full aspect-square mb-4"
+      className={CSS_CLASSES.IMAGE_CONTAINER_SQUIRCLE}
       style={{
         overflow: 'hidden',
         willChange: 'transform',
@@ -194,72 +264,75 @@ const ImageContainer = React.memo<{
   return (
     prevProps.lecture.id === nextProps.lecture.id &&
     prevProps.isActive === nextProps.isActive &&
-    prevProps.isHovered === nextProps.isHovered
+    prevProps.isHovered === nextProps.isHovered &&
+    prevProps.preloadedImages === nextProps.preloadedImages
   );
 });
 
 ImageContainer.displayName = 'ImageContainer';
 
-// Мемоизированный компонент LectureText
+// Enhanced LectureText with better memoization
 const LectureText = React.memo<{ 
   lecture: Lecture; 
   isActive: boolean; 
   isHovered: boolean;
 }>(({ lecture, isActive, isHovered }) => {
-  // Мемоизированные строки описания
-  const descriptionLines = useMemo(() => 
-    lecture.description?.split("\n").filter(Boolean) || [], 
-    [lecture.description]
-  );
+  const textContent = useMemo(() => {
+    const descriptionLines = lecture.description?.split("\n").filter(Boolean) || [];
+    
+    const renderedName = (() => {
+      if (typeof lecture.name === 'string') {
+        const nameLines = lecture.name.split("\n").filter(Boolean);
+        if (nameLines.length > 1) {
+          return nameLines.map((line, lineIndex) => (
+            <React.Fragment key={`name-${lineIndex}`}>
+              {line}
+              {lineIndex < nameLines.length - 1 && <br />}
+            </React.Fragment>
+          ));
+        }
+      }
+      return lecture.name;
+    })();
 
-  // Мемоизированный рендер имени
-  const renderedName = useMemo(() => {
-    if (typeof lecture.name === 'string') {
-      const nameLines = lecture.name.split("\n").filter(Boolean);
-      if (nameLines.length > 1) {
-        return nameLines.map((line, lineIndex) => (
-          <React.Fragment key={`name-${lineIndex}`}>
+    const renderedDescription = (() => {
+      if (descriptionLines.length > 0) {
+        return descriptionLines.map((line, lineIndex) => (
+          <React.Fragment key={`desc-${lineIndex}`}>
             {line}
-            {lineIndex < nameLines.length - 1 && <br />}
+            {lineIndex < descriptionLines.length - 1 && <br />}
           </React.Fragment>
         ));
       }
-    }
-    return lecture.name;
-  }, [lecture.name]);
+      return lecture.description;
+    })();
 
-  // Мемоизированный рендер описания
-  const renderedDescription = useMemo(() => {
-    if (descriptionLines.length > 0) {
-      return descriptionLines.map((line, lineIndex) => (
-        <React.Fragment key={`desc-${lineIndex}`}>
-          {line}
-          {lineIndex < descriptionLines.length - 1 && <br />}
-        </React.Fragment>
-      ));
-    }
-    return lecture.description;
-  }, [descriptionLines, lecture.description]);
+    return { renderedName, renderedDescription };
+  }, [lecture.name, lecture.description]);
+
+  const titleClasses = useMemo(() => cn(
+    CSS_CLASSES.TITLE,
+    isActive || isHovered ? "opacity-100" : "opacity-50"
+  ), [isActive, isHovered]);
+
+  const descriptionClasses = useMemo(() => cn(
+    CSS_CLASSES.DESCRIPTION,
+    isActive || isHovered ? "opacity-100" : "opacity-50"
+  ), [isActive, isHovered]);
 
   return (
     <>
       <h3
-        className={cn(
-          "text-2xl md:text-6xl lg:text-5xl md:mt-4 font-medium tracking-[-1px] transition-all duration-300",
-          isActive || isHovered ? "opacity-100" : "opacity-50"
-        )}
+        className={titleClasses}
         style={{ willChange: isActive || isHovered ? 'opacity' : 'auto' }}
       >
-        {renderedName}
+        {textContent.renderedName}
       </h3>
       <p
-        className={cn(
-          "mt-2 md:text-md lg:text-2xl font-regular text-muted-foreground transition-all duration-300",
-          isActive || isHovered ? "opacity-100" : "opacity-50"
-        )}
+        className={descriptionClasses}
         style={{ willChange: isActive || isHovered ? 'opacity' : 'auto' }}
       >
-        {renderedDescription}
+        {textContent.renderedDescription}
       </p>
     </>
   );
@@ -273,16 +346,22 @@ const LectureText = React.memo<{
 
 LectureText.displayName = 'LectureText';
 
-// Мемоизированный компонент LectureCard
+// Enhanced LectureCard
 const LectureCard = React.memo<{ 
   lecture: Lecture; 
   isActive: boolean; 
   isHovered: boolean;
-}>(({ lecture, isActive, isHovered }) => (
-  <div className="p-1">
-    <Card className="border-0 shadow-none relative">
-      <CardContent className="flex flex-col p-6">
-        <ImageContainer lecture={lecture} isActive={isActive} isHovered={isHovered} />
+  preloadedImages: Set<string>;
+}>(({ lecture, isActive, isHovered, preloadedImages }) => (
+  <div className={CSS_CLASSES.CARD_WRAPPER}>
+    <Card className={CSS_CLASSES.CARD}>
+      <CardContent className={CSS_CLASSES.CARD_CONTENT}>
+        <ImageContainer 
+          lecture={lecture} 
+          isActive={isActive} 
+          isHovered={isHovered}
+          preloadedImages={preloadedImages}
+        />
         <LectureText lecture={lecture} isActive={isActive} isHovered={isHovered} />
       </CardContent>
     </Card>
@@ -291,15 +370,16 @@ const LectureCard = React.memo<{
   return (
     prevProps.lecture.id === nextProps.lecture.id &&
     prevProps.isActive === nextProps.isActive &&
-    prevProps.isHovered === nextProps.isHovered
+    prevProps.isHovered === nextProps.isHovered &&
+    prevProps.preloadedImages === nextProps.preloadedImages
   );
 });
 
 LectureCard.displayName = 'LectureCard';
 
-// Мемоизированная навигация
+// Static navigation components
 const CarouselNavigation = React.memo(() => (
-  <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none z-5 -mt-12">
+  <div className={CSS_CLASSES.NAVIGATION}>
     <CarouselArrow direction="left" />
     <CarouselArrow direction="right" />
   </div>
@@ -325,12 +405,11 @@ export function AppleStyleCarousel({ lectures }: AppleStyleCarouselProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [hoverSide, setHoverSide] = useState<HoverSide>(null);
   
-  // Добавляем ref для безопасного доступа к контейнеру
   const containerRef = useRef<HTMLDivElement>(null);
   
-  const { preloadNearbyImages } = useImagePreloader(lectures);
+  const { preloadNearbyImages, preloadedImages } = useImagePreloader(lectures);
 
-  // Предзагрузка изображений при изменении активного индекса
+  // Preload images when active index changes
   useEffect(() => {
     preloadNearbyImages(activeIndex);
   }, [activeIndex, preloadNearbyImages]);
@@ -359,7 +438,7 @@ export function AppleStyleCarousel({ lectures }: AppleStyleCarouselProps) {
     setHoveredIndex(null);
   }, []);
 
-  // Улучшенный дебаунсированный обработчик с безопасной проверкой
+  // Enhanced mouse move handler with better performance
   const debouncedMouseMove = useDebounce((clientX: number) => {
     const container = containerRef.current;
     if (!container) return;
@@ -369,17 +448,17 @@ export function AppleStyleCarousel({ lectures }: AppleStyleCarouselProps) {
     
     const containerWidth = container.offsetWidth;
     const mouseX = clientX - containerRect.left;
+    const relativeX = mouseX / containerWidth;
 
-    if (mouseX < containerWidth / 3) {
+    if (relativeX < CONTAINER_WIDTH_THIRDS.LEFT) {
       setHoverSide("left");
-    } else if (mouseX > (containerWidth * 2) / 3) {
+    } else if (relativeX > CONTAINER_WIDTH_THIRDS.RIGHT) {
       setHoverSide("right");
     } else {
       setHoverSide("center");
     }
-  }, 16); // ~60fps
+  }, DEBOUNCE_DELAY);
 
-  // Обработчик движения мыши
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     debouncedMouseMove(e.clientX);
   }, [debouncedMouseMove]);
@@ -400,7 +479,7 @@ export function AppleStyleCarousel({ lectures }: AppleStyleCarouselProps) {
     }
   }, [api]);
 
-  // Мемоизированные элементы карусели
+  // Memoized carousel items with preloaded images
   const carouselItems = useMemo(() => 
     lectures.map((lecture, index) => (
       <CarouselItem
@@ -413,15 +492,16 @@ export function AppleStyleCarousel({ lectures }: AppleStyleCarouselProps) {
           lecture={lecture}
           isActive={activeIndex === index}
           isHovered={hoveredIndex === index}
+          preloadedImages={preloadedImages}
         />
       </CarouselItem>
-    )), [lectures, activeIndex, hoveredIndex, handleMouseEnter, handleMouseLeave]
+    )), [lectures, activeIndex, hoveredIndex, handleMouseEnter, handleMouseLeave, preloadedImages]
   );
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full max-w-9xl scale-90 -mx-4 xs:mx-1"
+      className={CSS_CLASSES.CONTAINER}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleContainerMouseLeave}
       onKeyDown={handleKeyNavigation}
@@ -434,7 +514,7 @@ export function AppleStyleCarousel({ lectures }: AppleStyleCarouselProps) {
 
       <Carousel
         setApi={setApi}
-        className="w-full max-w-9xl mt-8"
+        className={CSS_CLASSES.CAROUSEL}
         opts={{ loop: true, align: "center" }}
       >
         <CarouselContent>
