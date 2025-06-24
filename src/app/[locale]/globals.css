@@ -84,6 +84,74 @@
   }
 }
 
+/* Accessibility: Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  /* Disable specific scroll behaviors */
+  html {
+    scroll-behavior: auto !important;
+  }
+  
+  /* Override body transition for reduced motion */
+  body {
+    transition: none !important;
+  }
+  
+  /* Stop any marquee elements */
+  marquee {
+    -webkit-marquee-style: none;
+    marquee-style: none;
+  }
+  
+  /* Ensure text reveal animations respect reduced motion */
+  .word:not([data-text-reveal-id] .word),
+  .line:not([data-text-reveal-id] .line) {
+    transform: none !important;
+  }
+  
+  [data-text-reveal-id] .word,
+  [data-text-reveal-id] .line {
+    will-change: auto !important;
+  }
+  
+  .text-hidden-initially,
+  .footer-text-hidden-initially {
+    opacity: 1 !important;
+    visibility: visible !important;
+    will-change: auto !important;
+  }
+  
+  [data-text-reveal-id].text-hidden-initially,
+  [data-text-reveal-id].footer-text-hidden-initially {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+}
+
+/* Ensure Lenis respects reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  html.lenis,
+  html.lenis body {
+    scroll-behavior: auto !important;
+  }
+  
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+  
+  [data-lenis-prevent] {
+    overflow: auto !important;
+  }
+}
+
 @layer base {
   *,
   ::after,
@@ -161,7 +229,6 @@
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
   }
-
 
   * {
     @apply border-border;

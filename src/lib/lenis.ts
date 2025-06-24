@@ -5,34 +5,79 @@ import { useEffect } from 'react';
 
 export default function useLenis() {
   useEffect(() => {
-    // Check for reduced motion preference before initializing Lenis
-    const prefersReducedMotion =
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // Enhanced reduced motion detection with debugging
+    const checkReducedMotion = () => {
+      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+      console.log('Reduced motion preference:', mediaQuery.matches);
+      return mediaQuery.matches;
+    };
 
-    // Initialize Lenis with optimized settings
+    const prefersReducedMotion = checkReducedMotion();
+
+    // Initialize Lenis with conditional settings
     const lenis = new Lenis({
-      lerp: prefersReducedMotion ? 0 : 0.075, // Disable smooth scroll for users who prefer reduced motion
-      duration: 0.7, // Slightly longer duration for smoother transitions
-      wheelMultiplier: 0.8, // Reduce wheel sensitivity
-      touchMultiplier: 2, // Increase touch sensitivity
-      infinite: false, // Disable infinite scroll to prevent jittering
-      orientation: 'vertical', // Lock to vertical scrolling
-      gestureOrientation: 'vertical', // Lock gestures to vertical
-      smoothWheel: true, // Enable smooth mousewheel scrolling
-      easing: (t) => {
-        // Custom easing function for smoother transitions
-        return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
-      },
+      lerp: prefersReducedMotion ? 1 : 0.15,
+      duration: prefersReducedMotion ? 0 : 0.4,
+      wheelMultiplier: prefersReducedMotion ? 1 : 1.2,
+      touchMultiplier: prefersReducedMotion ? 1 : 2,
+      infinite: false,
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: !prefersReducedMotion, // Completely disable smooth wheel
+      easing: prefersReducedMotion 
+        ? (t) => t // Linear/instant
+        : (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+      autoRaf: false,
     });
 
-    // Set up the animation loop with timestamp
+    // Force disable Lenis if reduced motion is preferred
+    if (prefersReducedMotion) {
+      console.log('Reduced motion detected - disabling Lenis smooth scrolling');
+      lenis.destroy();
+      return () => {}; // Early return to skip Lenis entirely
+    }
+
+    // Listen for changes to the reduced motion preference
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handleMotionPreferenceChange = (e: MediaQueryListEvent) => {
+      console.log('Motion preference changed:', e.matches);
+      if (e.matches) {
+        // User enabled reduced motion - destroy Lenis
+        lenis.destroy();
+        window.location.reload(); // Force reload to completely reset
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleMotionPreferenceChange);
+
+    // Rest of your existing code...
+    let isMiddleMouseScrolling = false;
+    let middleMouseTimeout: NodeJS.Timeout;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button === 1) {
+        isMiddleMouseScrolling = true;
+        clearTimeout(middleMouseTimeout);
+      }
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (e.button === 1) {
+        middleMouseTimeout = setTimeout(() => {
+          isMiddleMouseScrolling = false;
+        }, 100);
+      }
+    };
+
     let lastScrollTop = 0;
     lenis.on('scroll', ({ scroll }: { scroll: number }) => {
-      const scrollingDown = scroll > lastScrollTop;
-      document.documentElement.setAttribute(
-        'data-scroll-direction',
-        scrollingDown ? 'down' : 'up'
-      );
+      if (!isMiddleMouseScrolling) {
+        const scrollingDown = scroll > lastScrollTop;
+        document.documentElement.setAttribute(
+          'data-scroll-direction',
+          scrollingDown ? 'down' : 'up'
+        );
+      }
       lastScrollTop = scroll;
     });
 
@@ -44,7 +89,6 @@ export default function useLenis() {
 
     frameId = requestAnimationFrame(animate);
 
-    // Stop scrolling animation when window loses focus
     const handleVisibilityChange = () => {
       if (document.hidden) {
         lenis.stop();
@@ -53,16 +97,20 @@ export default function useLenis() {
       }
     };
 
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mouseup', handleMouseUp);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Clean up
     return () => {
       cancelAnimationFrame(frameId);
+      clearTimeout(middleMouseTimeout);
+      mediaQuery.removeEventListener('change', handleMotionPreferenceChange);
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mouseup', handleMouseUp);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       lenis.destroy();
     };
-  }, []); // Empty dependency array since we want this to run once
+  }, []);
 }
 
-// Export additional Lenis types and components
 export * from 'lenis/react';

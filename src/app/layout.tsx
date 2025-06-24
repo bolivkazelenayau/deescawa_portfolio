@@ -9,6 +9,7 @@ import { ReactLenis } from "@/lib/lenis"
 import { ThemeMetaUpdater } from "@/components/theme_management/ThemeMetaUpdater";
 import { VideoProvider } from "@/contexts/VideoContext";
 import { Metadata } from "next";
+import { ConditionalLenis } from "@/components/ConditionalLenis";
 
 const pretendard = localFont({
   src: "../fonts/Pretendard/variable/woff2/PretendardStdVariable.woff2",
@@ -35,8 +36,7 @@ export default function RootLayout({
   return (
     <html suppressHydrationWarning className={pretendard.variable}>
       <body className="antialiased font-sans dark:bg-neutral-950" suppressHydrationWarning>
-        {/* <ReactScan /> */}
-        <ReactLenis root>
+        <ConditionalLenis>
           <VideoProvider>
             <ThemeProvider
               attribute="class"
@@ -53,7 +53,7 @@ export default function RootLayout({
               {children}
             </ThemeProvider>
           </VideoProvider>
-        </ReactLenis>
+        </ConditionalLenis>
       </body>
     </html>
   );
