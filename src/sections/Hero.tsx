@@ -489,19 +489,6 @@ const Hero: FC<HeroProps> = memo(({
             {/* Services Block - UPDATED WITH FAST STAGGERED LINES */}
             {config.content.services && config.content.services.length > 0 && (
               <div className="mt-12 md:mt-8 relative">
-                {/* Optional top container line - SNAPPY */}
-                {showServiceContainerLines && (
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={isAnimating ? { width: '100%' } : { width: 0 }}
-                    transition={{
-                      duration: 0.25,
-                      delay: SERVICE_ANIMATION_DELAY_BASE - 0.1,
-                      ease: [0.25, 0.46, 0.45, 0.94]
-                    }}
-                    className="border-t border-gray-400 mb-3 md:mb-2 lg:mb-4"
-                  />
-                )}
 
                 {/* Services with fast staggered lines and text */}
                 {config.content.services.map((service: ServiceItem, index: number) => (
