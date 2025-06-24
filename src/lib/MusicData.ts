@@ -44,7 +44,7 @@ export const musicData = [
     id: 2,
     albumCover: "/images/music/finding_balance.png",
     name: "Finding Balance",
-    description: "Второй мини-альбом Finding Balance — танцевальная бейс-музыка (дабстеп, хафтайм, фьюче битс) про нахождение баланса в творчестве \nи жизни",
+    description: "Второй мини-альбом Finding Balance — танцевальная бейс-музыка (дабстеп, хафтайм, фьюче битс) про баланс в творчестве и жизни",
     bandLink: "https://band.link/album2"
   },
   {
