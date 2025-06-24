@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react'
 import { useStableTranslation } from '@/hooks/useStableTranslation'
+import type { ImageLoaderProps } from 'next/image';
 import { Card, CardContent } from '@/components/ui/card'
 import Button from '@/components/Button'
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel"
@@ -10,32 +11,11 @@ import { cn } from "@/lib/utils"
 import { musicData, CAROUSEL_CONFIG, BREAKPOINTS, type Album } from '@/lib/MusicData'
 import ConditionalImage from '../ConditionalImage';
 
-// Константы для производительности
-const EASING_CONFIG = [0.25, 0.46, 0.45, 0.94] as const;
-const IMAGE_SIZES = "(max-width: 768px) 100vw, 50vw" as const;
+const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
+  return src;
+};
 
-// Оптимизированные стили для overlay - вынесены из компонента
-const createOverlayStyle = (albumCover: string) => ({
-  backgroundImage: `url(${albumCover})`,
-  backgroundSize: 'cover',
-  backgroundPosition: 'center',
-  filter: 'blur(24px) brightness(1.2) saturate(1.3)',
-  maskImage: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 50%, transparent 80%)',
-  WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 50%, transparent 80%)',
-  opacity: 0.1,
-  zIndex: 1,
-});
-
-// Мемоизированный компонент overlay
-const BlurredOverlay = React.memo<{ albumCover: string }>(({ albumCover }) => (
-  <div
-    className="absolute inset-0 pointer-events-none"
-    style={createOverlayStyle(albumCover)}
-  />
-));
-BlurredOverlay.displayName = 'BlurredOverlay';
-
-// Утилиты
+// Оптимизированные утилиты с мемоизацией
 const getSlidesToShow = (width: number): number => {
   if (width >= BREAKPOINTS.lg) return 3
   if (width >= BREAKPOINTS.sm) return 2
@@ -60,7 +40,7 @@ const renderTextWithFragments = (text: string | React.ReactNode): React.ReactNod
   )
 }
 
-// Оптимизированная кнопка навигации
+// Оптимизированный компонент кнопки навигации
 const NavigationButton: React.FC<NavigationButtonProps> = React.memo(({ direction, onClick, disabled }) => (
   <button
     onClick={onClick}
@@ -102,17 +82,17 @@ interface NavigationButtonProps {
   disabled?: boolean
 }
 
-// Хук для debouncing
+// Кастомный хук для дебаунсинга
 const useDebounce = (callback: () => void, delay: number) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-
+  
   return useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
     timeoutRef.current = setTimeout(callback, delay)
   }, [callback, delay])
 }
 
-// Оптимизированный предзагрузчик изображений
+// Кастомный хук для предзагрузки всех изображений
 const useImagePreloader = (albums: readonly Album[]) => {
   const [allImagesPreloaded, setAllImagesPreloaded] = useState(false)
   const preloadedImages = useRef(new Set<string>())
@@ -120,37 +100,33 @@ const useImagePreloader = (albums: readonly Album[]) => {
 
   const preloadAllImages = useCallback(async () => {
     if (preloadingRef.current || allImagesPreloaded) return
-
+    
     preloadingRef.current = true
-
+    
     try {
-      const batchSize = 2 // Уменьшено для лучшей производительности
-      const batches = []
-
-      for (let i = 0; i < albums.length; i += batchSize) {
-        const batch = albums.slice(i, i + batchSize).map((album) => {
-          if (preloadedImages.current.has(album.albumCover)) {
-            return Promise.resolve()
+      const imagePromises = albums.map((album) => {
+        if (preloadedImages.current.has(album.albumCover)) {
+          return Promise.resolve()
+        }
+        
+        return new Promise<void>((resolve, reject) => {
+          const img = new Image()
+          img.onload = () => {
+            preloadedImages.current.add(album.albumCover)
+            resolve()
           }
-
-          return new Promise<void>((resolve) => {
-            const img = new Image()
-            img.onload = () => {
-              preloadedImages.current.add(album.albumCover)
-              resolve()
-            }
-            img.onerror = () => resolve() // Убран console.warn для производительности
-            img.src = album.albumCover
-          })
+          img.onerror = () => {
+            console.warn(`Failed to preload image: ${album.albumCover}`)
+            resolve() // Продолжаем даже если одно изображение не загрузилось
+          }
+          img.src = album.albumCover
         })
+      })
 
-        batches.push(Promise.all(batch))
-      }
-
-      await Promise.all(batches)
+      await Promise.all(imagePromises)
       setAllImagesPreloaded(true)
     } catch (error) {
-      // Тихо обрабатываем ошибки
+      console.error('Error preloading images:', error)
     } finally {
       preloadingRef.current = false
     }
@@ -159,11 +135,10 @@ const useImagePreloader = (albums: readonly Album[]) => {
   return { preloadAllImages, allImagesPreloaded, preloadedImages: preloadedImages.current }
 }
 
-// Оптимизированный компонент карточки
+// Оптимизированный компонент карточки музыки
 interface MusicCardProps {
   album: Album
   className?: string
-  isActive?: boolean
   isHovered?: boolean
   onCardClick: (album: Album) => void
   locale: 'en' | 'ru'
@@ -173,13 +148,13 @@ interface MusicCardProps {
 const MusicCard: React.FC<MusicCardProps> = React.memo(({
   album,
   className = "",
-  isActive = false,
   isHovered = false,
   onCardClick,
   locale,
   allImagesPreloaded
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false)
+  const [backgroundImageLoaded, setBackgroundImageLoaded] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const { t } = useStableTranslation(locale, 'common')
 
@@ -196,43 +171,20 @@ const MusicCard: React.FC<MusicCardProps> = React.memo(({
     setImageLoaded(true)
   }, [])
 
-  // Оптимизированная проверка загрузки изображений
+  const handleBackgroundImageLoad = useCallback(() => {
+    setBackgroundImageLoaded(true)
+  }, [])
+
+  // Сразу показываем изображения если они предзагружены
   useEffect(() => {
     if (allImagesPreloaded) {
       setImageLoaded(true)
+      setBackgroundImageLoaded(true)
     }
   }, [allImagesPreloaded])
 
-  // Мемоизированные стили
-  const backgroundImageStyle = useMemo(() => ({
-    filter: 'blur(20px) brightness(1.1)',
-    transform: 'scale(1.1)',
-    zIndex: 1,
-  }), []);
-
-  const maskImageStyle = useMemo(() => ({
-    backgroundImage: `url(${album.albumCover})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    filter: 'blur(15px) brightness(0.9)',
-    mask: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.9) 100%)',
-    WebkitMask: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.9) 100%)',
-    zIndex: 2,
-  }), [album.albumCover]);
-
-  const mainImageStyle = useMemo(() => ({
-    zIndex: 3,
-    willChange: 'transform, opacity'
-  }), []);
-
   return (
-    <div
-      ref={cardRef}
-      className={cn(
-        "transition-all duration-200 ease-out will-change-transform",
-        isActive ? "scale-100 z-10" : "scale-95 z-0"
-      )}
-    >
+    <div ref={cardRef}>
       <Card
         className={cn(
           "music-card h-[600px] md:h-[700px] lg:h-[800px] overflow-hidden group cursor-pointer relative",
@@ -243,32 +195,53 @@ const MusicCard: React.FC<MusicCardProps> = React.memo(({
         style={{ borderRadius: '32px' }}
         onClick={handleClick}
       >
+        {/* Фоновое изображение - всегда загружаем если предзагрузка завершена */}
+        <ConditionalImage
+          src={album.albumCover}
+          alt=""
+          className="sr-only"
+          onLoad={handleBackgroundImageLoad}
+          loading="eager"
+          width={1}
+          height={1}
+        />
+        <div
+          className={cn(
+            "absolute inset-0 transition-opacity duration-300 ease-out",
+            (backgroundImageLoaded || allImagesPreloaded) ? "opacity-10 dark:opacity-5" : "opacity-0"
+          )}
+          style={{
+            backgroundImage: `url(${album.albumCover})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            filter: 'blur(20px) brightness(1.1)',
+            zIndex: 0,
+            willChange: (backgroundImageLoaded || allImagesPreloaded) ? 'auto' : 'opacity'
+          }}
+        />
+
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/3 to-white/8 dark:via-black/1 dark:to-black/5" style={{ zIndex: 1 }} />
+
         <CardContent className="p-0 h-full flex flex-col relative" style={{ zIndex: 2 }}>
           <div className="relative h-[60%] overflow-hidden flex items-center justify-center bg-white/5">
-            {/* Основное размытое изображение */}
-            <div className="absolute inset-0 w-full h-full">
-              <ConditionalImage
-                src={album.albumCover}
-                alt=""
-                className={cn(
-                  "w-full h-full object-cover transition-opacity duration-300 ease-out",
-                  (imageLoaded || allImagesPreloaded) ? "opacity-100" : "opacity-0"
-                )}
-                style={backgroundImageStyle}
-                draggable={false}
-                loading="eager"
-                fill
-                quality={60}
-              />
-            </div>
-
-            {/* Дополнительный слой с маской */}
-            <div
-              className="absolute inset-0 w-full h-full"
-              style={maskImageStyle}
+            {/* Основное изображение - всегда загружаем если предзагрузка завершена */}
+            <ConditionalImage
+              src={album.albumCover}
+              alt=""
+              className={cn(
+                "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ease-out",
+                (imageLoaded || allImagesPreloaded) ? "opacity-100" : "opacity-0"
+              )}
+              style={{
+                filter: 'blur(15px) brightness(1.05)',
+                zIndex: 1,
+                willChange: (imageLoaded || allImagesPreloaded) ? 'auto' : 'opacity'
+              }}
+              draggable={false}
+              loading="eager"
+              fill
             />
-
-            {/* Основное изображение высокого качества */}
+            <div className="absolute inset-0 bg-white/15 dark:bg-black/8" style={{ zIndex: 2 }} />
             <ConditionalImage
               src={album.albumCover}
               alt={album.name}
@@ -276,56 +249,44 @@ const MusicCard: React.FC<MusicCardProps> = React.memo(({
                 "max-w-full max-h-full object-contain transition-all duration-300 group-hover:scale-105 relative",
                 (imageLoaded || allImagesPreloaded) ? "opacity-100" : "opacity-0"
               )}
-              style={mainImageStyle}
+              style={{ zIndex: 3, willChange: 'transform, opacity' }}
               draggable={false}
               onLoad={handleImageLoad}
               loading="eager"
               priority={true}
               width={400}
               height={400}
-              quality={85}
             />
-
-
-            {/* Упрощенный placeholder */}
+            
+            {/* Показываем плейсхолдер только если изображения еще не предзагружены */}
             {!allImagesPreloaded && !imageLoaded && (
               <div className="w-full h-full bg-muted animate-pulse flex items-center justify-center absolute inset-0" style={{ zIndex: 4 }}>
                 <div className="w-64 h-64 bg-muted-foreground/20 rounded-lg" />
               </div>
             )}
-
-            <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-card via-card/1 to-transparent opacity-100 transition-opacity duration-200" style={{ zIndex: 5 }} />
+            
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" style={{ zIndex: 5 }} />
           </div>
 
-          <div className="flex-1 p-6 md:p-8 lg:p-10 relative overflow-hidden bg-gradient-to-t from-card via-card/95 to-card/80">
-            {/* Оптимизированный overlay */}
-            <BlurredOverlay albumCover={album.albumCover} />
-
-            <div className="relative z-10 h-full flex flex-col">
-              <div className="flex-1 flex flex-col justify-start min-h-0">
-                <div className="space-y-4">
-                  <h3 className="text-2xl md:text-3xl lg:text-4xl font-medium tracking-[-1px] text-left">
-                    {renderTextWithFragments(album.name)}
-                  </h3>
-                  <div className="min-h-[6rem] md:min-h-[7rem] lg:min-h-[8rem] max-h-[8rem] md:max-h-[9rem] lg:max-h-[10rem] overflow-hidden">
-                    <p className="text-base md:text-lg lg:text-xl text-muted-foreground leading-relaxed whitespace-pre-line">
-                      {renderTextWithFragments(album.description)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex-shrink-0 pt-6 md:pt-8">
-                <Button
-                  variant="primary"
-                  isSquircle={true}
-                  squircleSize="lg"
-                  className="w-full text-lg font-medium uppercase tracking-wide"
-                  onClick={handleButtonClick}
-                >
-                  {renderTextWithFragments(t('common.listen'))}
-                </Button>
-              </div>
+          <div className="flex-1 p-6 md:p-8 lg:p-10 flex flex-col justify-between bg-gradient-to-t from-card via-card/95 to-card/80">
+            <div className="space-y-4">
+              <h3 className="text-2xl md:text-3xl lg:text-4xl font-medium tracking-[-1px] text-left">
+                {renderTextWithFragments(album.name)}
+              </h3>
+              <p className="text-base md:text-lg lg:text-xl text-muted-foreground leading-relaxed">
+                {renderTextWithFragments(album.description)}
+              </p>
+            </div>
+            <div className="mt-8">
+              <Button
+                variant="primary"
+                isSquircle={true}
+                squircleSize="lg"
+                className="w-full text-lg font-medium uppercase tracking-wide"
+                onClick={handleButtonClick}
+              >
+                {renderTextWithFragments(t('common.listen'))}
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -335,7 +296,6 @@ const MusicCard: React.FC<MusicCardProps> = React.memo(({
 }, (prevProps, nextProps) => {
   return (
     prevProps.album.id === nextProps.album.id &&
-    prevProps.isActive === nextProps.isActive &&
     prevProps.isHovered === nextProps.isHovered &&
     prevProps.locale === nextProps.locale &&
     prevProps.allImagesPreloaded === nextProps.allImagesPreloaded
@@ -344,7 +304,7 @@ const MusicCard: React.FC<MusicCardProps> = React.memo(({
 
 MusicCard.displayName = 'MusicCard'
 
-// Optimized carousel component
+// Оптимизированный компонент карусели
 interface MusicCarouselProps {
   albums: readonly Album[]
   locale: 'en' | 'ru'
@@ -396,7 +356,7 @@ const MusicCarousel: React.FC<MusicCarouselProps> = ({ albums, locale, allImages
     }
   }, [api])
 
-  // Optimized resize handler with debouncing
+  // Оптимизированный обработчик resize с дебаунсингом
   const debouncedResize = useDebounce(() => {
     setSlidesToShow(getSlidesToShow(window.innerWidth))
   }, 150)
@@ -414,7 +374,7 @@ const MusicCarousel: React.FC<MusicCarouselProps> = ({ albums, locale, allImages
     }
   }, [debouncedResize])
 
-  // Optimized carousel state updates
+  // Оптимизированные обновления состояния карусели
   useLayoutEffect(() => {
     if (!api) return
 
@@ -441,11 +401,9 @@ const MusicCarousel: React.FC<MusicCarouselProps> = ({ albums, locale, allImages
     }
   }, [])
 
-  // Memoized carousel items
+  // Мемоизированные элементы карусели
   const carouselItems = useMemo(() =>
     albums.map((album: Album, index: number) => {
-      const isCardActive = index === activeIndex
-
       return (
         <CarouselItem
           key={album.id}
@@ -460,7 +418,6 @@ const MusicCarousel: React.FC<MusicCarouselProps> = ({ albums, locale, allImages
         >
           <MusicCard
             album={album}
-            isActive={isCardActive}
             isHovered={index === hoveredIndex}
             onCardClick={handleCardClick}
             locale={locale}
@@ -468,9 +425,9 @@ const MusicCarousel: React.FC<MusicCarouselProps> = ({ albums, locale, allImages
           />
         </CarouselItem>
       )
-    }), [albums, activeIndex, slidesToShow, hoveredIndex, handleMouseEnter, handleMouseLeave, handleCardClick, locale, allImagesPreloaded])
+    }), [albums, slidesToShow, hoveredIndex, handleMouseEnter, handleMouseLeave, handleCardClick, locale, allImagesPreloaded])
 
-  // Memoized dot indicators
+  // Мемоизированные индикаторы точек
   const dotIndicators = useMemo(() =>
     albums.map((_: unknown, index: number) => (
       <button
@@ -515,7 +472,7 @@ const MusicCarousel: React.FC<MusicCarouselProps> = ({ albums, locale, allImages
   )
 }
 
-// Main music section component
+// Основной компонент секции музыки
 interface MusicSectionProps {
   locale: 'en' | 'ru'
 }
@@ -525,19 +482,19 @@ const MusicSection: React.FC<MusicSectionProps> = ({ locale }) => {
   const sectionRef = useRef<HTMLElement>(null)
   const { preloadAllImages, allImagesPreloaded } = useImagePreloader(musicData)
 
-  // Intersection Observer for triggering preload when section comes into view
+  // Intersection Observer для запуска предзагрузки при попадании в секцию
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          // Start preloading all images
+          // Запускаем предзагрузку всех изображений
           preloadAllImages()
-          // Disconnect observer after first trigger
+          // Отключаем observer после первого срабатывания
           observer.disconnect()
         }
       },
       {
-        rootMargin: '500px', // Start loading 500px before entering viewport
+        rootMargin: '200px', // Начинаем загрузку за 200px до попадания в viewport
         threshold: 0.1
       }
     )
@@ -567,9 +524,9 @@ const MusicSection: React.FC<MusicSectionProps> = ({ locale }) => {
         </div>
 
         <div className="mt-24">
-          <MusicCarousel
-            albums={musicData}
-            locale={locale}
+          <MusicCarousel 
+            albums={musicData} 
+            locale={locale} 
             allImagesPreloaded={allImagesPreloaded}
           />
         </div>
