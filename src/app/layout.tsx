@@ -34,7 +34,7 @@ export default function RootLayout({
 }) {
   return (
     <html suppressHydrationWarning className={pretendard.variable}>
-            <ReactScan />
+            {/* <ReactScan /> */}
       <body className="antialiased font-sans dark:bg-neutral-950" suppressHydrationWarning>
         <ConditionalLenis>
           <VideoProvider>

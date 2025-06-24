@@ -95,105 +95,6 @@
   }
 }
 
-/* SmartText базовые стили */
-.smart-text {
-  text-wrap: balance;
-  hyphens: auto;
-  word-spacing: -0.02em;
-  white-space: pre-line;
-  line-height: inherit;
-}
-
-/* Для инлайн элементов */
-.smart-text.inline {
-  display: inline;
-  text-wrap: balance;
-  white-space: pre-line;
-}
-
-/* Специальные стили для лекций - предотвращаем разрыв слов */
-.smart-text.lecture-title,
-.smart-text.lecture-description,
-.lecture-title .smart-text,
-.lecture-description .smart-text {
-  hyphens: none !important;
-  word-break: keep-all !important;
-  overflow-wrap: normal !important;
-  -webkit-hyphens: none !important;
-  -moz-hyphens: none !important;
-  -ms-hyphens: none !important;
-  word-wrap: normal !important;
-  line-break: auto !important;
-}
-
-/* Агрессивные стили для карусели */
-.apple-style-carousel .smart-text,
-.apple-style-carousel .smart-text * {
-  hyphens: none !important;
-  word-break: keep-all !important;
-  overflow-wrap: normal !important;
-  -webkit-hyphens: none !important;
-  -moz-hyphens: none !important;
-  -ms-hyphens: none !important;
-  word-wrap: normal !important;
-  line-break: auto !important;
-}
-
-/* Мобильные стили для SmartText - БЕЗ изменения размера шрифта */
-@media (max-width: 768px) {
-  .smart-text {
-    hyphens: none !important;
-    word-break: keep-all !important;
-    overflow-wrap: normal !important;
-    -webkit-hyphens: none !important;
-    -moz-hyphens: none !important;
-    -ms-hyphens: none !important;
-  }
-  
-  /* Специально для карусели на мобильном */
-  .apple-style-carousel .smart-text,
-  .apple-style-carousel .smart-text *,
-  .smart-text.lecture-title,
-  .smart-text.lecture-description,
-  .smart-text.lecture-title *,
-  .smart-text.lecture-description * {
-    hyphens: none !important;
-    word-break: keep-all !important;
-    overflow-wrap: normal !important;
-    -webkit-hyphens: none !important;
-    -moz-hyphens: none !important;
-    -ms-hyphens: none !important;
-    word-wrap: normal !important;
-    line-break: auto !important;
-    white-space: pre-line !important;
-  }
-  
-  .smart-text.lecture-description {
-    line-height: 1.4;
-  }
-  
-  .smart-text.lecture-title {
-    line-height: 1.3;
-  }
-}
-
-/* Поддержка переносов строк */
-.smart-text br {
-  display: block;
-  content: "";
-  margin-top: 0;
-}
-
-/* Класс для полного запрета разрыва слов */
-.no-word-break {
-  hyphens: none !important;
-  word-break: keep-all !important;
-  overflow-wrap: normal !important;
-  -webkit-hyphens: none !important;
-  -moz-hyphens: none !important;
-  -ms-hyphens: none !important;
-}
-
 /* Accessibility: Respect user's motion preferences */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -242,6 +143,7 @@
   }
 }
 
+/* Ensure Lenis respects reduced motion */
 @media (prefers-reduced-motion: reduce) {
   html.lenis,
   html.lenis body {
@@ -418,6 +320,7 @@
     line-height: inherit;
   }
 
+  /* Enhanced YouTube iframe clipping */
   [data-monoco] {
     position: relative !important;
     z-index: 2 !important;
@@ -458,4 +361,30 @@
       --border-radius-card: 48px;
     }
   }
+}
+
+/* SmartText base styles */
+.smart-text {
+  text-wrap: balance;
+  hyphens: auto;
+  word-spacing: -0.02em;
+  white-space: pre-line;
+  line-height: 1.02;
+}
+
+/* Hero heading override - normal word spacing for impact */
+.smart-text.hero-heading,
+.hero-heading .smart-text {
+  word-spacing: normal !important;
+}
+
+/* Lecture-specific styles */
+.smart-text.lecture-title,
+.smart-text.lecture-description,
+.lecture-title .smart-text,
+.lecture-description .smart-text {
+  hyphens: none !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  white-space: pre-line !important;
 }

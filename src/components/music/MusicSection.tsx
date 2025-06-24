@@ -6,7 +6,7 @@ import { useStableTranslation } from '@/hooks/useStableTranslation'
 import { musicData } from '@/lib/MusicData'
 import { MusicCarousel } from './MusicCarousel'
 import { useImagePreloader } from '@/hooks/useImagePreloader'
-import { renderTextWithFragments } from '@/utils/ReactUtils'
+import SmartText from '@/components/SmartText'
 
 interface MusicSectionProps {
   locale: 'en' | 'ru'
@@ -39,25 +39,56 @@ export const MusicSection: React.FC<MusicSectionProps> = ({ locale }) => {
   }, [preloadAllImages])
 
   return (
-    <section ref={sectionRef} id="music" className="section -mb-64">
+    <section ref={sectionRef} id="music" className="section -mb-64 music-section">
       <div className="container">
-        <h1 className="kern whitespace-pre-line text-5xl md:text-6xl lg:text-7xl 2xl:text-8xl font-medium tracking-[-1px] py-72">
-          {renderTextWithFragments(t('title'))}
+        <h1 className="kern text-5xl md:text-6xl lg:text-7xl 2xl:text-8xl font-medium tracking-[-1px] py-72">
+          <SmartText
+            language={locale}
+            preserveLineBreaks={true}
+            preventWordBreaking={true}
+            style={{ lineHeight: '0.9' }}
+          >
+            {t('title')}
+          </SmartText>
         </h1>
 
         <div className='flex flex-col gap-8 -mt-60 lg:w-[80%]'>
-          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-5xl font-regular tracking-[-1px] text-left">
-            {renderTextWithFragments(t('subtitle1'))}
+          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-5xl font-regular tracking-[-1px] text-left music-subtitle">
+            <SmartText
+              language={locale}
+              preserveLineBreaks={false}
+              preventWordBreaking={true}
+              style={{
+                lineHeight: '1.1',
+                textWrap: 'nowrap',
+                whiteSpace: 'normal', // Вернул normal
+                wordBreak: 'keep-all' // Добавил
+              }}
+            >
+              {t('subtitle1')}
+            </SmartText>
           </h2>
-          <h2 className='text-xl sm:text-2xl md:text-3xl lg:text-5xl font-regular tracking-[-1px] text-left'>
-            {renderTextWithFragments(t('subtitle2'))}
+          <h2 className='text-xl sm:text-2xl md:text-3xl lg:text-5xl font-regular tracking-[-1px] text-left music-subtitle'>
+            <SmartText
+              language={locale}
+              preserveLineBreaks={true}
+              preventWordBreaking={true}
+              style={{
+                lineHeight: '1.1',
+                textWrap: 'nowrap',
+                whiteSpace: 'pre-line', // Оставил для поддержки \n
+                wordBreak: 'keep-all' // Добавил
+              }}
+            >
+              {t('subtitle2')}
+            </SmartText>
           </h2>
         </div>
 
         <div className="mt-24">
-          <MusicCarousel 
-            albums={musicData} 
-            locale={locale} 
+          <MusicCarousel
+            albums={musicData}
+            locale={locale}
             allImagesPreloaded={allImagesPreloaded}
           />
         </div>

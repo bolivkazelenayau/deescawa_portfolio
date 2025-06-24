@@ -460,20 +460,22 @@ const Hero: FC<HeroProps> = memo(({
           <div className={CSS_CLASSES.CONTAINER}>
             <div className={CSS_CLASSES.HEADING_WRAPPER} style={config.headingContainerStyle}>
               <div className={CSS_CLASSES.HEADING_OVERFLOW}>
-                <h1
-                  className={`${CSS_CLASSES.HEADING} ${animationReady ? 'animation-ready' : ''}`}
-                  ref={scope}
-                  key={`hero-heading-${locale}`}
-                  style={config.headingStyle}
-                >
-                  <SmartText
-                    language={locale}
-                    preserveLineBreaks={true} // Сохраняем ручные переносы из JSON
-                    style={{ display: 'inline' }}
-                  >
-                    {config.headingContent}
-                  </SmartText>
-                </h1>
+<h1
+  className={`${CSS_CLASSES.HEADING} ${animationReady ? 'animation-ready' : ''}`}
+  ref={scope}
+  key={`hero-heading-${locale}`}
+  style={config.headingStyle}
+>
+  <SmartText
+    language={locale}
+    className="hero-heading"
+    preserveLineBreaks={true}
+    style={{ display: 'inline' }}
+  >
+    {config.headingContent}
+  </SmartText>
+</h1>
+
               </div>
             </div>
 
@@ -492,7 +494,6 @@ const Hero: FC<HeroProps> = memo(({
                 <SmartText
                   language={locale}
                   className={CSS_CLASSES.SUBTITLE}
-                  style={{ lineHeight: '1.1' }}
                   preserveLineBreaks={true} // Или false, если хочешь только автоматические
                 >
                   {config.content.subtitle}

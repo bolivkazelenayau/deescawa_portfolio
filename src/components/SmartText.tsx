@@ -1,14 +1,23 @@
 // components/SmartText.tsx
-import { useMemo, ReactNode, CSSProperties } from 'react';
+import { useMemo, ReactNode, CSSProperties, ElementType } from 'react';
+import { fixHangingPrepositions, Language, TypographyConfig, detectLanguage } from '../utils/typography';
 
 interface SmartTextProps {
   children: ReactNode;
   className?: string;
   style?: CSSProperties;
-  language?: 'ru' | 'en';
+  language?: Language;
   customHangingWords?: string[];
   preserveLineBreaks?: boolean;
-  preventWordBreaking?: boolean; // Новый проп
+  preventWordBreaking?: boolean;
+  as?: ElementType;
+  autoDetectLanguage?: boolean;
+  enableSmartQuotes?: boolean;
+  enableSmartDashes?: boolean;
+  enableNumberFormatting?: boolean;
+  customProcessors?: Array<(text: string) => string>;
+  respectExplicitBreaks?: boolean;
+  disableHangingPrepositions?: boolean; // ADD THIS LINE
 }
 
 const SmartText: React.FC<SmartTextProps> = ({ 
@@ -18,79 +27,150 @@ const SmartText: React.FC<SmartTextProps> = ({
   language = 'ru',
   customHangingWords,
   preserveLineBreaks = true,
-  preventWordBreaking = false // По умолчанию false
+  preventWordBreaking = false,
+  as: Component = 'span' as ElementType,
+  autoDetectLanguage = false,
+  enableSmartQuotes = false,
+  enableSmartDashes = false,
+  enableNumberFormatting = false,
+  customProcessors = [],
+  respectExplicitBreaks = true,
+  disableHangingPrepositions = false // ADD THIS LINE
 }) => {
- const processedContent = useMemo(() => {
-  if (typeof children !== 'string') return children;
-  
-  const hangingWordsMap: Record<string, string[]> = {
-    ru: ['с', 'на', 'это', 'в', 'к', 'о', 'у', 'и', 'а', 'но', 'да', 'или', 'что', 'как', 'где', 'когда', 'за', 'до', 'от', 'по', 'со', 'из', 'без', 'для', 'при', 'под', 'над', 'через'],
-    en: ['a', 'an', 'the', 'in', 'on', 'at', 'to', 'of', 'for', 'with', 'by', 'is', 'are', 'was', 'were', 'from']
-  };
-  
-  const wordsToProcess = customHangingWords || hangingWordsMap[language] || hangingWordsMap.ru;
-  
-  let text = children;
-  
-  // Заменяем обычные дефисы на неразрывные в составных словах
-  if (preventWordBreaking) {
-    text = text.replace(/([а-яёa-z]+)-([а-яёa-z]+)/gi, '$1‑$2'); // Неразрывный дефис U+2011
-  }
-  
-  // СНАЧАЛА проверяем переносы строк
-  if (preserveLineBreaks && text.includes('\n')) {
-    return text.split('\n').map((line, index, array) => {
-      const processedLine = line.replace(
-        new RegExp(`(${wordsToProcess.join('|')})\\s+`, 'gi'),
-        (match: string, word: string) => `${word}\u00A0`
-      );
-      
-      return (
+  const processedContent = useMemo(() => {
+    if (typeof children !== 'string') return children;
+    
+    let text = children;
+    let detectedLanguage = language;
+    
+    // Автоопределение языка
+    if (autoDetectLanguage) {
+      detectedLanguage = detectLanguage(text);
+    }
+    
+    // Применяем кастомные процессоры
+    customProcessors.forEach(processor => {
+      text = processor(text);
+    });
+    
+    // Умные кавычки
+    if (enableSmartQuotes) {
+      text = applySmartQuotes(text, detectedLanguage);
+    }
+    
+    // Умные тире
+    if (enableSmartDashes) {
+      text = applySmartDashes(text);
+    }
+    
+    // Форматирование чисел
+    if (enableNumberFormatting) {
+      text = formatNumbers(text, detectedLanguage);
+    }
+    
+    // Заменяем дефисы на неразрывные
+    if (preventWordBreaking) {
+      text = text.replace(/([а-яёa-z]+)-([а-яёa-z]+)/gi, '$1‑$2');
+    }
+    
+    // Конфигурация для висячих предлогов
+    const config: TypographyConfig = {
+      language: detectedLanguage,
+      customWords: customHangingWords
+    };
+    
+    // Обработка висячих предлогов с учетом явных переносов
+ if (!disableHangingPrepositions) { // ADD THIS CONDITION
+      if (respectExplicitBreaks && text.includes('\n')) {
+        text = text.split('\n').map(line => 
+          fixHangingPrepositions(line, config)
+        ).join('\n');
+      } else {
+        text = fixHangingPrepositions(text, config);
+      }
+    }
+    
+    // Обработка переносов строк для рендеринга
+    if (preserveLineBreaks && text.includes('\n')) {
+      return text.split('\n').map((line, index, array) => (
         <span key={index}>
-          {processedLine}
+          {line}
           {index < array.length - 1 && <br />}
         </span>
-      );
-    });
-  }
-  
-  // Если нет переносов, обрабатываем как обычно
-  return text.replace(
-    new RegExp(`(${wordsToProcess.join('|')})\\s+`, 'gi'),
-    (match: string, word: string) => `${word}\u00A0`
-  );
-}, [children, language, customHangingWords, preserveLineBreaks, preventWordBreaking]);
+      ));
+    }
+    
+    return text;
+   }, [
+    children, 
+    language, 
+    customHangingWords, 
+    preserveLineBreaks, 
+    preventWordBreaking, 
+    autoDetectLanguage, 
+    enableSmartQuotes, 
+    enableSmartDashes, 
+    enableNumberFormatting, 
+    customProcessors,
+    respectExplicitBreaks,
+    disableHangingPrepositions // ADD THIS TO DEPENDENCIES
+  ]);
 
- const defaultStyles: CSSProperties = {
-    textWrap: 'balance' as const,
-    hyphens: preventWordBreaking ? 'none' : 'auto', // Отключаем переносы слов
-    wordBreak: preventWordBreaking ? 'keep-all' : 'normal', // Запрещаем разрыв слов
-    overflowWrap: preventWordBreaking ? 'normal' : 'break-word', // Контролируем перенос
-    whiteSpace: preserveLineBreaks ? 'pre-line' : 'normal',
+  const defaultStyles: CSSProperties = {
+    textWrap: 'balance',
+    hyphens: preventWordBreaking ? 'none' : 'auto',
+    wordBreak: preventWordBreaking ? 'keep-all' : 'normal',
+    overflowWrap: preventWordBreaking ? 'normal' : 'break-word',
+    whiteSpace: preserveLineBreaks ? 'pre-wrap' : 'normal', // changed from pre-line
     ...style
   };
 
-  // Если контент уже обработан как JSX элементы
-  if (Array.isArray(processedContent)) {
-    return (
-      <span 
-        className={`smart-text ${className}`}
-        style={defaultStyles}
-      >
-        {processedContent}
-      </span>
-    );
-  }
-
-  // Если это строка, рендерим как обычно
   return (
-    <span 
-      className={`smart-text ${className}`}
+    <Component 
+      className={`smart-text ${className}`.trim()}
       style={defaultStyles}
     >
       {processedContent}
-    </span>
+    </Component>
   );
+};
+
+// Вспомогательные функции
+const applySmartQuotes = (text: string, language: Language): string => {
+  const quotes = {
+    ru: { open: '«', close: '»' },
+    en: { open: '"', close: '"' },
+    de: { open: '„', close: '"' },
+    fr: { open: '« ', close: ' »' },
+    es: { open: '«', close: '»' }
+  };
+  
+  const { open, close } = quotes[language] || quotes.en;
+  return text.replace(/"([^"]*)"/g, `${open}$1${close}`);
+};
+
+const applySmartDashes = (text: string): string => {
+  return text
+    .replace(/--/g, '—') // Двойной дефис в длинное тире
+    .replace(/(\d+)-(\d+)/g, '$1–$2') // Дефис между числами в короткое тире
+    .replace(/\s-\s/g, ' — ') // Дефис между словами в длинное тире с пробелами
+    .replace(/(\w)\s*-\s*(\w)/g, '$1–$2'); // Короткое тире между словами без пробелов
+};
+
+const formatNumbers = (text: string, language: Language): string => {
+  const separators = {
+    ru: ' ',
+    en: ',',
+    de: '.',
+    fr: ' ',
+    es: '.'
+  };
+  
+  const separator = separators[language] || separators.en;
+  
+  return text.replace(/\b(\d{4,})\b/g, (match) => {
+    return match.replace(/(\d)(?=(\d{3})+(?!\d))/g, `$1${separator}`);
+  });
 };
 
 export default SmartText;
