@@ -492,6 +492,7 @@ const Hero: FC<HeroProps> = memo(({
                 <SmartText
                   language={locale}
                   className={CSS_CLASSES.SUBTITLE}
+                  style={{ lineHeight: '1.1' }}
                   preserveLineBreaks={true} // Или false, если хочешь только автоматические
                 >
                   {config.content.subtitle}
