@@ -17,50 +17,6 @@ const SLOW_DURATION = 95;
 // Precompute doubled data outside component to prevent recreation
 const DOUBLED_EVENT_DATA = [...eventData1, ...eventData1];
 
-// Кастомный хук для предзагрузки изображений
-const useImagePreloader = () => {
-  const preloadedImages = useRef(new Set<string>());
-  
-  const preloadImages = useCallback(() => {
-    // Предзагружаем все изображения в фоне
-    DOUBLED_EVENT_DATA.forEach((item, index) => {
-      if (!preloadedImages.current.has(item.image)) {
-        const img = new Image();
-        img.src = item.image;
-        preloadedImages.current.add(item.image);
-      }
-    });
-  }, []);
-
-  return { preloadImages };
-};
-
-// Мемоизированный компонент карточки
-const EventCard = memo<{
-  item: any;
-  index: number;
-  isPriority: boolean;
-}>(({ item, index, isPriority }) => (
-  <Card
-    image={item.image}
-    alt={`Event ${index + 1}`}
-    isSquircle 
-    squircleSize="lg"
-    priority={isPriority}
-    quality={isPriority ? 90 : 75}
-    sizes="(max-width: 640px) 120px, (max-width: 768px) 200px, (max-width: 1024px) 300px, 400px"
-    loading={isPriority ? "eager" : "lazy"}
-  />
-), (prevProps, nextProps) => {
-  return (
-    prevProps.item.id === nextProps.item.id &&
-    prevProps.index === nextProps.index &&
-    prevProps.isPriority === nextProps.isPriority
-  );
-});
-
-EventCard.displayName = 'EventCard';
-
 const EventStack_1: React.FC<EventStackProps> = memo(({ className = "" }) => {
   const [duration, setDuration] = useState(FAST_DURATION);
   const [ref, { width }] = useMeasure();
@@ -70,16 +26,6 @@ const EventStack_1: React.FC<EventStackProps> = memo(({ className = "" }) => {
   const [rerender, setRerender] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const animationControlsRef = useRef<any>(null);
-  
-  const { preloadImages } = useImagePreloader();
-
-  // Предзагружаем изображения при монтировании
-  useEffect(() => {
-    // Небольшая задержка для приоритизации критического рендеринга
-    const timer = setTimeout(preloadImages, 100);
-    return () => clearTimeout(timer);
-  }, [preloadImages]);
 
   // Memoize container className
   const containerClassName = useMemo(() => 
@@ -97,7 +43,7 @@ const EventStack_1: React.FC<EventStackProps> = memo(({ className = "" }) => {
     }
   }, [xTranslation]);
 
-  // Memoize animation configuration с восстановленной логикой hover
+  // Memoize animation configuration
   const animationConfig = useMemo(() => {
     if (!width) return null;
     
@@ -107,7 +53,7 @@ const EventStack_1: React.FC<EventStackProps> = memo(({ className = "" }) => {
       const currentPosition = xTranslation.get();
       const remainingDistance = Math.abs(finalPosition - currentPosition);
       const totalDistance = Math.abs(finalPosition);
-      const progress = Math.max(0.1, remainingDistance / totalDistance);
+      const progress = remainingDistance / totalDistance;
       
       return {
         to: [currentPosition, finalPosition],
@@ -136,25 +82,13 @@ const EventStack_1: React.FC<EventStackProps> = memo(({ className = "" }) => {
     }
   }, [width, mustFinish, duration, xTranslation, resetPosition, rerender]);
 
-  // Оптимизированное управление анимацией
   useEffect(() => {
     if (!animationConfig) return;
     
-    // Останавливаем предыдущую анимацию
-    if (animationControlsRef.current) {
-      animationControlsRef.current.stop();
-    }
-    
-    animationControlsRef.current = animate(xTranslation, animationConfig.to, animationConfig.options);
-    
-    return () => {
-      if (animationControlsRef.current) {
-        animationControlsRef.current.stop();
-      }
-    };
+    const controls = animate(xTranslation, animationConfig.to, animationConfig.options);
+    return () => controls?.stop();
   }, [xTranslation, animationConfig]);
 
-  // Восстановленные обработчики hover с логикой замедления
   const handleHoverStart = useCallback(() => {
     setMustFinish(true);
     setDuration(SLOW_DURATION);
@@ -168,31 +102,33 @@ const EventStack_1: React.FC<EventStackProps> = memo(({ className = "" }) => {
   // Memoize motion div props
   const motionProps = useMemo(() => ({
     className: "left-0 flex gap-4",
-    style: { 
-      x: xTranslation,
-      willChange: 'transform'
-    },
+    style: { x: xTranslation },
     onHoverStart: handleHoverStart,
     onHoverEnd: handleHoverEnd,
     ref: containerRef
   }), [xTranslation, handleHoverStart, handleHoverEnd]);
 
-  // Оптимизированное создание карточек
-  const cardElements = useMemo(() => {
-    return DOUBLED_EVENT_DATA.map((item, idx) => {
-      // Приоритет для первых 6 изображений + каждого 4-го для равномерного распределения
-      const isPriority = idx < 6 || idx % 4 === 0;
-      
-      return (
-        <EventCard
-          key={`event-${item.id || idx}-${idx < eventData1.length ? 'original' : 'duplicate'}`}
-          item={item}
-          index={idx}
-          isPriority={isPriority}
-        />
-      );
-    });
-  }, []);
+  // Memoize card rendering with Next.js Image optimization props
+const cardElements = useMemo(() => 
+  DOUBLED_EVENT_DATA.map((item, idx) => {
+    const isPriority = idx < 4; // Load first 4 images with priority
+    
+    return (
+      <Card
+        image={item.image}
+        alt={`Event ${idx + 1}`}
+        isSquircle 
+        squircleSize="lg"
+        key={`event-${item.id || idx}-${idx < eventData1.length ? 'original' : 'duplicate'}`}
+        priority={isPriority}
+        quality={85}
+        sizes="(max-width: 640px) 50px, (max-width: 768px) 150px, (max-width: 1024px) 300px, 400px"
+        loading={isPriority ? "eager" : "lazy"}
+      />
+    );
+  }), 
+  []
+);
 
   return (
     <main className={containerClassName}>
@@ -200,10 +136,6 @@ const EventStack_1: React.FC<EventStackProps> = memo(({ className = "" }) => {
         className="w-max overflow-hidden -mx-48"
         role="region"
         aria-label="Event carousel"
-        style={{ 
-          contain: 'layout style paint',
-          willChange: 'transform'
-        }}
       >
         <motion.div
           {...motionProps}
