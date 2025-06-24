@@ -1,9 +1,10 @@
-// sections/Lectures.tsx (server component with React.Fragment support)
+// sections/Lectures.tsx (server component with SmartText support)
 import React from 'react';
 import { lectures } from '@/lib/LecturesData';
 import { AppleStyleCarousel } from '@/components/apple-style-carousel';
 import { SquircleVideo } from '@/components/video/SquircleVideo';
 import { getHybridTranslations, type Locale } from '@/lib/translations/StaticTranslationsLoader';
+import SmartText from '@/components/SmartText';
 
 import { type SupportedLocale } from '@/i18nconfig';
 
@@ -21,7 +22,7 @@ const SUBTITLE_CLASSES = "text-xl sm:text-2xl md:text-3xl lg:text-5xl font-regul
 const CAROUSEL_WRAPPER_CLASSES = "w-full overflow-hidden sm:-mx-2 mb-16 xs:-mt-24 lg:mt-0";
 
 // Video layout classes
-const VIDEO_LAYOUT_CLASSES = "w-full max-w-8xl -mt-24";
+const VIDEO_LAYOUT_CLASSES = "w-full max-w-8xl lg:-mt-24 xs:-mt-12";
 const DESKTOP_GRID_CLASSES = "hidden md:grid md:grid-cols-3 gap-6";
 const HORIZONTAL_VIDEO_CLASSES = "md:col-span-2";
 const VERTICAL_VIDEO_CLASSES = "md:col-span-1";
@@ -39,37 +40,6 @@ const FALLBACKS = {
     subtitle: 'Образовательный контент и презентации'
   }
 } as const;
-
-// Optimized text processing with memoization-like caching
-const processTextWithBreaks = (() => {
-  const cache = new Map<string, React.ReactNode>();
-
-  return (text: string): React.ReactNode => {
-    if (!text) return text;
-
-    // Check cache first
-    if (cache.has(text)) {
-      return cache.get(text);
-    }
-
-    const lines = text.split('\n').filter(line => line.trim());
-
-    if (lines.length <= 1) {
-      cache.set(text, text);
-      return text;
-    }
-
-    const result = lines.map((line, index) => (
-      <React.Fragment key={index}>
-        {line}
-        {index < lines.length - 1 && <br />}
-      </React.Fragment>
-    ));
-
-    cache.set(text, result);
-    return result;
-  };
-})();
 
 // Enhanced translation loader with error handling
 async function loadTranslations(locale: SupportedLocale) {
@@ -113,24 +83,24 @@ export async function Lectures({ locale }: LecturesProps) {
   const subtitle = (t ? t('subtitle') : null) || FALLBACKS[locale].subtitle;
 
   // Translate lectures efficiently
- const translatedLectures = lectures.map(lecture => {
-  const translated = translateLecture(lecture, t, locale);
-  
-  // Ensure image is a string (URL)
-  let image: string;
-  if (typeof translated.image === 'string') {
-    image = translated.image;
-  } else if (translated.image && typeof translated.image === 'object' && 'src' in translated.image) {
-    image = (translated.image as { src: string }).src; // ← Исправили здесь
-  } else {
-    image = '';
-  }
-  
-  return {
-    ...translated,
-    image,
-  };
-});
+  const translatedLectures = lectures.map(lecture => {
+    const translated = translateLecture(lecture, t, locale);
+    
+    // Ensure image is a string (URL)
+    let image: string;
+    if (typeof translated.image === 'string') {
+      image = translated.image;
+    } else if (translated.image && typeof translated.image === 'object' && 'src' in translated.image) {
+      image = (translated.image as { src: string }).src;
+    } else {
+      image = '';
+    }
+    
+    return {
+      ...translated,
+      image,
+    };
+  });
 
   // Log warning if translations failed (for debugging)
   if (hasError && process.env.NODE_ENV === 'development') {
@@ -140,17 +110,29 @@ export async function Lectures({ locale }: LecturesProps) {
   return (
     <section className={SECTION_CLASSES} id="lectures">
       <div className={CONTAINER_CLASSES}>
-        {/* Heading - full width, outside grid with Fragment support */}
+        {/* Heading - full width, outside grid with SmartText */}
         <h2 className={HEADING_CLASSES}>
-          {processTextWithBreaks(heading)}
+          <SmartText 
+            preserveLineBreaks={true} 
+            language={locale}
+            preventWordBreaking={true}
+          >
+            {heading}
+          </SmartText>
         </h2>
 
         {/* Grid layout for description only */}
         <div className={SUBTITLE_GRID_CLASSES}>
-          {/* Description - takes 8 columns with Fragment support */}
+          {/* Description - takes 8 columns with SmartText */}
           <div className={SUBTITLE_COL_CLASSES}>
             <h3 className={SUBTITLE_CLASSES}>
-              {processTextWithBreaks(subtitle)}
+              <SmartText 
+                preserveLineBreaks={true} 
+                language={locale}
+                preventWordBreaking={true}
+              >
+                {subtitle}
+              </SmartText>
             </h3>
           </div>
 
@@ -160,7 +142,10 @@ export async function Lectures({ locale }: LecturesProps) {
 
         {/* Carousel - full width, outside the grid */}
         <div className={CAROUSEL_WRAPPER_CLASSES}>
-          <AppleStyleCarousel lectures={translatedLectures} />
+          <AppleStyleCarousel 
+            lectures={translatedLectures} 
+            locale={locale}
+          />
         </div>
 
         {/* Responsive Video Layout */}

@@ -9,10 +9,11 @@ import useTextRevealAnimation from "@/hooks/useTextRevealAnimation"
 import { useStableTranslation } from "@/hooks/useStableTranslation"
 import React from "react"
 import dynamic from 'next/dynamic'
+import SmartText from '@/components/SmartText';
 
 // Static constants
 const heroImage = { src: "/images/hero/hero_image.jpg" };
-const EMAIL_ADDRESS = "hello@deescawa.com";
+const EMAIL_ADDRESS = "deescawa@gmail.com";
 const HEADER_OFFSET = 80;
 
 // Animation timing constants
@@ -85,12 +86,14 @@ const ServiceLink = memo(({
   service,
   index,
   isAnimating,
-  totalServices
+  totalServices,
+  locale
 }: {
   service: ServiceItem;
   index: number;
   isAnimating: boolean;
   totalServices: number;
+  locale: 'en' | 'ru';
 }) => {
   const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
     if (service.href.startsWith('#')) {
@@ -106,17 +109,20 @@ const ServiceLink = memo(({
       return service.title;
     }
 
-    if (typeof service.title === 'string' && service.title.includes('\n')) {
-      return service.title.split('\n').map((line, index, array) => (
-        <React.Fragment key={index}>
-          {line}
-          {index < array.length - 1 && <br />}
-        </React.Fragment>
-      ));
+    if (typeof service.title === 'string') {
+      return (
+        <SmartText
+          language={locale}
+          className="inline"
+          style={{ display: 'inline' }}
+        >
+          {service.title}
+        </SmartText>
+      );
     }
 
     return <span>{service.title}</span>;
-  }, [service.title]);
+  }, [service.title, locale]);
 
   // Memoized timing calculations
   const timing = useMemo(() => ({
@@ -366,12 +372,7 @@ const Hero: FC<HeroProps> = memo(({
     };
 
     const headingLines = content.heading ? content.heading.split('\n') : [];
-    const headingContent = headingLines.map((line, index) => (
-      <React.Fragment key={index}>
-        {line}
-        {index < headingLines.length - 1 && <br />}
-      </React.Fragment>
-    ));
+    const headingContent = content.heading;
 
     return {
       headingStyle,
@@ -447,18 +448,6 @@ const Hero: FC<HeroProps> = memo(({
     smoothScrollTo("projects");
   }, []);
 
-  // Memoized subtitle content
-  const subtitleContent = useMemo(() => {
-    if (!config.content.subtitle) return null;
-    
-    const lines = config.content.subtitle.split('\n');
-    return lines.map((line, index) => (
-      <React.Fragment key={index}>
-        {line}
-        {index < lines.length - 1 && <br />}
-      </React.Fragment>
-    ));
-  }, [config.content.subtitle]);
 
   return (
     <section
@@ -477,7 +466,13 @@ const Hero: FC<HeroProps> = memo(({
                   key={`hero-heading-${locale}`}
                   style={config.headingStyle}
                 >
-                  {config.headingContent}
+                  <SmartText
+                    language={locale}
+                    preserveLineBreaks={true} // Сохраняем ручные переносы из JSON
+                    style={{ display: 'inline' }}
+                  >
+                    {config.headingContent}
+                  </SmartText>
                 </h1>
               </div>
             </div>
@@ -494,9 +489,13 @@ const Hero: FC<HeroProps> = memo(({
                 }}
                 style={{ willChange: 'transform, opacity' }}
               >
-                <p className={CSS_CLASSES.SUBTITLE}>
-                  {subtitleContent}
-                </p>
+                <SmartText
+                  language={locale}
+                  className={CSS_CLASSES.SUBTITLE}
+                  preserveLineBreaks={true} // Или false, если хочешь только автоматические
+                >
+                  {config.content.subtitle}
+                </SmartText>
               </motion.div>
             )}
 
@@ -510,6 +509,7 @@ const Hero: FC<HeroProps> = memo(({
                     index={index}
                     isAnimating={isAnimating}
                     totalServices={config.content.services.length}
+                    locale={locale}
                   />
                 ))}
 

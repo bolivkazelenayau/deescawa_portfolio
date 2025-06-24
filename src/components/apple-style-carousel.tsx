@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { CarouselApi } from "@/components/ui/carousel";
 import { Monoco } from '@monokai/monoco-react';
+import SmartText from '@/components/SmartText';
 
 interface Lecture {
   id: string;
@@ -28,14 +29,15 @@ interface Lecture {
 
 interface AppleStyleCarouselProps {
   lectures: Lecture[];
+  locale?: 'ru' | 'en';
 }
 
 type HoverSide = "left" | "center" | "right" | null;
 
 // Static constants moved outside component
 const CONTAINER_WIDTH_THIRDS = {
-  LEFT: 1/3,
-  RIGHT: 2/3
+  LEFT: 1 / 3,
+  RIGHT: 2 / 3
 } as const;
 
 const DEBOUNCE_DELAY = 16; // ~60fps
@@ -48,7 +50,7 @@ const DEFAULT_SQUIRCLE_CONFIG = {
 } as const;
 
 const CSS_CLASSES = {
-  CONTAINER: "relative w-full max-w-9xl scale-90 -mx-4 xs:mx-1",
+  CONTAINER: "relative w-full max-w-9xl scale-90 -mx-4 xs:mx-1 apple-style-carousel", // Добавил класс
   CAROUSEL: "w-full max-w-9xl mt-8",
   CARD_WRAPPER: "p-1",
   CARD: "border-0 shadow-none relative",
@@ -69,16 +71,16 @@ const CSS_CLASSES = {
 const useDebounce = (callback: (...args: any[]) => void, delay: number) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const callbackRef = useRef(callback);
-  
+
   useEffect(() => {
     callbackRef.current = callback;
   }, [callback]);
-  
+
   const debouncedCallback = useCallback((...args: any[]) => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-    
+
     timeoutRef.current = setTimeout(() => {
       callbackRef.current(...args);
     }, delay);
@@ -92,7 +94,7 @@ const useDebounce = (callback: (...args: any[]) => void, delay: number) => {
       }
     };
   }, []);
-  
+
   return debouncedCallback;
 };
 
@@ -107,7 +109,7 @@ const useImagePreloader = (lectures: Lecture[]) => {
     }
 
     preloadingQueue.current.add(src);
-    
+
     return new Promise<void>((resolve) => {
       const img = new Image();
       img.onload = () => {
@@ -125,20 +127,20 @@ const useImagePreloader = (lectures: Lecture[]) => {
 
   const preloadNearbyImages = useCallback((currentIndex: number) => {
     const indicesToPreload = [];
-    
+
     for (let i = -PRELOAD_RANGE; i <= PRELOAD_RANGE; i++) {
       const index = currentIndex + i;
       if (index >= 0 && index < lectures.length) {
         indicesToPreload.push(index);
       }
     }
-    
+
     // Batch preload with Promise.all for better performance
     const preloadPromises = indicesToPreload.map(index => {
       const lecture = lectures[index];
       return lecture?.image ? preloadImage(lecture.image) : Promise.resolve();
     });
-    
+
     Promise.all(preloadPromises).catch(console.warn);
   }, [lectures, preloadImage]);
 
@@ -148,12 +150,12 @@ const useImagePreloader = (lectures: Lecture[]) => {
 // Optimized GradientOverlay with static classes
 const GradientOverlay = React.memo<{ side: "left" | "right"; hoverSide: HoverSide }>(
   ({ side, hoverSide }) => {
-    const sideClasses = useMemo(() => 
+    const sideClasses = useMemo(() =>
       side === "left" ? CSS_CLASSES.GRADIENT_LEFT : CSS_CLASSES.GRADIENT_RIGHT,
       [side]
     );
 
-    const opacityClass = useMemo(() => 
+    const opacityClass = useMemo(() =>
       hoverSide === side ? "opacity-0" : "opacity-60",
       [hoverSide, side]
     );
@@ -170,13 +172,13 @@ const GradientOverlay = React.memo<{ side: "left" | "right"; hoverSide: HoverSid
 GradientOverlay.displayName = 'GradientOverlay';
 
 // Enhanced ImageContainer with better performance
-const ImageContainer = React.memo<{ 
-  lecture: Lecture; 
-  isActive: boolean; 
+const ImageContainer = React.memo<{
+  lecture: Lecture;
+  isActive: boolean;
   isHovered: boolean;
   preloadedImages: Set<string>;
 }>(({ lecture, isActive, isHovered, preloadedImages }) => {
-  const [imageLoaded, setImageLoaded] = useState(() => 
+  const [imageLoaded, setImageLoaded] = useState(() =>
     preloadedImages.has(lecture.image)
   );
 
@@ -217,7 +219,7 @@ const ImageContainer = React.memo<{
         width={lecture.width}
         height={lecture.height}
         className={imageClasses}
-        style={{ 
+        style={{
           objectPosition: lecture.transform?.objectPosition || "center",
           willChange: isActive || isHovered ? 'transform, opacity' : 'auto'
         }}
@@ -271,45 +273,13 @@ const ImageContainer = React.memo<{
 
 ImageContainer.displayName = 'ImageContainer';
 
-// Enhanced LectureText with better memoization
+// Enhanced LectureText with SmartText integration
 const LectureText = React.memo<{ 
   lecture: Lecture; 
   isActive: boolean; 
   isHovered: boolean;
-}>(({ lecture, isActive, isHovered }) => {
-  const textContent = useMemo(() => {
-    const descriptionLines = lecture.description?.split("\n").filter(Boolean) || [];
-    
-    const renderedName = (() => {
-      if (typeof lecture.name === 'string') {
-        const nameLines = lecture.name.split("\n").filter(Boolean);
-        if (nameLines.length > 1) {
-          return nameLines.map((line, lineIndex) => (
-            <React.Fragment key={`name-${lineIndex}`}>
-              {line}
-              {lineIndex < nameLines.length - 1 && <br />}
-            </React.Fragment>
-          ));
-        }
-      }
-      return lecture.name;
-    })();
-
-    const renderedDescription = (() => {
-      if (descriptionLines.length > 0) {
-        return descriptionLines.map((line, lineIndex) => (
-          <React.Fragment key={`desc-${lineIndex}`}>
-            {line}
-            {lineIndex < descriptionLines.length - 1 && <br />}
-          </React.Fragment>
-        ));
-      }
-      return lecture.description;
-    })();
-
-    return { renderedName, renderedDescription };
-  }, [lecture.name, lecture.description]);
-
+  locale?: 'ru' | 'en';
+}>(({ lecture, isActive, isHovered, locale = 'ru' }) => {
   const titleClasses = useMemo(() => cn(
     CSS_CLASSES.TITLE,
     isActive || isHovered ? "opacity-100" : "opacity-50"
@@ -326,13 +296,27 @@ const LectureText = React.memo<{
         className={titleClasses}
         style={{ willChange: isActive || isHovered ? 'opacity' : 'auto' }}
       >
-        {textContent.renderedName}
+        <SmartText 
+          language={locale}
+          preserveLineBreaks={true}
+          preventWordBreaking={true}
+          className="lecture-title"
+        >
+          {typeof lecture.name === 'string' ? lecture.name : ''}
+        </SmartText>
       </h3>
       <p
         className={descriptionClasses}
         style={{ willChange: isActive || isHovered ? 'opacity' : 'auto' }}
       >
-        {textContent.renderedDescription}
+        <SmartText 
+          language={locale}
+          preserveLineBreaks={true}
+          preventWordBreaking={true}
+          className="lecture-description"
+        >
+          {lecture.description}
+        </SmartText>
       </p>
     </>
   );
@@ -340,29 +324,36 @@ const LectureText = React.memo<{
   return (
     prevProps.lecture.id === nextProps.lecture.id &&
     prevProps.isActive === nextProps.isActive &&
-    prevProps.isHovered === nextProps.isHovered
+    prevProps.isHovered === nextProps.isHovered &&
+    prevProps.locale === nextProps.locale
   );
 });
 
 LectureText.displayName = 'LectureText';
 
 // Enhanced LectureCard
-const LectureCard = React.memo<{ 
-  lecture: Lecture; 
-  isActive: boolean; 
+const LectureCard = React.memo<{
+  lecture: Lecture;
+  isActive: boolean;
   isHovered: boolean;
   preloadedImages: Set<string>;
-}>(({ lecture, isActive, isHovered, preloadedImages }) => (
+  locale?: 'ru' | 'en';
+}>(({ lecture, isActive, isHovered, preloadedImages, locale = 'ru' }) => (
   <div className={CSS_CLASSES.CARD_WRAPPER}>
     <Card className={CSS_CLASSES.CARD}>
       <CardContent className={CSS_CLASSES.CARD_CONTENT}>
-        <ImageContainer 
-          lecture={lecture} 
-          isActive={isActive} 
+        <ImageContainer
+          lecture={lecture}
+          isActive={isActive}
           isHovered={isHovered}
           preloadedImages={preloadedImages}
         />
-        <LectureText lecture={lecture} isActive={isActive} isHovered={isHovered} />
+        <LectureText
+          lecture={lecture}
+          isActive={isActive}
+          isHovered={isHovered}
+          locale={locale}
+        />
       </CardContent>
     </Card>
   </div>
@@ -371,7 +362,8 @@ const LectureCard = React.memo<{
     prevProps.lecture.id === nextProps.lecture.id &&
     prevProps.isActive === nextProps.isActive &&
     prevProps.isHovered === nextProps.isHovered &&
-    prevProps.preloadedImages === nextProps.preloadedImages
+    prevProps.preloadedImages === nextProps.preloadedImages &&
+    prevProps.locale === nextProps.locale
   );
 });
 
@@ -399,14 +391,17 @@ const CarouselArrow = React.memo<{ direction: "left" | "right" }>(({ direction }
 
 CarouselArrow.displayName = 'CarouselArrow';
 
-export function AppleStyleCarousel({ lectures }: AppleStyleCarouselProps) {
+export function AppleStyleCarousel({
+  lectures,
+  locale = 'ru'
+}: AppleStyleCarouselProps) {
   const [api, setApi] = useState<CarouselApi>();
   const [activeIndex, setActiveIndex] = useState(0);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [hoverSide, setHoverSide] = useState<HoverSide>(null);
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
-  
+
   const { preloadNearbyImages, preloadedImages } = useImagePreloader(lectures);
 
   // Preload images when active index changes
@@ -442,10 +437,10 @@ export function AppleStyleCarousel({ lectures }: AppleStyleCarouselProps) {
   const debouncedMouseMove = useDebounce((clientX: number) => {
     const container = containerRef.current;
     if (!container) return;
-    
+
     const containerRect = container.getBoundingClientRect();
     if (!containerRect.width) return;
-    
+
     const containerWidth = container.offsetWidth;
     const mouseX = clientX - containerRect.left;
     const relativeX = mouseX / containerWidth;
@@ -479,7 +474,7 @@ export function AppleStyleCarousel({ lectures }: AppleStyleCarouselProps) {
     }
   }, [api]);
 
-  // Memoized carousel items with preloaded images
+  // Memoized carousel items with locale support
   const carouselItems = useMemo(() => 
     lectures.map((lecture, index) => (
       <CarouselItem
@@ -493,9 +488,10 @@ export function AppleStyleCarousel({ lectures }: AppleStyleCarouselProps) {
           isActive={activeIndex === index}
           isHovered={hoveredIndex === index}
           preloadedImages={preloadedImages}
+          locale={locale}
         />
       </CarouselItem>
-    )), [lectures, activeIndex, hoveredIndex, handleMouseEnter, handleMouseLeave, preloadedImages]
+    )), [lectures, activeIndex, hoveredIndex, handleMouseEnter, handleMouseLeave, preloadedImages, locale]
   );
 
   return (

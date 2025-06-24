@@ -5,7 +5,6 @@ import localFont from "next/font/local"
 import "./[locale]/globals.css";
 import { ThemeProvider } from "next-themes";
 import { ScrollRestorationHandler } from "@/components/ScrollRestorationHandler";
-import { ReactLenis } from "@/lib/lenis"
 import { ThemeMetaUpdater } from "@/components/theme_management/ThemeMetaUpdater";
 import { VideoProvider } from "@/contexts/VideoContext";
 import { Metadata } from "next";
@@ -35,6 +34,7 @@ export default function RootLayout({
 }) {
   return (
     <html suppressHydrationWarning className={pretendard.variable}>
+            <ReactScan />
       <body className="antialiased font-sans dark:bg-neutral-950" suppressHydrationWarning>
         <ConditionalLenis>
           <VideoProvider>
