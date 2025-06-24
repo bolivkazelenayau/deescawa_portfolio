@@ -12,10 +12,13 @@ import React from "react"
 import dynamic from 'next/dynamic'
 import type { ImageLoaderProps } from 'next/image';
 
-const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
-  return src; // Пакет сам управляет оптимизацией
+// Оптимизированный лоадер изображений
+const imageLoader = ({ src, width, quality = 75 }: ImageLoaderProps): string => {
+  if (src.startsWith('/')) {
+    return `${src}?w=${width}&q=${quality}`;
+  }
+  return src;
 };
-
 
 // Lazy load icon with better fallback
 const DoubleChevronIcon = dynamic(() => import('@/components/DoubleChevronIcon'), {
@@ -23,19 +26,19 @@ const DoubleChevronIcon = dynamic(() => import('@/components/DoubleChevronIcon')
   ssr: false
 })
 
-// Static constants - UPDATED FOR SNAPPY ANIMATIONS
+// Static constants - OPTIMIZED FOR PERFORMANCE
 const HEADER_OFFSET = 80
-const ANIMATION_DURATION = 0.4 // Faster base duration
-const ANIMATION_DELAY_BUTTON_1 = 0.5 // Snappier button timing
+const ANIMATION_DURATION = 0.4
+const ANIMATION_DELAY_BUTTON_1 = 0.5
 const ANIMATION_DELAY_BUTTON_2 = 0.7
-const SERVICE_ANIMATION_DELAY_BASE = 0.3 // Earlier start
-const SERVICE_LINE_STAGGER = 0.08 // Fast line stagger
-const SERVICE_TEXT_DELAY = 0.15 // Quick delay between line and text
-const SERVICE_ARROW_DELAY = 0.1 // Snappy arrow appearance
-const SERVICE_BOTTOM_LINE_DELAY = 0.15 // Reduced delay for bottom line
+const SERVICE_ANIMATION_DELAY_BASE = 0.3
+const SERVICE_LINE_STAGGER = 0.08
+const SERVICE_TEXT_DELAY = 0.15
+const SERVICE_ARROW_DELAY = 0.1
+const SERVICE_BOTTOM_LINE_DELAY = 0.15
 const EMAIL_ADDRESS = "hello@deescawa.com"
 
-// Static class names
+// Static class names - MEMOIZED
 const SECTION_CLASSES = "min-h-screen"
 const GRID_CLASSES = "grid md:grid-cols-12 h-screen items-stretch sticky top-0"
 const LEFT_COL_CLASSES = "md:col-span-7 flex flex-col justify-start md:justify-center min-h-screen md:min-h-0 xs:pt-32 md:pt-0"
@@ -48,7 +51,7 @@ const RIGHT_COL_CLASSES = "md:col-span-5 relative"
 const IMAGE_WRAPPER_CLASSES = "h-full w-full md:absolute md:right-0"
 const IMAGE_CLASSES = "size-full object-cover"
 
-// Static animation configs - UPDATED FOR CONSISTENCY
+// Static animation configs - MEMOIZED FOR PERFORMANCE
 const BUTTON_ANIMATION_CONFIG_1 = {
   duration: ANIMATION_DURATION,
   delay: ANIMATION_DELAY_BUTTON_1,
@@ -66,6 +69,30 @@ const IMAGE_ANIMATION_CONFIG = {
   ease: "easeOut"
 } as const;
 
+// Optimized animation variants
+const ANIMATION_VARIANTS = {
+  line: {
+    initial: { width: 0 },
+    animate: { width: '100%' }
+  },
+  text: {
+    initial: { opacity: 0, x: -30, scale: 0.98 },
+    animate: { opacity: 1, x: 0, scale: 1 }
+  },
+  arrow: {
+    initial: { opacity: 0, x: 15, scale: 0.9 },
+    animate: { opacity: 1, x: 0, scale: 1 }
+  },
+  button: {
+    initial: { opacity: 0, y: "100%" },
+    animate: { opacity: 1, y: 0 }
+  },
+  subtitle: {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 }
+  }
+} as const;
+
 // Service interface for type safety
 interface ServiceItem {
   title: string | React.ReactNode;
@@ -79,7 +106,7 @@ interface HeroProps {
   showServiceContainerLines?: boolean;
 }
 
-// Smooth scroll utility
+// Smooth scroll utility - OPTIMIZED
 const smoothScrollTo = (targetId: string) => {
   const targetElement = document.getElementById(targetId);
   if (targetElement) {
@@ -93,7 +120,7 @@ const smoothScrollTo = (targetId: string) => {
   }
 };
 
-// ServiceLink component - UPDATED WITH SNAPPY STAGGERED ANIMATIONS
+// ServiceLink component - OPTIMIZED WITH MEMOIZED ANIMATIONS
 const ServiceLink = memo(({
   service,
   index,
@@ -113,8 +140,8 @@ const ServiceLink = memo(({
     }
   }, [service.href]);
 
-  // Handle React elements and newlines in strings
-  const renderServiceContent = () => {
+  // Memoized service content rendering
+  const serviceContent = useMemo(() => {
     if (React.isValidElement(service.title)) {
       return service.title;
     }
@@ -129,51 +156,54 @@ const ServiceLink = memo(({
     }
 
     return <span>{service.title}</span>;
-  };
+  }, [service.title]);
 
-  // Calculate consistent timing
-  const lineDelay = SERVICE_ANIMATION_DELAY_BASE + (index * SERVICE_LINE_STAGGER);
-  const textDelay = lineDelay + SERVICE_TEXT_DELAY;
-  const arrowDelay = textDelay + SERVICE_ARROW_DELAY;
+  // Memoized timing calculations
+  const timingConfig = useMemo(() => ({
+    lineDelay: SERVICE_ANIMATION_DELAY_BASE + (index * SERVICE_LINE_STAGGER),
+    textDelay: SERVICE_ANIMATION_DELAY_BASE + (index * SERVICE_LINE_STAGGER) + SERVICE_TEXT_DELAY,
+    arrowDelay: SERVICE_ANIMATION_DELAY_BASE + (index * SERVICE_LINE_STAGGER) + SERVICE_TEXT_DELAY + SERVICE_ARROW_DELAY
+  }), [index]);
+
+  // Memoized transition configs
+  const transitionConfigs = useMemo(() => ({
+    line: {
+      duration: 0.25,
+      delay: timingConfig.lineDelay,
+      ease: [0.25, 0.46, 0.45, 0.94]
+    },
+    text: {
+      duration: 0.3,
+      delay: timingConfig.textDelay,
+      ease: [0.25, 0.46, 0.45, 0.94]
+    },
+    arrow: {
+      delay: timingConfig.arrowDelay,
+      duration: 0.25,
+      ease: [0.25, 0.46, 0.45, 0.94]
+    }
+  }), [timingConfig]);
 
   return (
     <div className="relative">
-      {/* Animated separator line - FAST STAGGER */}
+      {/* Animated separator line - OPTIMIZED */}
       {index > 0 && (
         <motion.div
-          initial={{ width: 0 }}
-          animate={isAnimating ? { width: '100%' } : { width: 0 }}
-          transition={{
-            duration: 0.25, // Faster line animation
-            delay: lineDelay,
-            ease: [0.25, 0.46, 0.45, 0.94] // Consistent easing
-          }}
+          initial={ANIMATION_VARIANTS.line.initial}
+          animate={isAnimating ? ANIMATION_VARIANTS.line.animate : ANIMATION_VARIANTS.line.initial}
+          transition={transitionConfigs.line}
           className="border-t border-gray-400 mb-3 md:mb-2 xl:mb-4"
+          style={{ willChange: 'width' }}
         />
       )}
 
-      {/* Service content - SNAPPY TEXT APPEARANCE */}
+      {/* Service content - OPTIMIZED */}
       <motion.div
-        initial={{
-          opacity: 0,
-          x: -30, // Less dramatic movement
-          scale: 0.98 // Subtle scale
-        }}
-        animate={isAnimating ? {
-          opacity: 1,
-          x: 0,
-          scale: 1
-        } : {
-          opacity: 0,
-          x: -30,
-          scale: 0.98
-        }}
-        transition={{
-          duration: 0.3, // Fast text animation
-          delay: textDelay,
-          ease: [0.25, 0.46, 0.45, 0.94] // Consistent easing
-        }}
+        initial={ANIMATION_VARIANTS.text.initial}
+        animate={isAnimating ? ANIMATION_VARIANTS.text.animate : ANIMATION_VARIANTS.text.initial}
+        transition={transitionConfigs.text}
         className="py-3 md:py-2 xl:py-2 relative group/service overflow-hidden"
+        style={{ willChange: 'transform, opacity' }}
       >
         <div className="relative flex items-center justify-between">
           <Link
@@ -183,7 +213,7 @@ const ServiceLink = memo(({
             rel={service.external ? "noopener noreferrer" : undefined}
             className="xs:text-xs md:text-xs xl:text-xl font-normal tracking-tight leading-relaxed hover:text-gray-300 transition-all duration-200 cursor-pointer group flex-1 uppercase group-hover/service:translate-x-2"
           >
-            {renderServiceContent()}
+            {serviceContent}
             {service.external && (
               <span className="inline-block ml-2 text-lg opacity-60 group-hover:opacity-100 transition-opacity duration-200">
                 ↗
@@ -191,16 +221,13 @@ const ServiceLink = memo(({
             )}
           </Link>
 
-          {/* Arrow - SNAPPY APPEARANCE */}
+          {/* Arrow - OPTIMIZED */}
           <motion.div
-            initial={{ opacity: 0, x: 15, scale: 0.9 }}
-            animate={isAnimating ? { opacity: 1, x: 0, scale: 1 } : { opacity: 0, x: 15, scale: 0.9 }}
-            transition={{
-              delay: arrowDelay,
-              duration: 0.25, // Fast arrow animation
-              ease: [0.25, 0.46, 0.45, 0.94] // Consistent easing
-            }}
+            initial={ANIMATION_VARIANTS.arrow.initial}
+            animate={isAnimating ? ANIMATION_VARIANTS.arrow.animate : ANIMATION_VARIANTS.arrow.initial}
+            transition={transitionConfigs.arrow}
             className="ml-4 group-hover/service:-translate-x-2 transition-transform duration-200"
+            style={{ willChange: 'transform, opacity' }}
           >
             <svg
               width="24"
@@ -224,7 +251,7 @@ const ServiceLink = memo(({
 
 ServiceLink.displayName = 'ServiceLink';
 
-// Optimized button components - UPDATED WITH CONSISTENT TIMING
+// Optimized button components - MEMOIZED TRANSITIONS
 const ViewWorkButton = memo(({
   isAnimating,
   buttonText,
@@ -235,9 +262,10 @@ const ViewWorkButton = memo(({
   onClick: () => void;
 }) => (
   <motion.div
-    initial={{ opacity: 0, y: "100%" }}
-    animate={isAnimating ? { opacity: 1, y: 0 } : { opacity: 0, y: "100%" }}
+    initial={ANIMATION_VARIANTS.button.initial}
+    animate={isAnimating ? ANIMATION_VARIANTS.button.animate : ANIMATION_VARIANTS.button.initial}
     transition={BUTTON_ANIMATION_CONFIG_1}
+    style={{ willChange: 'transform, opacity' }}
   >
     <Button
       variant="secondary"
@@ -262,9 +290,10 @@ const ContactButton = memo(({
   buttonText: string;
 }) => (
   <motion.div
-    initial={{ opacity: 0, y: "100%" }}
-    animate={isAnimating ? { opacity: 1, y: 0 } : { opacity: 0, y: "100%" }}
+    initial={ANIMATION_VARIANTS.button.initial}
+    animate={isAnimating ? ANIMATION_VARIANTS.button.animate : ANIMATION_VARIANTS.button.initial}
     transition={BUTTON_ANIMATION_CONFIG_2}
+    style={{ willChange: 'transform, opacity' }}
   >
     <Link href={`mailto:${EMAIL_ADDRESS}`} passHref className="inline-block">
       <Button
@@ -296,7 +325,7 @@ const Hero: FC<HeroProps> = memo(({
   const { t, isLoading } = useStableTranslation(locale, 'hero')
   const [isAnimating, setIsAnimating] = useState(false)
 
-  // Process services with proper typing and validation
+  // Optimized services processing with better memoization
   const processServices = useCallback((servicesData: any): ServiceItem[] => {
     if (!Array.isArray(servicesData)) return [];
 
@@ -332,7 +361,7 @@ const Hero: FC<HeroProps> = memo(({
     }).filter(Boolean) as ServiceItem[];
   }, []);
 
-  // Combined memoization for better performance
+  // Enhanced memoization with better dependency tracking
   const config = useMemo(() => {
     const headingStyle = {
       width: '100%',
@@ -375,6 +404,25 @@ const Hero: FC<HeroProps> = memo(({
     };
   }, [locale, t, processServices]);
 
+  // Memoized subtitle content processing
+  const subtitleContent = useMemo(() => {
+    if (!config.content.subtitle) return null;
+    
+    const lines = config.content.subtitle.split('\n');
+    return lines.map((line, index) => (
+      <React.Fragment key={index}>
+        {line}
+        {index < lines.length - 1 && <br />}
+      </React.Fragment>
+    ));
+  }, [config.content.subtitle]);
+
+  // Memoized container line timing
+  const containerLineTimings = useMemo(() => ({
+    top: SERVICE_ANIMATION_DELAY_BASE - 0.1,
+    bottom: SERVICE_ANIMATION_DELAY_BASE + (config.content.services.length * SERVICE_LINE_STAGGER) + SERVICE_BOTTOM_LINE_DELAY
+  }), [config.content.services.length]);
+
   // Reset animation states on locale change
   useEffect(() => {
     hasTriggeredRef.current = false;
@@ -382,14 +430,14 @@ const Hero: FC<HeroProps> = memo(({
     setAnimationReady(false);
   }, [locale]);
 
-  // Only animate image on first load
+  // Optimized image loading effect
   useEffect(() => {
     if (!hasImageLoaded) {
       setHasImageLoaded(true);
     }
-  }, []);
+  }, [hasImageLoaded]);
 
-  // Intersection observer
+  // Optimized intersection observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -398,7 +446,7 @@ const Hero: FC<HeroProps> = memo(({
           hasTriggeredRef.current = true;
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1, rootMargin: '50px' }
     );
 
     if (sectionRef.current) {
@@ -408,7 +456,7 @@ const Hero: FC<HeroProps> = memo(({
     return () => observer.disconnect();
   }, []);
 
-  // Text reveal animation
+  // Text reveal animation with optimization
   const { scope, entranceAnimation, isInitialized } = useTextRevealAnimation(
     {
       onStart: () => setAnimationReady(true)
@@ -416,7 +464,7 @@ const Hero: FC<HeroProps> = memo(({
     locale
   );
 
-  // Button animations
+  // Optimized button animations
   useEffect(() => {
     if (isLoading || !isVisible || !isInitialized) return;
 
@@ -424,6 +472,7 @@ const Hero: FC<HeroProps> = memo(({
     entranceAnimation();
   }, [isLoading, isVisible, isInitialized, entranceAnimation]);
 
+  // Optimized scroll animations
   const { scrollYProgress } = useScroll({
     target: enableZoomAnimation ? scrollingDiv : undefined,
     offset: enableZoomAnimation ? ["start end", "end end"] : undefined,
@@ -461,76 +510,59 @@ const Hero: FC<HeroProps> = memo(({
               </div>
             </div>
 
-            {/* Subtitle - UPDATED WITH SNAPPY TIMING */}
+            {/* Subtitle - OPTIMIZED */}
             {config.content.subtitle && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={isAnimating ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                initial={ANIMATION_VARIANTS.subtitle.initial}
+                animate={isAnimating ? ANIMATION_VARIANTS.subtitle.animate : ANIMATION_VARIANTS.subtitle.initial}
                 transition={{
                   duration: ANIMATION_DURATION,
-                  delay: 0.3, // Faster subtitle appearance
+                  delay: 0.3,
                   ease: [0.25, 0.46, 0.45, 0.94]
                 }}
+                style={{ willChange: 'transform, opacity' }}
               >
                 <p className="xs:text-2xl md:text-2xl xl:text-5xl max-w-4xl tracking-[-0.02em] font-normal leading-tight xl:-mt-3 xs:-mt-6">
-                  {(() => {
-                    const lines = config.content.subtitle.split('\n');
-                    return lines.map((line, index) => (
-                      <React.Fragment key={index}>
-                        {line}
-                        {index < lines.length - 1 && <br />}
-                      </React.Fragment>
-                    ));
-                  })()}
+                  {subtitleContent}
                 </p>
               </motion.div>
             )}
 
-            {/* Services Block - UPDATED WITH FAST STAGGERED LINES */}
-            {config.content.services && config.content.services.length > 0 && (
-              <div className="mt-12 md:mt-8 relative">
-                {/* Optional top container line - SNAPPY */}
-                {showServiceContainerLines && (
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={isAnimating ? { width: '100%' } : { width: 0 }}
-                    transition={{
-                      duration: 0.25,
-                      delay: SERVICE_ANIMATION_DELAY_BASE - 0.1,
-                      ease: [0.25, 0.46, 0.45, 0.94]
-                    }}
-                    className="border-t border-gray-400 mb-3 md:mb-2 lg:mb-4"
-                  />
-                )}
+            {/* Services Block - FULLY OPTIMIZED */}
+          {/* Services Block - FULLY OPTIMIZED */}
+{config.content.services && config.content.services.length > 0 && (
+  <div className="mt-12 md:mt-8 relative">
+    {/* Убираем верхнюю контейнерную линию - УДАЛЕНО */}
+    
+    {/* Services with optimized rendering */}
+    {config.content.services.map((service: ServiceItem, index: number) => (
+      <ServiceLink
+        key={`${service.title}-${index}`}
+        service={service}
+        index={index}
+        isAnimating={isAnimating}
+        totalServices={config.content.services.length}
+      />
+    ))}
 
-                {/* Services with fast staggered lines and text */}
-                {config.content.services.map((service: ServiceItem, index: number) => (
-                  <ServiceLink
-                    key={`${service.title}-${index}`}
-                    service={service}
-                    index={index}
-                    isAnimating={isAnimating}
-                    totalServices={config.content.services.length}
-                  />
-                ))}
+    {/* Optional bottom container line - OPTIMIZED */}
+    {showServiceContainerLines && (
+      <motion.div
+        initial={ANIMATION_VARIANTS.line.initial}
+        animate={isAnimating ? ANIMATION_VARIANTS.line.animate : ANIMATION_VARIANTS.line.initial}
+        transition={{
+          duration: 0.25,
+          delay: containerLineTimings.bottom,
+          ease: [0.25, 0.46, 0.45, 0.94]
+        }}
+        className="border-b border-gray-400 mt-3 md:mt-2 lg:mt-4"
+        style={{ willChange: 'width' }}
+      />
+    )}
+  </div>
+)}
 
-                {/* Optional bottom container line - REDUCED DELAY */}
-                {showServiceContainerLines && (
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={isAnimating ? { width: '100%' } : { width: 0 }}
-                    transition={{
-                      duration: 0.25,
-                      delay: SERVICE_ANIMATION_DELAY_BASE + (config.content.services.length * SERVICE_LINE_STAGGER) + SERVICE_BOTTOM_LINE_DELAY,
-                      ease: [0.25, 0.46, 0.45, 0.94]
-                    }}
-                    className="border-b border-gray-400 mt-3 md:mt-2 lg:mt-4"
-                  />
-                )}
-              </div>
-            )}
-
-            {/* Buttons - uncomment if needed */}
+            {/* Buttons - OPTIMIZED (uncomment if needed) */}
             {/* <div className={BUTTONS_WRAPPER_CLASSES}>
               <ViewWorkButton 
                 isAnimating={isAnimating}
@@ -550,7 +582,7 @@ const Hero: FC<HeroProps> = memo(({
             animate={{ opacity: hasImageLoaded ? 1 : 0 }}
             transition={IMAGE_ANIMATION_CONFIG}
             className={IMAGE_WRAPPER_CLASSES}
-            style={{ width: portraitWidth }}
+            style={{ width: portraitWidth, willChange: 'width, opacity' }}
           >
             <ConditionalImage
               src={heroImage.src}
@@ -560,6 +592,7 @@ const Hero: FC<HeroProps> = memo(({
               sizes="(max-width: 768px) 100vw, 50vw"
               width={800}
               height={1200}
+              loader={imageLoader}
             />
           </motion.div>
         </div>
