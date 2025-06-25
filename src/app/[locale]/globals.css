@@ -388,3 +388,26 @@
   overflow-wrap: normal !important;
   white-space: pre-line !important;
 }
+
+.smart-text.events-description {
+  word-break: keep-all !important;
+  overflow-wrap: break-word !important;
+  hyphens: none !important;
+}
+
+/* Prevent breaking of specific phrases */
+.smart-text.events-description {
+  white-space: pre-line !important;
+}
+
+.prevent-text-breaking {
+  word-break: keep-all !important;
+  overflow-wrap: break-word !important;
+  hyphens: none !important;
+}
+
+.prevent-text-breaking .smart-text {
+  word-break: keep-all !important;
+  overflow-wrap: break-word !important;
+  hyphens: none !important;
+}
