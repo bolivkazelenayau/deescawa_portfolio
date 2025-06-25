@@ -3,10 +3,13 @@ import ProjectTitle from "./ProjectTitle";
 import ArrowIcon from "./ArrowIcon";
 import dynamic from "next/dynamic";
 import ConditionalImage from "@/components/ConditionalImage";
+import React from "react";
 
-// Optimized dynamic import
+// Enhanced loading state
 const SquircleImage = dynamic(() => import("./SquircleImage"), {
-  loading: () => <div className="aspect-video w-full bg-gray-200 animate-pulse rounded-lg" />,
+  loading: () => (
+    <div className="aspect-video w-full bg-gradient-to-r from-gray-200 to-gray-300 animate-pulse rounded-lg" />
+  ),
 });
 
 interface MobileLayoutProps {
@@ -22,16 +25,104 @@ interface MobileLayoutProps {
   showImage?: boolean;
 }
 
-// Static constants moved outside component
-const BASE_CLASSES = {
-  CONTAINER_BASE: "group-hover/project:text-stone-900 md:hidden flex flex-col h-full w-full",
-  IMAGE_CONTAINER: "image-container aspect-video w-full relative",
-  IMAGE_BASE: "w-full h-full",
-  IMAGE_COVER: "w-full h-full object-cover",
-  CONTENT_WRAPPER: "relative mt-auto p-12 w-full",
-  TITLE_WRAPPER: "absolute left-0 -bottom-1 flex flex-col max-w-[calc(100%-20px)]",
-  ARROW_WRAPPER: "absolute right-0 bottom-0"
+// Consolidated configuration object
+const MOBILE_CONFIG = {
+  CLASSES: {
+    // Layout containers
+    container: "group-hover/project:text-stone-900 md:hidden flex flex-col h-full w-full",
+    imageContainer: "image-container aspect-video w-full relative",
+    contentWrapper: "relative mt-auto p-12 w-full",
+    
+    // Content positioning
+    titleWrapper: "absolute left-0 -bottom-1 flex flex-col max-w-[calc(100%-20px)]",
+    arrowWrapper: "absolute right-0 bottom-0",
+    
+    // Image styling
+    imageBase: "w-full h-full",
+    imageCover: "w-full h-full object-cover"
+  },
+  DEFAULTS: {
+    borderRadius: 12,
+    smoothing: 0.8
+  }
 } as const;
+
+// Utility function to get image configuration
+const getImageConfig = (useSquircle: boolean, image: string, name: string, width: number, height: number) => ({
+  src: image,
+  alt: `${name} image`,
+  width,
+  height,
+  className: useSquircle ? MOBILE_CONFIG.CLASSES.imageBase : MOBILE_CONFIG.CLASSES.imageCover
+});
+
+// Extracted image component for better separation
+const ProjectImage = memo(({
+  config,
+  useSquircle,
+  borderRadius,
+  smoothing
+}: {
+  config: ReturnType<typeof getImageConfig>;
+  useSquircle: boolean;
+  borderRadius: number;
+  smoothing: number;
+}) => {
+  return useSquircle ? (
+    <SquircleImage
+      {...config}
+      borderRadius={borderRadius}
+      smoothing={smoothing}
+    />
+  ) : (
+    <ConditionalImage {...config} />
+  );
+});
+ProjectImage.displayName = 'ProjectImage';
+
+// Image section component using Fragment to avoid wrapper
+const ImageSection = memo(({
+  showImage,
+  imageConfig,
+  useSquircle,
+  borderRadius,
+  smoothing
+}: {
+  showImage: boolean;
+  imageConfig: ReturnType<typeof getImageConfig>;
+  useSquircle: boolean;
+  borderRadius: number;
+  smoothing: number;
+}) => {
+  if (!showImage) return null;
+
+  return (
+    <div className={MOBILE_CONFIG.CLASSES.imageContainer}>
+      <ProjectImage
+        config={imageConfig}
+        useSquircle={useSquircle}
+        borderRadius={borderRadius}
+        smoothing={smoothing}
+      />
+    </div>
+  );
+});
+ImageSection.displayName = 'ImageSection';
+
+// Content section with title and arrow using Fragment
+const ContentSection = memo(({ name, description }: { name: string; description: string }) => (
+  <div className={MOBILE_CONFIG.CLASSES.contentWrapper}>
+    <>
+      <div className={MOBILE_CONFIG.CLASSES.titleWrapper}>
+        <ProjectTitle name={name} description={description} />
+      </div>
+      <div className={MOBILE_CONFIG.CLASSES.arrowWrapper}>
+        <ArrowIcon />
+      </div>
+    </>
+  </div>
+));
+ContentSection.displayName = 'ContentSection';
 
 const MobileLayout: FC<MobileLayoutProps> = memo(({ 
   name, 
@@ -41,91 +132,30 @@ const MobileLayout: FC<MobileLayoutProps> = memo(({
   height, 
   className = "",
   useSquircle = true,
-  borderRadius = 12,
-  smoothing = 0.8,
+  borderRadius = MOBILE_CONFIG.DEFAULTS.borderRadius,
+  smoothing = MOBILE_CONFIG.DEFAULTS.smoothing,
   showImage = true
 }) => {
-  // Memoized alt text
-  const altText = useMemo(() => `${name} image`, [name]);
+  // Single memoized calculation for all layout data
+  const layoutData = useMemo(() => ({
+    containerClasses: className 
+      ? `${MOBILE_CONFIG.CLASSES.container} ${className}`
+      : MOBILE_CONFIG.CLASSES.container,
+    imageConfig: getImageConfig(useSquircle, image, name, width, height)
+  }), [className, useSquircle, image, name, width, height]);
 
-  // Memoized container classes
-  const containerClasses = useMemo(() => 
-    className 
-      ? `${BASE_CLASSES.CONTAINER_BASE} ${className}`
-      : BASE_CLASSES.CONTAINER_BASE,
-    [className]
-  );
-
-  // Memoized image classes
-  const imageClasses = useMemo(() => 
-    useSquircle ? BASE_CLASSES.IMAGE_BASE : BASE_CLASSES.IMAGE_COVER,
-    [useSquircle]
-  );
-
-  // Memoized image component
-  const imageComponent = useMemo(() => {
-    if (!showImage) return null;
-
-    const commonProps = {
-      src: image,
-      alt: altText,
-      width,
-      height,
-      className: imageClasses
-    };
-
-    return useSquircle ? (
-      <SquircleImage
-        {...commonProps}
+  return (
+    <div className={layoutData.containerClasses}>
+      <ImageSection
+        showImage={showImage}
+        imageConfig={layoutData.imageConfig}
+        useSquircle={useSquircle}
         borderRadius={borderRadius}
         smoothing={smoothing}
       />
-    ) : (
-      <ConditionalImage {...commonProps} />
-    );
-  }, [
-    showImage,
-    image,
-    altText,
-    width,
-    height,
-    imageClasses,
-    useSquircle,
-    borderRadius,
-    smoothing
-  ]);
-
-  return (
-    <div className={containerClasses}>
-      {showImage && (
-        <div className={BASE_CLASSES.IMAGE_CONTAINER}>
-          {imageComponent}
-        </div>
-      )}
-
-      <div className={BASE_CLASSES.CONTENT_WRAPPER}>
-        <div className={BASE_CLASSES.TITLE_WRAPPER}>
-          <ProjectTitle name={name} description={description} />
-        </div>
-        <div className={BASE_CLASSES.ARROW_WRAPPER}>
-          <ArrowIcon />
-        </div>
-      </div>
+      
+      <ContentSection name={name} description={description} />
     </div>
-  );
-}, (prevProps, nextProps) => {
-  // Custom comparison for better memoization
-  return (
-    prevProps.name === nextProps.name &&
-    prevProps.description === nextProps.description &&
-    prevProps.image === nextProps.image &&
-    prevProps.width === nextProps.width &&
-    prevProps.height === nextProps.height &&
-    prevProps.className === nextProps.className &&
-    prevProps.useSquircle === nextProps.useSquircle &&
-    prevProps.borderRadius === nextProps.borderRadius &&
-    prevProps.smoothing === nextProps.smoothing &&
-    prevProps.showImage === nextProps.showImage
   );
 });
 

@@ -1,12 +1,15 @@
-import { FC, memo, useMemo, useCallback } from "react";
+import { FC, memo, useMemo } from "react";
 import ProjectTitle from "./ProjectTitle";
 import ArrowIcon from "./ArrowIcon";
 import dynamic from "next/dynamic";
 import ConditionalImage from "@/components/ConditionalImage";
+import React from "react";
 
-// Optimized dynamic import with better loading state
+// Enhanced loading state with better UX
 const SquircleImage = dynamic(() => import("./SquircleImage"), {
-  loading: () => <div className="aspect-video w-full bg-gray-200 animate-pulse rounded-lg" />,
+  loading: () => (
+    <div className="aspect-video w-full bg-gradient-to-r from-gray-200 to-gray-300 animate-pulse rounded-lg" />
+  ),
 });
 
 interface DesktopLayoutProps {
@@ -21,36 +24,156 @@ interface DesktopLayoutProps {
   showImage?: boolean;
 }
 
-// Static constants moved outside component
-const ASPECT_RATIO_THRESHOLDS = {
-  HORIZONTAL: 1.5,
-  SQUARE_MIN: 0.8,
-  SQUARE_MAX: 1.2,
-  VERTICAL: 0.8
+// Consolidated constants for better organization
+const LAYOUT_CONFIG = {
+  THRESHOLDS: {
+    HORIZONTAL: 1.5,
+    SQUARE_MIN: 0.8,
+    SQUARE_MAX: 1.2,
+    VERTICAL: 0.8
+  },
+  CLASSES: {
+    // Layout containers
+    container: "hidden md:grid md:grid-cols-[1fr_300px_max-content] md:gap-8 w-full h-full group/project",
+    titleWrapper: "lg:group-hover/project:pl-8 transition-all duration-300",
+    imageWrapper: "relative md:group/project flex items-center justify-center",
+    arrowWrapper: "flex items-center justify-end",
+    
+    // Image containers by aspect ratio
+    imageContainer: "absolute mx-auto opacity-0 scale-90 group-hover/project:opacity-100 group-hover/project:scale-110 transition-all duration-300 z-5",
+    imageBase: "w-full h-full",
+    
+    // Responsive sizing
+    horizontal: "w-full max-h-[180px] top-[55%] -translate-y-1/2",
+    square: "w-[180px] h-[180px] top-1/2 -translate-y-[45%]",
+    vertical: "h-[200px] w-auto max-w-[150px] top-1/2 -translate-y-[45%]",
+    default: "w-full max-h-[180px] top-[55%] -translate-y-1/2"
+  }
 } as const;
 
-const CONTAINER_CLASSES = {
-  HORIZONTAL: "w-full max-h-[180px]",
-  SQUARE: "w-[180px] h-[180px]",
-  VERTICAL: "h-[200px] w-auto max-w-[150px]",
-  DEFAULT: "w-full max-h-[180px]"
-} as const;
+// Utility function to classify aspect ratio and return all needed classes
+const getImageLayout = (aspectRatio: number) => {
+  const { THRESHOLDS, CLASSES } = LAYOUT_CONFIG;
+  
+  if (aspectRatio > THRESHOLDS.HORIZONTAL) {
+    return {
+      type: 'horizontal' as const,
+      isVertical: false,
+      containerClasses: `${CLASSES.imageContainer} ${CLASSES.horizontal}`,
+      imageClasses: `${CLASSES.imageBase} object-cover`
+    };
+  }
+  
+  if (aspectRatio >= THRESHOLDS.SQUARE_MIN && aspectRatio <= THRESHOLDS.SQUARE_MAX) {
+    return {
+      type: 'square' as const,
+      isVertical: false,
+      containerClasses: `${CLASSES.imageContainer} ${CLASSES.square}`,
+      imageClasses: `${CLASSES.imageBase} object-cover`
+    };
+  }
+  
+  if (aspectRatio < THRESHOLDS.VERTICAL) {
+    return {
+      type: 'vertical' as const,
+      isVertical: true,
+      containerClasses: `${CLASSES.imageContainer} ${CLASSES.vertical}`,
+      imageClasses: `${CLASSES.imageBase} object-contain`
+    };
+  }
+  
+  return {
+    type: 'default' as const,
+    isVertical: false,
+    containerClasses: `${CLASSES.imageContainer} ${CLASSES.default}`,
+    imageClasses: `${CLASSES.imageBase} object-cover`
+  };
+};
 
-const POSITION_CLASSES = {
-  HORIZONTAL: "top-[55%] -translate-y-1/2",
-  SQUARE: "top-1/2 -translate-y-[45%]",
-  VERTICAL: "top-1/2 -translate-y-[45%]",
-  DEFAULT: "top-[55%] -translate-y-1/2"
-} as const;
+// Extracted image component for better separation of concerns
+const ProjectImage = memo(({
+  layout,
+  commonProps,
+  useSquircle,
+  borderRadius,
+  smoothing
+}: {
+  layout: ReturnType<typeof getImageLayout>;
+  commonProps: {
+    src: string;
+    alt: string;
+    width: number;
+    height: number;
+    className: string;
+  };
+  useSquircle: boolean;
+  borderRadius: number;
+  smoothing: number;
+}) => {
+  return useSquircle ? (
+    <SquircleImage
+      {...commonProps}
+      borderRadius={borderRadius}
+      smoothing={smoothing}
+      objectFit={layout.isVertical ? "object-contain" : "object-cover"}
+    />
+  ) : (
+    <ConditionalImage {...commonProps} />
+  );
+});
+ProjectImage.displayName = 'ProjectImage';
 
-const BASE_CLASSES = {
-  CONTAINER: "hidden md:grid md:grid-cols-[1fr_300px_max-content] md:gap-8 w-full h-full group/project",
-  TITLE_WRAPPER: "lg:group-hover/project:pl-8 transition-all duration-300",
-  IMAGE_WRAPPER: "relative md:group/project flex items-center justify-center",
-  IMAGE_CONTAINER: "absolute mx-auto opacity-0 scale-90 group-hover/project:opacity-100 group-hover/project:scale-110 transition-all duration-300 z-5",
-  ARROW_WRAPPER: "flex items-center justify-end",
-  IMAGE_BASE: "w-full h-full"
-} as const;
+// Main layout sections as separate components using Fragment
+const TitleSection = memo(({ name, description }: { name: string; description: string }) => (
+  <div className={LAYOUT_CONFIG.CLASSES.titleWrapper}>
+    <ProjectTitle name={name} description={description} />
+  </div>
+));
+TitleSection.displayName = 'TitleSection';
+
+const ImageSection = memo(({
+  showImage,
+  layout,
+  imageProps,
+  useSquircle,
+  borderRadius,
+  smoothing
+}: {
+  showImage: boolean;
+  layout: ReturnType<typeof getImageLayout>;
+  imageProps: {
+    src: string;
+    alt: string;
+    width: number;
+    height: number;
+    className: string;
+  };
+  useSquircle: boolean;
+  borderRadius: number;
+  smoothing: number;
+}) => (
+  <div className={LAYOUT_CONFIG.CLASSES.imageWrapper}>
+    {showImage && (
+      <div className={layout.containerClasses}>
+        <ProjectImage
+          layout={layout}
+          commonProps={imageProps}
+          useSquircle={useSquircle}
+          borderRadius={borderRadius}
+          smoothing={smoothing}
+        />
+      </div>
+    )}
+  </div>
+));
+ImageSection.displayName = 'ImageSection';
+
+const ArrowSection = memo(() => (
+  <div className={LAYOUT_CONFIG.CLASSES.arrowWrapper}>
+    <ArrowIcon />
+  </div>
+));
+ArrowSection.displayName = 'ArrowSection';
 
 const DesktopLayout: FC<DesktopLayoutProps> = memo(({ 
   name, 
@@ -63,118 +186,38 @@ const DesktopLayout: FC<DesktopLayoutProps> = memo(({
   smoothing = 0.8,
   showImage = true
 }) => {
-  // Memoized calculations
-  const imageMetrics = useMemo(() => {
+  // Single memoized calculation that returns everything we need
+  const layoutData = useMemo(() => {
     const aspectRatio = width / height;
-    const isHorizontal = aspectRatio > ASPECT_RATIO_THRESHOLDS.HORIZONTAL;
-    const isSquare = aspectRatio >= ASPECT_RATIO_THRESHOLDS.SQUARE_MIN && aspectRatio <= ASPECT_RATIO_THRESHOLDS.SQUARE_MAX;
-    const isVertical = aspectRatio < ASPECT_RATIO_THRESHOLDS.VERTICAL;
+    const layout = getImageLayout(aspectRatio);
     
     return {
-      aspectRatio,
-      isHorizontal,
-      isSquare,
-      isVertical,
-      altText: `${name} image`
+      layout,
+      imageProps: {
+        src: image,
+        alt: `${name} image`,
+        width,
+        height,
+        className: layout.imageClasses
+      }
     };
-  }, [width, height, name]);
+  }, [width, height, image, name]);
 
-  // Memoized class calculations
-  const containerClass = useMemo(() => {
-    const { isHorizontal, isSquare, isVertical } = imageMetrics;
-    
-    if (isHorizontal) return CONTAINER_CLASSES.HORIZONTAL;
-    if (isSquare) return CONTAINER_CLASSES.SQUARE;
-    if (isVertical) return CONTAINER_CLASSES.VERTICAL;
-    return CONTAINER_CLASSES.DEFAULT;
-  }, [imageMetrics]);
-
-  const positionClass = useMemo(() => {
-    const { isHorizontal, isSquare, isVertical } = imageMetrics;
-    
-    if (isHorizontal) return POSITION_CLASSES.HORIZONTAL;
-    if (isSquare) return POSITION_CLASSES.SQUARE;
-    if (isVertical) return POSITION_CLASSES.VERTICAL;
-    return POSITION_CLASSES.DEFAULT;
-  }, [imageMetrics]);
-
-  // Memoized combined classes
-  const imageContainerClasses = useMemo(() => 
-    `${BASE_CLASSES.IMAGE_CONTAINER} ${containerClass} ${positionClass}`,
-    [containerClass, positionClass]
-  );
-
-  const imageClasses = useMemo(() => 
-    `${BASE_CLASSES.IMAGE_BASE} ${imageMetrics.isVertical ? "object-contain" : "object-cover"}`,
-    [imageMetrics.isVertical]
-  );
-
-  // Memoized image component
-  const imageComponent = useMemo(() => {
-    if (!showImage) return null;
-
-    const commonProps = {
-      src: image,
-      alt: imageMetrics.altText,
-      width,
-      height,
-      className: imageClasses
-    };
-
-    return useSquircle ? (
-      <SquircleImage
-        {...commonProps}
+  return (
+    <div className={LAYOUT_CONFIG.CLASSES.container}>
+      <TitleSection name={name} description={description} />
+      
+      <ImageSection
+        showImage={showImage}
+        layout={layoutData.layout}
+        imageProps={layoutData.imageProps}
+        useSquircle={useSquircle}
         borderRadius={borderRadius}
         smoothing={smoothing}
-        objectFit={imageMetrics.isVertical ? "object-contain" : "object-cover"}
       />
-    ) : (
-      <ConditionalImage {...commonProps} />
-    );
-  }, [
-    showImage,
-    image,
-    imageMetrics.altText,
-    imageMetrics.isVertical,
-    width,
-    height,
-    imageClasses,
-    useSquircle,
-    borderRadius,
-    smoothing
-  ]);
-
-  return (
-    <div className={BASE_CLASSES.CONTAINER}>
-      <div className={BASE_CLASSES.TITLE_WRAPPER}>
-        <ProjectTitle name={name} description={description} />
-      </div>
       
-      <div className={BASE_CLASSES.IMAGE_WRAPPER}>
-        {showImage && (
-          <div className={imageContainerClasses}>
-            {imageComponent}
-          </div>
-        )}
-      </div>
-      
-      <div className={BASE_CLASSES.ARROW_WRAPPER}>
-        <ArrowIcon />
-      </div>
+      <ArrowSection />
     </div>
-  );
-}, (prevProps, nextProps) => {
-  // Custom comparison for better memoization
-  return (
-    prevProps.name === nextProps.name &&
-    prevProps.description === nextProps.description &&
-    prevProps.image === nextProps.image &&
-    prevProps.width === nextProps.width &&
-    prevProps.height === nextProps.height &&
-    prevProps.useSquircle === nextProps.useSquircle &&
-    prevProps.borderRadius === nextProps.borderRadius &&
-    prevProps.smoothing === nextProps.smoothing &&
-    prevProps.showImage === nextProps.showImage
   );
 });
 

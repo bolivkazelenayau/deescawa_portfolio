@@ -48,22 +48,40 @@ const CLIP_PATH_STYLE = {
   clipPath: "polygon(0% -5%, 100% -5%, 100% 105%, 0 105%)"
 } as const
 
-// Static class names
-const EMAIL_BUTTON_CLASSES = "mt-4 xs-max-md:mt-0"
-const NAV_CLASSES = "font-light flex flex-col items-start md:items-end gap-3 md:gap-4 lg:gap-6 mt-14 xs:mt-1 md:mt-0"
-const NAV_BUTTON_CLASSES = "text-md font-light lg:text-xl w-auto tracking-normal"
-const COPYRIGHT_CLASSES = "py-10 text-white/30 text-sm z-10 lg:ml-8 xs:ml-0" // <-- Added ml-8 to copyright
-const HEADING_CLASSES = "text-5xl md:text-6xl xl:text-8xl py-12 -mt-6 font-extralight footer-text-hidden-initially"
-const FOOTER_CONTAINER_CLASSES = "h-[105dvh] md:h-[800px] lg:h-[1000px] footer-container"
-const FOOTER_CONTENT_CLASSES = "fixed bottom-0 h-[105vh] md:h-[800px] lg:h-[1000px] w-full bg-stone-900 text-white"
-const CONTAINER_CLASSES = "py-32 container p-4 md:p-8 lg:py-48 mt-[-1vh]"
-const INNER_CONTAINER_CLASSES = "lg:py-32 xs:py-16"
-const STATUS_CLASSES = "flex items-center gap-3 py-4 lg:ml-8 xs:ml-0"
-const STATUS_DOT_CLASSES = "size-3 rounded-full bg-green-400 animate-pulse"
-const STATUS_TEXT_CLASSES = "kern uppercase text-sm md:text-base"
-const GRID_CLASSES = "flex flex-col md:grid md:grid-cols-3 md:items-center"
-const CONTENT_CLASSES = "md:col-span-2 lg:ml-8 xs:ml-0 mb-8 md:mb-0" // <-- Added ml-8 to shift content right
-const NAV_CONTAINER_CLASSES = "w-full flex md:justify-end lg:px-10" // Fix basis: typo, add md:px-6
+// Consolidated class names with better semantic naming
+const CLASSES = {
+  // Layout containers
+  footerContainer: "h-[105dvh] md:h-[800px] lg:h-[1000px] footer-container",
+  footerContent: "fixed bottom-0 h-[105vh] md:h-[800px] lg:h-[1000px] w-full bg-stone-900 text-white",
+  mainContainer: "py-32 container p-4 md:p-8 lg:py-48 mt-[-1vh]",
+  innerContainer: "lg:py-32 xs:py-16",
+  
+  // Grid and content
+  contentGrid: "grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-0 md:items-center",
+  headingSection: "md:col-span-2 lg:ml-8 xs:ml-0",
+  navSection: "w-full flex md:justify-end lg:px-10",
+  
+  // Status indicator
+  statusContainer: "flex items-center gap-3 py-4 lg:ml-8 xs:ml-0",
+  statusDot: "size-3 rounded-full bg-green-400 animate-pulse",
+  statusText: "kern uppercase text-sm md:text-base",
+  
+  // Typography
+  heading: "text-5xl md:text-6xl xl:text-8xl py-12 -mt-6 font-extralight footer-text-hidden-initially",
+  
+  // Navigation
+  nav: "font-light flex flex-col items-start md:items-end gap-3 md:gap-4 lg:gap-6 mt-14 xs:mt-1 md:mt-0",
+  navButton: "text-md font-light lg:text-xl w-auto tracking-normal",
+  
+  // Contact section
+  contactContainer: "flex items-center mt-4 xs-max-md:mt-0",
+  emailButton: "mt-4 xs-max-md:mt-0",
+  socialIcons: "flex items-center gap-2 ml-4 lg:gap-4 xl:translate-y-2 xs:translate-y-2",
+  socialIcon: "text-white/70 hover:text-white transition-colors duration-200 xs:text-5xl lg:text-5xl",
+  
+  // Copyright
+  copyright: "py-10 text-white/30 text-sm z-10 lg:ml-8 xs:ml-0 col-span-full mt-8"
+} as const
 
 // Optimized debounce with RAF
 const debounceRAF = (func: Function) => {
@@ -85,7 +103,7 @@ const FALLBACK_CONTENT = {
     shoutout: "Shoutout to everyone who made this possible.",
     navigation: {
       about: "About",
-      commercialCases: "Commercial cases", 
+      commercialCases: "Commercial cases",
       lectures: "Lectures",
       events: "Events",
       music: "My music",
@@ -100,7 +118,7 @@ const FALLBACK_CONTENT = {
     navigation: {
       about: "О себе",
       commercialCases: "Коммерческие проекты",
-      lectures: "Лекции", 
+      lectures: "Лекции",
       events: "События",
       music: "Моя музыка",
       contact: "Контакты"
@@ -108,51 +126,83 @@ const FALLBACK_CONTENT = {
   }
 } as const
 
-// ✅ Fixed: Updated button variant
+// Simplified EmailButton with cleaner structure
 const EmailButton = memo(() => (
-  <Link href={`mailto:${EMAIL_ADDRESS}`} passHref className="inline-block">
+  <Link href={`mailto:${EMAIL_ADDRESS}`} className="inline-block">
     <Button
-      variant="secondary" 
+      variant="secondary"
       isSquircle
       squircleSize="md"
       fullWidth={false}
-      className={EMAIL_BUTTON_CLASSES}
+      className={CLASSES.emailButton}
     >
       {EMAIL_ADDRESS}
     </Button>
   </Link>
 ))
-
 EmailButton.displayName = 'EmailButton'
 
-// ✅ Fixed: Updated button variant
-const FooterNav = memo(({ 
-  handleClickNavItem, 
-  translations 
-}: { 
+// Social icons as separate component using Fragment
+const SocialIcons = memo(() => (
+  <>
+    <Link 
+      href="https://instagram.com/deescawa" 
+      target="_blank" 
+      rel="noopener noreferrer"
+      className="hover:scale-110 transition-transform duration-200"
+    >
+      <FaInstagram className={CLASSES.socialIcon} />
+    </Link>
+    <Link 
+      href="https://t.me/deescawa" 
+      target="_blank" 
+      rel="noopener noreferrer"
+      className="hover:scale-110 transition-transform duration-200"
+    >
+      <FaTelegram className={CLASSES.socialIcon} />
+    </Link>
+  </>
+))
+SocialIcons.displayName = 'SocialIcons'
+
+// Contact section using Fragment to avoid wrapper div
+const ContactSection = memo(() => (
+  <div className={CLASSES.contactContainer}>
+    <EmailButton />
+    <div className={CLASSES.socialIcons}>
+      <SocialIcons />
+    </div>
+  </div>
+))
+ContactSection.displayName = 'ContactSection'
+
+// Simplified FooterNav with better structure
+const FooterNav = memo(({
+  handleClickNavItem,
+  translations
+}: {
   handleClickNavItem: (e: MouseEvent<HTMLAnchorElement>) => void
   translations: Record<string, string>
 }) => {
-  // Create a proper mapping for nav items
   const getTranslationKey = (label: string): string => {
     const keyMap: Record<string, string> = {
       'Commercial cases': 'commercialcases',
       'Lectures': 'lectures',
       'Events': 'events',
-      'My music': 'music', // Map "My music" to "music"
+      'My music': 'music',
       'Contact': 'contact'
     };
     return keyMap[label] || label.toLowerCase().replace(/\s+/g, '');
   };
 
-  const navLinks = useMemo(() => 
+  const navLinks = useMemo(() =>
     navItems.map(({ href, label }) => {
       const translationKey = getTranslationKey(label);
       const translatedText = translations[translationKey] || label;
-      
+
       return (
         <Link href={href} key={href} onClick={handleClickNavItem} className="inline-block">
-          <Button variant="text" className={NAV_BUTTON_CLASSES}>
+          <Button variant="text" className={CLASSES.navButton}>
             {translatedText}
           </Button>
         </Link>
@@ -162,56 +212,41 @@ const FooterNav = memo(({
   )
 
   return (
-    <nav className={NAV_CLASSES}>
+    <nav className={CLASSES.nav}>
       {navLinks}
     </nav>
   )
 })
-
-
 FooterNav.displayName = 'FooterNav'
 
-// Memoized copyright
-const Copyright = memo(({ copyright, shoutout }: { copyright: string; shoutout: string }) => (
-  <p className={COPYRIGHT_CLASSES}>
-    {copyright} <br />
-    {shoutout}
-  </p>
-))
-
-Copyright.displayName = 'Copyright'
-
-// ✅ Fixed: Added anti-flicker support
-const AnimatedHeading = memo(({ 
-  headingLines, 
-  locale 
-}: { 
+// Simplified AnimatedHeading using Fragment
+const AnimatedHeading = memo(({
+  headingLines,
+  locale
+}: {
   headingLines: string[]
-  locale: string 
+  locale: string
 }) => {
-  const [animationReady, setAnimationReady] = useState(false)  // ✅ Added for anti-flicker
-  
-  // ✅ Fixed: Added onStart callback for anti-flicker
+  const [animationReady, setAnimationReady] = useState(false)
   const { scope, entranceAnimation, refreshSplit } = useTextRevealAnimation({
-    onStart: () => setAnimationReady(true)  // ✅ Added callback
+    onStart: () => setAnimationReady(true)
   }, locale)
-  
+
   const [animationTriggered, setAnimationTriggered] = useState(false)
   const hasAnimatedRef = useRef(false)
-  
-  // ✅ Fixed: Reset both animation states when locale changes
+
   useEffect(() => {
     hasAnimatedRef.current = false
     setAnimationTriggered(false)
-    setAnimationReady(false)  // ✅ Added reset
+    setAnimationReady(false)
   }, [locale])
-  
+
   const { ref, inView } = useInView({
     threshold: 0.1,
     rootMargin: "100px 0px -100px 0px",
     triggerOnce: true,
   })
-  
+
   useEffect(() => {
     if (inView && !animationTriggered && !hasAnimatedRef.current) {
       const timer = setTimeout(() => {
@@ -222,25 +257,25 @@ const AnimatedHeading = memo(({
           hasAnimatedRef.current = true
         }, 20)
       }, 50)
-      
+
       return () => clearTimeout(timer)
     }
   }, [inView, entranceAnimation, refreshSplit, animationTriggered])
-  
-  const headingContent = useMemo(() => 
+
+  const headingContent = useMemo(() =>
     headingLines.map((line, index) => (
-      <React.Fragment key={index}>
+      <React.Fragment key={`line-${index}`}>
         {line}
         {index < headingLines.length - 1 && <br />}
       </React.Fragment>
     )),
     [headingLines]
   )
-  
+
   return (
     <div ref={ref}>
-      <h2 
-        className={`${HEADING_CLASSES} ${animationReady ? 'animation-ready' : ''}`}  // ✅ Added conditional class
+      <h2
+        className={`${CLASSES.heading} ${animationReady ? 'animation-ready' : ''}`}
         ref={scope}
         key={`footer-heading-${locale}`}
       >
@@ -249,8 +284,26 @@ const AnimatedHeading = memo(({
     </div>
   )
 })
-
 AnimatedHeading.displayName = 'AnimatedHeading'
+
+// Status indicator as separate component
+const StatusIndicator = memo(({ message }: { message: string }) => (
+  <div className={CLASSES.statusContainer}>
+    <div className={CLASSES.statusDot} />
+    <span className={CLASSES.statusText}>{message}</span>
+  </div>
+))
+StatusIndicator.displayName = 'StatusIndicator'
+
+// Copyright component using Fragment for cleaner structure
+const Copyright = memo(({ copyright, shoutout }: { copyright: string; shoutout: string }) => (
+  <p className={CLASSES.copyright}>
+    {copyright}
+    <br />
+    {shoutout}
+  </p>
+))
+Copyright.displayName = 'Copyright'
 
 const Footer: FC<FooterProps> = memo(({ locale }) => {
   const { t } = useClientTranslation(locale, 'common');
@@ -279,7 +332,7 @@ const Footer: FC<FooterProps> = memo(({ locale }) => {
   // Memoized content with fallbacks
   const content = useMemo(() => {
     const fallback = FALLBACK_CONTENT[locale]
-    
+
     return {
       sendMessage: t('footer.sendMessage') || fallback.sendMessage,
       heading: t('footer.heading') || fallback.heading,
@@ -296,7 +349,7 @@ const Footer: FC<FooterProps> = memo(({ locale }) => {
     }
   }, [t, locale])
 
-  const headingLines = useMemo(() => 
+  const headingLines = useMemo(() =>
     content.heading.split('\n'),
     [content.heading]
   )
@@ -319,7 +372,7 @@ const Footer: FC<FooterProps> = memo(({ locale }) => {
       const currentThemeColor = shouldUseFooterColor
         ? COLORS.footerColor
         : isDarkMode ? COLORS.darkModeColor : COLORS.lightModeColor
-      
+
       metaThemeColor.setAttribute("content", currentThemeColor)
     }),
     [triggerInView, footerInView, isDarkMode]
@@ -330,7 +383,7 @@ const Footer: FC<FooterProps> = memo(({ locale }) => {
 
     scrollDirectionRef.current = currentScrollY > lastScrollY.current ? 'down' : 'up'
     lastScrollY.current = currentScrollY
-    
+
     updateThemeColor()
   }, [updateThemeColor])
 
@@ -364,7 +417,7 @@ const Footer: FC<FooterProps> = memo(({ locale }) => {
       })
       return
     }
-    
+
     const target = document.querySelector(hash)
     if (target) {
       target.scrollIntoView({ behavior: "smooth" })
@@ -379,57 +432,43 @@ const Footer: FC<FooterProps> = memo(({ locale }) => {
 
   return (
     <section id="contact">
-      <div
-        ref={headerBlurRef}
-        className="h-[220px] w-full opacity-0 pointer-events-none"
-        aria-hidden="true"
-      />
-
-      <div
-        ref={setTriggerRef}
-        className="h-[80px] w-full opacity-0 pointer-events-none"
-        aria-hidden="true"
-      />
+      {/* Invisible trigger elements using Fragment to avoid wrapper divs */}
+      <>
+        <div
+          ref={headerBlurRef}
+          className="h-[220px] w-full opacity-0 pointer-events-none"
+          aria-hidden="true"
+        />
+        <div
+          ref={setTriggerRef}
+          className="h-[80px] w-full opacity-0 pointer-events-none"
+          aria-hidden="true"
+        />
+      </>
 
       <footer className="overflow-hidden">
-        <div className={FOOTER_CONTAINER_CLASSES} style={CLIP_PATH_STYLE}>
-          <div ref={footerRef} className={FOOTER_CONTENT_CLASSES}>
-            <div className={CONTAINER_CLASSES}>
-              <div className={INNER_CONTAINER_CLASSES}>
-                <div className={STATUS_CLASSES}>
-                  <div className={STATUS_DOT_CLASSES} />
-                  <span className={STATUS_TEXT_CLASSES}>{content.sendMessage}</span>
-                </div>
-                <div className={GRID_CLASSES}>
-                  {/* Content (heading + button) */}
-{/* Content (heading + button) */}
-<div className={CONTENT_CLASSES + ""}>
-  <AnimatedHeading 
-    headingLines={headingLines} 
-    locale={locale} 
-  />
-  <div className="flex items-center mt-4 xs-max-md:mt-0">
-    <EmailButton />
-    <div className="flex items-center gap-2 ml-4 lg:gap-4 xl:translate-y-2 xs:translate-y-2">
-      <Link href="https://instagram.com/deescawa" target="_blank" rel="noopener noreferrer">
-       <FaInstagram className="text-white/70 hover:text-white transition-colors duration-200 xs:text-5xl lg:text-5xl" />
-      </Link>
-      <Link href="https://t.me/deescawa" target="_blank" rel="noopener noreferrer">
-        <FaTelegram className="text-white/70 hover:text-white transition-colors duration-200 xs:text-5xl lg:text-5xl" />
-      </Link>
-    </div>
-  </div>
-</div>
-{/* Nav below content on mobile, right column on md+ */}
-<div className={NAV_CONTAINER_CLASSES}>
-  <FooterNav
-    handleClickNavItem={handleClickNavItem}
-    translations={content.navigation}
-  />
-</div>
-
-                </div>
-                <div className="col-span-3 mt-8">
+        <div className={CLASSES.footerContainer} style={CLIP_PATH_STYLE}>
+          <div ref={footerRef} className={CLASSES.footerContent}>
+            <div className={CLASSES.mainContainer}>
+              <div className={CLASSES.innerContainer}>
+                <StatusIndicator message={content.sendMessage} />
+                
+                <div className={CLASSES.contentGrid}>
+                  {/* Heading section */}
+                  <div className={CLASSES.headingSection}>
+                    <AnimatedHeading headingLines={headingLines} locale={locale} />
+                    <ContactSection />
+                  </div>
+                  
+                  {/* Navigation section */}
+                  <div className={CLASSES.navSection}>
+                    <FooterNav
+                      handleClickNavItem={handleClickNavItem}
+                      translations={content.navigation}
+                    />
+                  </div>
+                  
+                  {/* Copyright section */}
                   <Copyright
                     copyright={content.copyright}
                     shoutout={content.shoutout}

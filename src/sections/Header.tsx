@@ -14,34 +14,40 @@ import { navItems } from "@/lib/navItems"
 
 // Static constants
 const EMAIL_ADDRESS = "deescawa@gmail.com"
-const SCROLL_THRESHOLD = 50
-const THROTTLE_MS = 16
 
-const COLORS = {
-  footerColor: "#1c1917",
-  lightModeColor: "#ffffff",
-  darkModeColor: "#09090b"
+// Consolidated class names for better maintainability
+const CLASSES = {
+  // Layout containers
+  logoContainer: "absolute top-0 left-0 h-20 z-20 bg-white bg-opacity-50 shadow-lg mix-blend-difference transition-all duration-150 ease-out",
+  logo: "isolate z-25 transition-all duration-150 ease-out",
+  blurContainer: "fixed top-0 left-0 w-full h-20 z-10",
+  rightContainer: "fixed top-0 right-0 h-20 z-20 transition-all duration-150 ease-out",
+  
+  // Inner containers
+  innerContainer: "container max-w-full!",
+  controlsContainer: "flex justify-end items-center h-20 gap-4 transition-all duration-150 ease-out",
+  
+  // Contact button
+  contactLink: "hidden md:inline-flex",
+  contactButton: "hidden md:inline-flex uppercase min-w-[120px] justify-center transition-all duration-150 ease-out",
+  
+  // Menu button
+  menuButton: "bg-white dark:bg-black border-stone-300/60 dark:border-stone-600/60 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all duration-150 ease-out",
+  
+  // Control containers
+  navControlsContainer: "nav-controls-container",
+  themeToggleContainer: "theme-toggle-container",
+  languageSwitcherContainer: "language-switcher-container",
+  contactButtonContainer: "contact-button-container"
 } as const
-
-// Enhanced static class names with transition classes
-const LOGO_CONTAINER_CLASSES = "absolute top-0 left-0 h-20 z-20 bg-white bg-opacity-50 shadow-lg mix-blend-difference transition-all duration-150 ease-out"
-const LOGO_CLASSES = "isolate z-25 transition-all duration-150 ease-out"
-const BLUR_CONTAINER_CLASSES = "fixed top-0 left-0 w-full h-20 z-10"
-const RIGHT_CONTAINER_CLASSES = "fixed top-0 xs:-right-4 md:right-0 2xl:right-0 h-20 z-20 transition-all duration-150 ease-out"
-
-const INNER_CONTAINER_CLASSES = "container max-w-full!"
-const CONTROLS_CONTAINER_CLASSES = "flex justify-end items-center h-20 gap-4 transition-all duration-150 ease-out"
-const CONTACT_LINK_CLASSES = "hidden md:inline-flex"
-const CONTACT_BUTTON_CLASSES = "hidden md:inline-flex uppercase min-w-[120px] justify-center transition-all duration-150 ease-out"
-const MENU_BUTTON_CLASSES = "bg-white dark:bg-black border-stone-300/60 dark:border-stone-600/60 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all duration-150 ease-out"
 
 // Fallback content
 const FALLBACK_CONTACT_TEXT = {
   en: 'Contact Me',
   ru: 'Связаться'
-} as const;
+} as const
 
-// ✅ Enhanced debounce with RAF for smoother updates
+// Enhanced debounce with RAF for smoother updates
 const debounceRAF = (func: Function, delay: number = 0) => {
   let rafId: number | null = null
   let timeoutId: NodeJS.Timeout | null = null
@@ -64,7 +70,7 @@ const debounceRAF = (func: Function, delay: number = 0) => {
   }
 }
 
-// Enhanced ContactButton with anti-flash optimization
+// Contact button component with cleaner structure
 const ContactButton = memo(({ 
   locale, 
   serverTranslations, 
@@ -84,23 +90,21 @@ const ContactButton = memo(({
   }, [serverTranslations?.contactButton, clientT, locale]);
   
   return (
-    <Link href={`mailto:${EMAIL_ADDRESS}`} className={CONTACT_LINK_CLASSES}>
+    <Link href={`mailto:${EMAIL_ADDRESS}`} className={CLASSES.contactLink}>
       <Button 
         variant="primary" 
         isSquircle={true} 
         squircleSize="md" 
-        className={CONTACT_BUTTON_CLASSES}
-        // ✅ Removed the conflicting inline style
+        className={CLASSES.contactButton}
       >
         {contactText}
       </Button>
     </Link>
   );
 });
-
 ContactButton.displayName = 'ContactButton';
 
-// ✅ Enhanced NavigationControls with stable styling
+// Navigation controls with stable styling
 const NavigationControls = memo(({ 
   isOpen, 
   handleSetIsOpen, 
@@ -115,25 +119,16 @@ const NavigationControls = memo(({
   }
 
   return (
-    <div 
-      className="nav-controls-container"
-      style={{ 
-        contain: 'layout style',
-        transition: 'all 0.15s ease-out'
-      }}
-    >
-      <MenuButton 
-        isOpen={isOpen}
-        setIsOpen={handleSetIsOpen}
-        className={MENU_BUTTON_CLASSES}
-      />
-    </div>
+    <MenuButton 
+      isOpen={isOpen}
+      setIsOpen={handleSetIsOpen}
+      className={CLASSES.menuButton}
+    />
   );
 });
-
 NavigationControls.displayName = 'NavigationControls';
 
-// ✅ Enhanced UtilityControls with stable styling
+// Utility controls using Fragment to avoid wrapper divs
 const UtilityControls = memo(({ 
   mounted, 
   locale, 
@@ -157,62 +152,28 @@ const UtilityControls = memo(({
 
   return (
     <>
-      <div 
-        className="theme-toggle-container"
-        style={{ 
-          contain: 'layout style',
-          transition: 'all 0.15s ease-out'
-        }}
-      >
-        <ThemeToggle />
-      </div>
-      <div 
-        className="language-switcher-container"
-        style={{ 
-          contain: 'layout style',
-          transition: 'all 0.15s ease-out'
-        }}
-      >
-        <LanguageSwitcher />
-      </div>
-      <div 
-        className="contact-button-container"
-        style={{ 
-          contain: 'layout style',
-          transition: 'all 0.15s ease-out'
-        }}
-      >
-        <ContactButton 
-          locale={locale}
-          serverTranslations={serverTranslations}
-          clientT={clientT}
-        />
-      </div>
+      <ThemeToggle />
+      <LanguageSwitcher />
+      <ContactButton 
+        locale={locale}
+        serverTranslations={serverTranslations}
+        clientT={clientT}
+      />
     </>
   );
 });
-
 UtilityControls.displayName = 'UtilityControls';
 
 // Enhanced BlurBackground with smooth Framer Motion animation
 const BlurBackground = memo(() => {
   const { scrollY } = useScroll();
   
-  const blurOpacity = useTransform(
-    scrollY,
-    [0, 150],
-    [0, 1]
-  );
-  
-  const blurAmount = useTransform(
-    scrollY,
-    [0, 150],
-    [0, 10]
-  );
+  const blurOpacity = useTransform(scrollY, [0, 150], [0, 1]);
+  const blurAmount = useTransform(scrollY, [0, 150], [0, 10]);
 
   return (
     <motion.div
-      className={BLUR_CONTAINER_CLASSES}
+      className={CLASSES.blurContainer}
       style={{
         opacity: blurOpacity,
         backdropFilter: useTransform(blurAmount, (value) => `blur(${value}px)`),
@@ -223,13 +184,11 @@ const BlurBackground = memo(() => {
         willChange: 'opacity, backdrop-filter',
         backfaceVisibility: 'hidden',
         contain: 'layout style paint',
-        // ✅ Add transition for smoother locale changes
         transition: 'opacity 0.15s ease-out'
       }}
     />
   );
 });
-
 BlurBackground.displayName = 'BlurBackground';
 
 interface HeaderProps {
@@ -246,7 +205,7 @@ const Header = memo(({ onNavToggle, locale, serverTranslations }: HeaderProps) =
   
   const { t: clientT } = useClientTranslation(locale, 'common');
 
-  // ✅ Detect locale changes and add transition class
+  // Detect locale changes and add transition class
   useEffect(() => {
     if (lastLocaleRef.current !== locale) {
       setIsLocaleTransitioning(true);
@@ -289,11 +248,11 @@ const Header = memo(({ onNavToggle, locale, serverTranslations }: HeaderProps) =
     <header 
       className="main-header"
       style={{
-        // ✅ Force stable styling during locale transitions
         transition: isLocaleTransitioning ? 'all 0.15s ease-out' : 'none',
         willChange: isLocaleTransitioning ? 'background-color, color' : 'auto'
       }}
     >
+      {/* Mobile Navigation */}
       <MobileNav 
         isOpen={isOpen}
         onNavItemClick={handleClickMobileNavItem}
@@ -301,15 +260,18 @@ const Header = memo(({ onNavToggle, locale, serverTranslations }: HeaderProps) =
         setIsOpen={handleSetIsOpen}
       />
       
-      <div className={LOGO_CONTAINER_CLASSES}>
-        <Logo className={LOGO_CLASSES} />
+      {/* Logo Section */}
+      <div className={CLASSES.logoContainer}>
+        <Logo className={CLASSES.logo} />
       </div>
 
+      {/* Blur Background */}
       <BlurBackground />
 
-      <div className={RIGHT_CONTAINER_CLASSES}>
-        <div className={INNER_CONTAINER_CLASSES}>
-          <div className={CONTROLS_CONTAINER_CLASSES}>
+      {/* Right Controls Section - using Fragment to avoid nested containers */}
+      <div className={CLASSES.rightContainer}>
+        <div className={CLASSES.innerContainer}>
+          <div className={CLASSES.controlsContainer}>
             <NavigationControls 
               isOpen={isOpen}
               handleSetIsOpen={handleSetIsOpen}

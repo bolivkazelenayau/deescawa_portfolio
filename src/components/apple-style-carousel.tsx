@@ -34,37 +34,57 @@ interface AppleStyleCarouselProps {
 
 type HoverSide = "left" | "center" | "right" | null;
 
-// Static constants moved outside component
-const CONTAINER_WIDTH_THIRDS = {
-  LEFT: 1 / 3,
-  RIGHT: 2 / 3
-} as const;
-
-const DEBOUNCE_DELAY = 16; // ~60fps
-const PRELOAD_RANGE = 1; // How many items to preload on each side
-
-const DEFAULT_SQUIRCLE_CONFIG = {
-  borderRadius: 40,
-  smoothing: 0.8,
-  monocoBorderRadius: 48
-} as const;
-
-const CSS_CLASSES = {
-  CONTAINER: "relative w-full max-w-9xl scale-90 -mx-4 xs:mx-1 apple-style-carousel", // Добавил класс
-  CAROUSEL: "w-full max-w-9xl mt-8",
-  CARD_WRAPPER: "p-1",
-  CARD: "border-0 shadow-none relative",
-  CARD_CONTENT: "flex flex-col p-6",
-  IMAGE_CONTAINER_REGULAR: "relative w-full aspect-square overflow-hidden rounded-[24px] mb-4",
-  IMAGE_CONTAINER_SQUIRCLE: "relative w-full aspect-square mb-4",
-  IMAGE_BASE: "w-full h-full object-cover transition-all duration-300 ease-out transform-gpu",
-  OVERLAY: "absolute inset-0 bg-linear-to-t from-black/30 to-transparent backdrop-blur-[6px] transition-all duration-300",
-  TITLE: "text-2xl md:text-6xl lg:text-5xl md:mt-4 font-medium tracking-[-1px] transition-all duration-300",
-  DESCRIPTION: "mt-2 md:text-md lg:text-2xl font-regular text-muted-foreground transition-all duration-300",
-  GRADIENT_BASE: "absolute top-0 bottom-0 w-1/6 pointer-events-none transition-opacity duration-700 z-10",
-  GRADIENT_LEFT: "left-0 bg-linear-to-r from-background via-background/30 to-transparent",
-  GRADIENT_RIGHT: "right-0 bg-linear-to-l from-background via-background/30 to-transparent",
-  NAVIGATION: "absolute left-0 right-0 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none z-5 -mt-12"
+// Consolidated configuration object
+const CAROUSEL_CONFIG = {
+  PERFORMANCE: {
+    debounceDelay: 16, // ~60fps
+    preloadRange: 1,
+    containerWidthThirds: {
+      left: 1 / 3,
+      right: 2 / 3
+    }
+  },
+  SQUIRCLE: {
+    borderRadius: 40,
+    smoothing: 0.8,
+    monocoBorderRadius: 48
+  },
+  CLASSES: {
+    // Layout containers
+    container: "relative w-full max-w-9xl scale-90 -mx-4 xs:mx-1 apple-style-carousel",
+    carousel: "w-full max-w-9xl mt-8",
+    
+    // Card structure
+    cardWrapper: "p-1",
+    card: "border-0 shadow-none relative",
+    cardContent: "flex flex-col p-6",
+    
+    // Image containers
+    imageContainerRegular: "relative w-full aspect-square overflow-hidden rounded-[24px] mb-4",
+    imageContainerSquircle: "relative w-full aspect-square mb-4",
+    imageBase: "w-full h-full object-cover transition-all duration-300 ease-out transform-gpu",
+    overlay: "absolute inset-0 bg-linear-to-t from-black/30 to-transparent backdrop-blur-[6px] transition-all duration-300",
+    
+    // Typography
+    title: "text-2xl md:text-6xl lg:text-5xl md:mt-4 font-medium tracking-[-1px] transition-all duration-300",
+    description: "mt-2 md:text-md lg:text-2xl font-regular text-muted-foreground transition-all duration-300",
+    
+    // Gradients and navigation
+    gradientBase: "absolute top-0 bottom-0 w-1/6 pointer-events-none transition-opacity duration-700 z-10",
+    gradientLeft: "left-0 bg-linear-to-r from-background via-background/30 to-transparent",
+    gradientRight: "right-0 bg-linear-to-l from-background via-background/30 to-transparent",
+    navigation: "absolute left-0 right-0 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none z-5 -mt-12",
+    
+    // States
+    active: "opacity-100 scale-105",
+    inactive: "opacity-50 scale-100",
+    overlayVisible: "opacity-100",
+    overlayHidden: "opacity-0"
+  },
+  CAROUSEL_OPTIONS: {
+    loop: true,
+    align: "center" as const
+  }
 } as const;
 
 // Enhanced debounce hook with cleanup
@@ -80,13 +100,11 @@ const useDebounce = (callback: (...args: any[]) => void, delay: number) => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-
     timeoutRef.current = setTimeout(() => {
       callbackRef.current(...args);
     }, delay);
   }, [delay]);
 
-  // Cleanup function
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
@@ -98,7 +116,7 @@ const useDebounce = (callback: (...args: any[]) => void, delay: number) => {
   return debouncedCallback;
 };
 
-// Enhanced image preloader with batch processing
+// Enhanced image preloader
 const useImagePreloader = (lectures: Lecture[]) => {
   const preloadedImages = useRef(new Set<string>());
   const preloadingQueue = useRef(new Set<string>());
@@ -119,7 +137,7 @@ const useImagePreloader = (lectures: Lecture[]) => {
       };
       img.onerror = () => {
         preloadingQueue.current.delete(src);
-        resolve(); // Don't fail the entire preload process
+        resolve();
       };
       img.src = src;
     });
@@ -128,14 +146,13 @@ const useImagePreloader = (lectures: Lecture[]) => {
   const preloadNearbyImages = useCallback((currentIndex: number) => {
     const indicesToPreload = [];
 
-    for (let i = -PRELOAD_RANGE; i <= PRELOAD_RANGE; i++) {
+    for (let i = -CAROUSEL_CONFIG.PERFORMANCE.preloadRange; i <= CAROUSEL_CONFIG.PERFORMANCE.preloadRange; i++) {
       const index = currentIndex + i;
       if (index >= 0 && index < lectures.length) {
         indicesToPreload.push(index);
       }
     }
 
-    // Batch preload with Promise.all for better performance
     const preloadPromises = indicesToPreload.map(index => {
       const lecture = lectures[index];
       return lecture?.image ? preloadImage(lecture.image) : Promise.resolve();
@@ -147,41 +164,57 @@ const useImagePreloader = (lectures: Lecture[]) => {
   return { preloadNearbyImages, preloadedImages: preloadedImages.current };
 };
 
-// Optimized GradientOverlay with static classes
+// Utility functions
+const getImageClasses = (isActive: boolean, isHovered: boolean, objectPosition?: string) => {
+  const positionClass = objectPosition === "center" ? "object-center" :
+    objectPosition === "top" ? "object-top" : "object-bottom";
+  
+  const stateClass = isActive || isHovered ? 
+    CAROUSEL_CONFIG.CLASSES.active : 
+    CAROUSEL_CONFIG.CLASSES.inactive;
+  
+  return cn(CAROUSEL_CONFIG.CLASSES.imageBase, stateClass, positionClass);
+};
+
+const getOverlayClasses = (isActive: boolean, isHovered: boolean) => {
+  const stateClass = isActive || isHovered ? 
+    CAROUSEL_CONFIG.CLASSES.overlayHidden : 
+    CAROUSEL_CONFIG.CLASSES.overlayVisible;
+  
+  return cn(CAROUSEL_CONFIG.CLASSES.overlay, stateClass);
+};
+
+const getTextClasses = (baseClass: string, isActive: boolean, isHovered: boolean) => {
+  const stateClass = isActive || isHovered ? "opacity-100" : "opacity-50";
+  return cn(baseClass, stateClass);
+};
+
+// Gradient overlay component
 const GradientOverlay = React.memo<{ side: "left" | "right"; hoverSide: HoverSide }>(
   ({ side, hoverSide }) => {
-    const sideClasses = useMemo(() =>
-      side === "left" ? CSS_CLASSES.GRADIENT_LEFT : CSS_CLASSES.GRADIENT_RIGHT,
-      [side]
-    );
-
-    const opacityClass = useMemo(() =>
-      hoverSide === side ? "opacity-0" : "opacity-60",
-      [hoverSide, side]
-    );
+    const sideClasses = side === "left" ? 
+      CAROUSEL_CONFIG.CLASSES.gradientLeft : 
+      CAROUSEL_CONFIG.CLASSES.gradientRight;
+    
+    const opacityClass = hoverSide === side ? "opacity-0" : "opacity-60";
 
     return (
       <div
-        className={cn(CSS_CLASSES.GRADIENT_BASE, sideClasses, opacityClass)}
+        className={cn(CAROUSEL_CONFIG.CLASSES.gradientBase, sideClasses, opacityClass)}
         aria-hidden="true"
       />
     );
   }
 );
-
 GradientOverlay.displayName = 'GradientOverlay';
 
-// Enhanced ImageContainer with better performance
-const ImageContainer = React.memo<{
+// Image component with better structure
+const LectureImage = React.memo<{
   lecture: Lecture;
   isActive: boolean;
   isHovered: boolean;
-  preloadedImages: Set<string>;
-}>(({ lecture, isActive, isHovered, preloadedImages }) => {
-  const [imageLoaded, setImageLoaded] = useState(() =>
-    preloadedImages.has(lecture.image)
-  );
-
+  onLoad: () => void;
+}>(({ lecture, isActive, isHovered, onLoad }) => {
   const altText = useMemo(() => {
     if (typeof lecture.name === 'string') {
       return lecture.name.replace(/\n/g, ' ');
@@ -189,29 +222,17 @@ const ImageContainer = React.memo<{
     return 'Lecture image';
   }, [lecture.name]);
 
-  const squircleConfig = useMemo(() => ({
-    useSquircle: lecture.isSquircle !== undefined ? lecture.isSquircle : true,
-    borderRadius: lecture.borderRadius || DEFAULT_SQUIRCLE_CONFIG.borderRadius,
-    smoothing: lecture.smoothing || DEFAULT_SQUIRCLE_CONFIG.smoothing
-  }), [lecture.isSquircle, lecture.borderRadius, lecture.smoothing]);
+  const imageClasses = useMemo(() => 
+    getImageClasses(isActive, isHovered, lecture.transform?.objectPosition),
+    [isActive, isHovered, lecture.transform?.objectPosition]
+  );
 
-  const imageClasses = useMemo(() => cn(
-    CSS_CLASSES.IMAGE_BASE,
-    isActive || isHovered ? "opacity-100 scale-105" : "opacity-50 scale-100",
-    lecture.transform?.objectPosition === "center" ? "object-center" :
-      lecture.transform?.objectPosition === "top" ? "object-top" : "object-bottom"
-  ), [isActive, isHovered, lecture.transform?.objectPosition]);
+  const overlayClasses = useMemo(() => 
+    getOverlayClasses(isActive, isHovered),
+    [isActive, isHovered]
+  );
 
-  const overlayClasses = useMemo(() => cn(
-    CSS_CLASSES.OVERLAY,
-    isActive || isHovered ? "opacity-0" : "opacity-100"
-  ), [isActive, isHovered]);
-
-  const handleImageLoad = useCallback(() => {
-    setImageLoaded(true);
-  }, []);
-
-  const imageElement = useMemo(() => (
+  return (
     <>
       <ConditionalImage
         src={lecture.image || "/placeholder.svg"}
@@ -226,20 +247,51 @@ const ImageContainer = React.memo<{
         loading={isActive ? "eager" : "lazy"}
         priority={isActive}
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-        onLoad={handleImageLoad}
+        onLoad={onLoad}
       />
-
       <div
         className={overlayClasses}
         style={{ willChange: isActive || isHovered ? 'opacity' : 'auto' }}
         aria-hidden="true"
       />
     </>
-  ), [lecture, altText, imageClasses, overlayClasses, isActive, isHovered, handleImageLoad]);
+  );
+});
+LectureImage.displayName = 'LectureImage';
+
+// Image container component
+const ImageContainer = React.memo<{
+  lecture: Lecture;
+  isActive: boolean;
+  isHovered: boolean;
+  preloadedImages: Set<string>;
+}>(({ lecture, isActive, isHovered, preloadedImages }) => {
+  const [imageLoaded, setImageLoaded] = useState(() =>
+    preloadedImages.has(lecture.image)
+  );
+
+  const squircleConfig = useMemo(() => ({
+    useSquircle: lecture.isSquircle !== undefined ? lecture.isSquircle : true,
+    borderRadius: lecture.borderRadius || CAROUSEL_CONFIG.SQUIRCLE.borderRadius,
+    smoothing: lecture.smoothing || CAROUSEL_CONFIG.SQUIRCLE.smoothing
+  }), [lecture.isSquircle, lecture.borderRadius, lecture.smoothing]);
+
+  const handleImageLoad = useCallback(() => {
+    setImageLoaded(true);
+  }, []);
+
+  const imageElement = (
+    <LectureImage
+      lecture={lecture}
+      isActive={isActive}
+      isHovered={isHovered}
+      onLoad={handleImageLoad}
+    />
+  );
 
   if (!squircleConfig.useSquircle) {
     return (
-      <div className={CSS_CLASSES.IMAGE_CONTAINER_REGULAR}>
+      <div className={CAROUSEL_CONFIG.CLASSES.imageContainerRegular}>
         {imageElement}
       </div>
     );
@@ -247,10 +299,10 @@ const ImageContainer = React.memo<{
 
   return (
     <Monoco
-      borderRadius={DEFAULT_SQUIRCLE_CONFIG.monocoBorderRadius}
+      borderRadius={CAROUSEL_CONFIG.SQUIRCLE.monocoBorderRadius}
       smoothing={squircleConfig.smoothing}
       clip={true}
-      className={CSS_CLASSES.IMAGE_CONTAINER_SQUIRCLE}
+      className={CAROUSEL_CONFIG.CLASSES.imageContainerSquircle}
       style={{
         overflow: 'hidden',
         willChange: 'transform',
@@ -262,33 +314,25 @@ const ImageContainer = React.memo<{
       </div>
     </Monoco>
   );
-}, (prevProps, nextProps) => {
-  return (
-    prevProps.lecture.id === nextProps.lecture.id &&
-    prevProps.isActive === nextProps.isActive &&
-    prevProps.isHovered === nextProps.isHovered &&
-    prevProps.preloadedImages === nextProps.preloadedImages
-  );
 });
-
 ImageContainer.displayName = 'ImageContainer';
 
-// Enhanced LectureText with SmartText integration
+// Text content component
 const LectureText = React.memo<{ 
   lecture: Lecture; 
   isActive: boolean; 
   isHovered: boolean;
   locale?: 'ru' | 'en';
 }>(({ lecture, isActive, isHovered, locale = 'ru' }) => {
-  const titleClasses = useMemo(() => cn(
-    CSS_CLASSES.TITLE,
-    isActive || isHovered ? "opacity-100" : "opacity-50"
-  ), [isActive, isHovered]);
+  const titleClasses = useMemo(() => 
+    getTextClasses(CAROUSEL_CONFIG.CLASSES.title, isActive, isHovered),
+    [isActive, isHovered]
+  );
 
-  const descriptionClasses = useMemo(() => cn(
-    CSS_CLASSES.DESCRIPTION,
-    isActive || isHovered ? "opacity-100" : "opacity-50"
-  ), [isActive, isHovered]);
+  const descriptionClasses = useMemo(() => 
+    getTextClasses(CAROUSEL_CONFIG.CLASSES.description, isActive, isHovered),
+    [isActive, isHovered]
+  );
 
   return (
     <>
@@ -320,18 +364,10 @@ const LectureText = React.memo<{
       </p>
     </>
   );
-}, (prevProps, nextProps) => {
-  return (
-    prevProps.lecture.id === nextProps.lecture.id &&
-    prevProps.isActive === nextProps.isActive &&
-    prevProps.isHovered === nextProps.isHovered &&
-    prevProps.locale === nextProps.locale
-  );
 });
-
 LectureText.displayName = 'LectureText';
 
-// Enhanced LectureCard
+// Card component using Fragment for cleaner structure
 const LectureCard = React.memo<{
   lecture: Lecture;
   isActive: boolean;
@@ -339,9 +375,9 @@ const LectureCard = React.memo<{
   preloadedImages: Set<string>;
   locale?: 'ru' | 'en';
 }>(({ lecture, isActive, isHovered, preloadedImages, locale = 'ru' }) => (
-  <div className={CSS_CLASSES.CARD_WRAPPER}>
-    <Card className={CSS_CLASSES.CARD}>
-      <CardContent className={CSS_CLASSES.CARD_CONTENT}>
+  <div className={CAROUSEL_CONFIG.CLASSES.cardWrapper}>
+    <Card className={CAROUSEL_CONFIG.CLASSES.card}>
+      <CardContent className={CAROUSEL_CONFIG.CLASSES.cardContent}>
         <ImageContainer
           lecture={lecture}
           isActive={isActive}
@@ -357,28 +393,10 @@ const LectureCard = React.memo<{
       </CardContent>
     </Card>
   </div>
-), (prevProps, nextProps) => {
-  return (
-    prevProps.lecture.id === nextProps.lecture.id &&
-    prevProps.isActive === nextProps.isActive &&
-    prevProps.isHovered === nextProps.isHovered &&
-    prevProps.preloadedImages === nextProps.preloadedImages &&
-    prevProps.locale === nextProps.locale
-  );
-});
-
+));
 LectureCard.displayName = 'LectureCard';
 
-// Static navigation components
-const CarouselNavigation = React.memo(() => (
-  <div className={CSS_CLASSES.NAVIGATION}>
-    <CarouselArrow direction="left" />
-    <CarouselArrow direction="right" />
-  </div>
-));
-
-CarouselNavigation.displayName = 'CarouselNavigation';
-
+// Navigation components using Fragment
 const CarouselArrow = React.memo<{ direction: "left" | "right" }>(({ direction }) => (
   <div className={`relative pointer-events-auto ${direction === "left" ? "left-0" : "right-0"}`}>
     {direction === "left" ? (
@@ -388,9 +406,19 @@ const CarouselArrow = React.memo<{ direction: "left" | "right" }>(({ direction }
     )}
   </div>
 ));
-
 CarouselArrow.displayName = 'CarouselArrow';
 
+const CarouselNavigation = React.memo(() => (
+  <div className={CAROUSEL_CONFIG.CLASSES.navigation}>
+    <>
+      <CarouselArrow direction="left" />
+      <CarouselArrow direction="right" />
+    </>
+  </div>
+));
+CarouselNavigation.displayName = 'CarouselNavigation';
+
+// Main carousel component
 export function AppleStyleCarousel({
   lectures,
   locale = 'ru'
@@ -401,10 +429,51 @@ export function AppleStyleCarousel({
   const [hoverSide, setHoverSide] = useState<HoverSide>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
-
   const { preloadNearbyImages, preloadedImages } = useImagePreloader(lectures);
 
-  // Preload images when active index changes
+  // Consolidated event handlers
+  const handlers = useMemo(() => ({
+    mouseEnter: (index: number) => setHoveredIndex(index),
+    mouseLeave: () => setHoveredIndex(null),
+    containerMouseLeave: () => setHoverSide(null),
+    keyNavigation: (e: React.KeyboardEvent) => {
+      if (!api) return;
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        api.scrollPrev();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        api.scrollNext();
+      }
+    }
+  }), [api]);
+
+  // Enhanced mouse move handler
+  const debouncedMouseMove = useDebounce((clientX: number) => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    if (!containerRect.width) return;
+
+    const containerWidth = container.offsetWidth;
+    const mouseX = clientX - containerRect.left;
+    const relativeX = mouseX / containerWidth;
+
+    if (relativeX < CAROUSEL_CONFIG.PERFORMANCE.containerWidthThirds.left) {
+      setHoverSide("left");
+    } else if (relativeX > CAROUSEL_CONFIG.PERFORMANCE.containerWidthThirds.right) {
+      setHoverSide("right");
+    } else {
+      setHoverSide("center");
+    }
+  }, CAROUSEL_CONFIG.PERFORMANCE.debounceDelay);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    debouncedMouseMove(e.clientX);
+  }, [debouncedMouseMove]);
+
+  // Effects
   useEffect(() => {
     preloadNearbyImages(activeIndex);
   }, [activeIndex, preloadNearbyImages]);
@@ -425,63 +494,14 @@ export function AppleStyleCarousel({
     };
   }, [api]);
 
-  const handleMouseEnter = useCallback((index: number) => {
-    setHoveredIndex(index);
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    setHoveredIndex(null);
-  }, []);
-
-  // Enhanced mouse move handler with better performance
-  const debouncedMouseMove = useDebounce((clientX: number) => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const containerRect = container.getBoundingClientRect();
-    if (!containerRect.width) return;
-
-    const containerWidth = container.offsetWidth;
-    const mouseX = clientX - containerRect.left;
-    const relativeX = mouseX / containerWidth;
-
-    if (relativeX < CONTAINER_WIDTH_THIRDS.LEFT) {
-      setHoverSide("left");
-    } else if (relativeX > CONTAINER_WIDTH_THIRDS.RIGHT) {
-      setHoverSide("right");
-    } else {
-      setHoverSide("center");
-    }
-  }, DEBOUNCE_DELAY);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    debouncedMouseMove(e.clientX);
-  }, [debouncedMouseMove]);
-
-  const handleContainerMouseLeave = useCallback(() => {
-    setHoverSide(null);
-  }, []);
-
-  const handleKeyNavigation = useCallback((e: React.KeyboardEvent) => {
-    if (!api) return;
-
-    if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      api.scrollPrev();
-    } else if (e.key === "ArrowRight") {
-      e.preventDefault();
-      api.scrollNext();
-    }
-  }, [api]);
-
-  // Memoized carousel items with locale support
+  // Memoized carousel items
   const carouselItems = useMemo(() => 
     lectures.map((lecture, index) => (
       <CarouselItem
         key={lecture.id}
         className="md:basis-2/3 xl:basis-1/4 2xl:basis-1/3"
-        onMouseEnter={() => handleMouseEnter(index)}
-        onMouseLeave={handleMouseLeave}
+        onMouseEnter={() => handlers.mouseEnter(index)}
+        onMouseLeave={handlers.mouseLeave}
       >
         <LectureCard
           lecture={lecture}
@@ -491,27 +511,29 @@ export function AppleStyleCarousel({
           locale={locale}
         />
       </CarouselItem>
-    )), [lectures, activeIndex, hoveredIndex, handleMouseEnter, handleMouseLeave, preloadedImages, locale]
+    )), [lectures, activeIndex, hoveredIndex, handlers, preloadedImages, locale]
   );
 
   return (
     <div
       ref={containerRef}
-      className={CSS_CLASSES.CONTAINER}
+      className={CAROUSEL_CONFIG.CLASSES.container}
       onMouseMove={handleMouseMove}
-      onMouseLeave={handleContainerMouseLeave}
-      onKeyDown={handleKeyNavigation}
+      onMouseLeave={handlers.containerMouseLeave}
+      onKeyDown={handlers.keyNavigation}
       tabIndex={0}
       role="region"
       aria-label="Lecture carousel"
     >
-      <GradientOverlay side="left" hoverSide={hoverSide} />
-      <GradientOverlay side="right" hoverSide={hoverSide} />
+      <>
+        <GradientOverlay side="left" hoverSide={hoverSide} />
+        <GradientOverlay side="right" hoverSide={hoverSide} />
+      </>
 
       <Carousel
         setApi={setApi}
-        className={CSS_CLASSES.CAROUSEL}
-        opts={{ loop: true, align: "center" }}
+        className={CAROUSEL_CONFIG.CLASSES.carousel}
+        opts={CAROUSEL_CONFIG.CAROUSEL_OPTIONS}
       >
         <CarouselContent>
           {carouselItems}

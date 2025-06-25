@@ -1,14 +1,17 @@
 // sections/Music.tsx
 "use client"
 
+import { memo } from 'react'
 import MusicSection from "@/components/music/MusicSection"
 
-type MusicProps = {
+interface MusicProps {
   locale: 'en' | 'ru';
-};
-
-const Music = ({ locale }: MusicProps) => {
-  return <MusicSection locale={locale} />
 }
+
+const Music = memo<MusicProps>(({ locale }) => {
+  return <MusicSection locale={locale} />
+})
+
+Music.displayName = 'Music'
 
 export default Music
