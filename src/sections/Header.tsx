@@ -27,7 +27,8 @@ const COLORS = {
 const LOGO_CONTAINER_CLASSES = "absolute top-0 left-0 h-20 z-20 bg-white bg-opacity-50 shadow-lg mix-blend-difference transition-all duration-150 ease-out"
 const LOGO_CLASSES = "isolate z-25 transition-all duration-150 ease-out"
 const BLUR_CONTAINER_CLASSES = "fixed top-0 left-0 w-full h-20 z-10"
-const RIGHT_CONTAINER_CLASSES = "fixed top-0 right-0 h-20 z-20 transition-all duration-150 ease-out"
+const RIGHT_CONTAINER_CLASSES = "fixed top-0 xs:-right-4 md:right-0 2xl:right-0 h-20 z-20 transition-all duration-150 ease-out"
+
 const INNER_CONTAINER_CLASSES = "container max-w-full!"
 const CONTROLS_CONTAINER_CLASSES = "flex justify-end items-center h-20 gap-4 transition-all duration-150 ease-out"
 const CONTACT_LINK_CLASSES = "hidden md:inline-flex"

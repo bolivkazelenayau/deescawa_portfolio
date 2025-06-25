@@ -1,7 +1,6 @@
 "use client"
 
 import { type FC, useEffect, useRef, useState, useCallback, memo, useMemo } from "react"
-import ExportedImage from "next-image-export-optimizer"
 import { motion, useScroll, useTransform } from "motion/react"
 import Link from "next/link"
 import Button from "@/components/Button"
@@ -10,11 +9,8 @@ import useTextRevealAnimation from "@/hooks/useTextRevealAnimation"
 import { useStableTranslation } from "@/hooks/useStableTranslation"
 import React from "react"
 import dynamic from 'next/dynamic'
-import type { ImageLoaderProps } from 'next/image';
 
-const imageLoader = ({ src, width, quality }: ImageLoaderProps): string => {
-  return src; // Пакет сам управляет оптимизацией
-};
+import ConditionalImage from "@/components/ConditionalImage"
 
 
 // Lazy load icon with better fallback
@@ -552,7 +548,7 @@ const Hero: FC<HeroProps> = memo(({
             className={IMAGE_WRAPPER_CLASSES}
             style={{ width: portraitWidth }}
           >
-            <ExportedImage
+            <ConditionalImage
               src={heroImage.src}
               alt={config.content.portraitAlt || "Hero image"}
               className={IMAGE_CLASSES}
