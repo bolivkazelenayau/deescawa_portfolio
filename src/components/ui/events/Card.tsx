@@ -12,6 +12,8 @@ interface CardProps {
   alt?: string
   quality?: number
   loading?: "eager" | "lazy"
+  onLoad?: () => void      // <-- Add this
+  onError?: () => void     // <-- And this
 }
 
 // Static configurations moved outside component
@@ -52,7 +54,9 @@ const Card: React.FC<CardProps> = memo(({
   squircleSize = "default",
   alt = "Card image",
   quality = 85,
-  loading
+  loading,
+  onLoad,
+  onError
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -61,7 +65,8 @@ const Card: React.FC<CardProps> = memo(({
   const handleLoad = useCallback(() => {
     setIsLoaded(true);
     setHasError(false);
-  }, []);
+    if (onLoad) onLoad();
+  }, [onLoad]);
 
   const handleError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     if (process.env.NODE_ENV === 'development') {
@@ -70,7 +75,8 @@ const Card: React.FC<CardProps> = memo(({
     setHasError(true);
     setIsLoaded(false);
     e.currentTarget.src = PLACEHOLDER_IMAGE;
-  }, [image]);
+    if (onError) onError();
+  }, [image, onError]);
 
   // Memoized combined classes
   const combinedClasses = useMemo(() => 

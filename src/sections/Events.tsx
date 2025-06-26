@@ -35,7 +35,7 @@ const EVENTS_CONFIG = {
     },
     en: {
       squircle: {
-        width: "w-[85vw] max-w-[720px]",
+        width: "w-[85vw] max-w-[780px]",
         contentSpacing: "xs:mx-10 xl:mx-24",
         headingMargin: "xs:mx-10 lg:mx-24",
         descriptionWidth: "xs:w-3/5 md:w-full lg:w-4/5"

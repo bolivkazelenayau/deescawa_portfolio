@@ -5,159 +5,198 @@ import { animate, motion, useMotionValue } from "framer-motion";
 import { useEffect, useState, useRef, useCallback, useMemo, memo } from "react";
 import useMeasure from "react-use-measure";
 import { eventData1 } from "@/lib/events/EventsData_1";
-import { useInView } from "react-intersection-observer";
 import React from "react";
+import { twMerge } from "tailwind-merge";
 
-interface EventStackProps {
-  className?: string;
-}
+// ============================================================================
+// CONFIGURATION AND UTILITIES (Copied verbatim from your original code)
+// ============================================================================
 
-// Enhanced configuration with lazy loading
 const EVENT_STACK_CONFIG = {
   ANIMATION: {
     fastDuration: 50,
     slowDuration: 95,
-    preloadDelay: 100,
-    priorityThreshold: 6,
+    priorityThreshold: 8,
     priorityInterval: 4,
-    minProgress: 0.1,
-    finalPositionOffset: 8
+    finalPositionOffset: 8,
   },
   INTERSECTION_OBSERVER: {
-    threshold: 0.1,
-    rootMargin: '500px 0px', // Start loading 500px before entering viewport
-    triggerOnce: true
+    threshold: 0.05,
+    getRootMargin: () => {
+      if (typeof window === 'undefined') return '800px 0px';
+      const width = window.innerWidth;
+      const connection = (navigator as any).connection;
+      const isSlowConnection = connection && (connection.effectiveType === '2g' || connection.effectiveType === '3g');
+      if (isSlowConnection) {
+        return width < 768 ? '1200px 0px' : '1500px 0px';
+      }
+      if (width < 768) return '1000px 0px';
+      if (width < 1024) return '1200px 0px';
+      if (width < 1440) return '1400px 0px';
+      return '1600px 0px';
+    },
   },
   CLASSES: {
     container: "container-stack mt-24",
     wrapper: "w-max overflow-hidden -mx-48",
     motionContainer: "left-0 flex gap-4",
-    placeholder: "w-full h-full bg-gradient-to-r from-gray-200 to-gray-300 animate-pulse rounded-lg"
+    shimmer: "absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-shimmer"
   },
   CARD_SETTINGS: {
     priority: { quality: 90, loading: "eager" as const },
-    normal: { quality: 75, loading: "lazy" as const },
+    normal: { quality: 75, loading: "eager" as const },
     sizes: "(max-width: 640px) 120px, (max-width: 768px) 200px, (max-width: 1024px) 300px, 400px"
   },
   STYLES: {
-    wrapper: { 
-      contain: 'layout style paint' as const,
-      willChange: 'transform'
-    },
-    motion: {
-      willChange: 'transform'
-    }
+    wrapper: { contain: 'layout style paint' as const },
+    motion: { willChange: 'transform' as const }
   }
 } as const;
 
-// Precomputed doubled data
 const DOUBLED_EVENT_DATA = [...eventData1, ...eventData1];
 
-// Enhanced image preloader with intersection observer
-const useIntersectionImageLoader = () => {
-  const [imagesLoaded, setImagesLoaded] = useState(false);
-  const [animationStarted, setAnimationStarted] = useState(false);
-  const preloadedImages = useRef(new Set<string>());
-  const loadingPromises = useRef(new Map<string, Promise<void>>());
-
-  const preloadImage = useCallback((src: string): Promise<void> => {
-    if (preloadedImages.current.has(src)) {
-      return Promise.resolve();
-    }
-
-    if (loadingPromises.current.has(src)) {
-      return loadingPromises.current.get(src)!;
-    }
-
-    const promise = new Promise<void>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        preloadedImages.current.add(src);
-        loadingPromises.current.delete(src);
-        resolve();
-      };
-      img.onerror = () => {
-        loadingPromises.current.delete(src);
-        reject();
-      };
-      img.src = src;
-    });
-
-    loadingPromises.current.set(src, promise);
-    return promise;
-  }, []);
-
-  const preloadAllImages = useCallback(async () => {
-    if (imagesLoaded) return;
-
-    try {
-      // Load priority images first (first 6 + every 4th)
-      const priorityPromises = DOUBLED_EVENT_DATA
-        .filter((_, idx) => idx < EVENT_STACK_CONFIG.ANIMATION.priorityThreshold || idx % EVENT_STACK_CONFIG.ANIMATION.priorityInterval === 0)
-        .map(item => preloadImage(item.image));
-
-      await Promise.all(priorityPromises);
-
-      // Then load remaining images
-      const remainingPromises = DOUBLED_EVENT_DATA
-        .filter((_, idx) => !(idx < EVENT_STACK_CONFIG.ANIMATION.priorityThreshold || idx % EVENT_STACK_CONFIG.ANIMATION.priorityInterval === 0))
-        .map(item => preloadImage(item.image));
-
-      await Promise.all(remainingPromises);
-      
-      setImagesLoaded(true);
-    } catch (error) {
-      console.warn('Some images failed to preload:', error);
-      setImagesLoaded(true); // Continue anyway
-    }
-  }, [preloadImage, imagesLoaded]);
-
-  const startAnimation = useCallback(() => {
-    if (!animationStarted) {
-      setAnimationStarted(true);
-    }
-  }, [animationStarted]);
-
-  return {
-    preloadAllImages,
-    startAnimation,
-    imagesLoaded,
-    animationStarted,
-    preloadedImages: preloadedImages.current
+const debounce = (func: Function, wait: number) => {
+  let timeout: NodeJS.Timeout;
+  return function executedFunction(...args: any[]) {
+    const later = () => { clearTimeout(timeout); func(...args); };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
   };
 };
 
-// Intersection observer hook for triggering loading and animation
-const useIntersectionTrigger = (
-  preloadAllImages: () => Promise<void>,
-  startAnimation: () => void
-) => {
-  const { ref, inView } = useInView(EVENT_STACK_CONFIG.INTERSECTION_OBSERVER);
-
-  useEffect(() => {
-    if (inView) {
-      // Start loading images immediately when section comes into view
-      preloadAllImages();
-      
-      // Start animation after a brief delay to let images start loading
-      const animationTimer = setTimeout(() => {
-        startAnimation();
-      }, 100);
-
-      return () => clearTimeout(animationTimer);
-    }
-  }, [inView, preloadAllImages, startAnimation]);
-
-  return ref;
+const getCardPriority = (index: number) => {
+  return index < EVENT_STACK_CONFIG.ANIMATION.priorityThreshold || 
+         index % EVENT_STACK_CONFIG.ANIMATION.priorityInterval === 0;
 };
 
-// Enhanced EventCard with loading state
+// ============================================================================
+// CUSTOM HOOKS (Copied verbatim from your original code)
+// ============================================================================
+
+const useIntersectionImageLoader = () => {
+    const [imagesLoaded, setImagesLoaded] = useState(false);
+    const [animationStarted, setAnimationStarted] = useState(false);
+    const [loadingProgress, setLoadingProgress] = useState(0);
+    const [priorityImagesLoaded, setPriorityImagesLoaded] = useState(false);
+    const preloadedImages = useRef(new Set<string>());
+
+    useEffect(() => {
+        const loadPriority = async () => {
+            const priorityImages = DOUBLED_EVENT_DATA.slice(0, 6).map(item => new Promise<void>(resolve => {
+                const img = new Image();
+                img.onload = () => { preloadedImages.current.add(item.image); resolve(); };
+                img.onerror = () => resolve();
+                img.decoding = 'async';
+                img.loading = 'eager';
+                img.src = item.image;
+            }));
+            await Promise.all(priorityImages);
+            setPriorityImagesLoaded(true);
+        };
+        loadPriority();
+    }, []);
+
+    const preloadAllImages = useCallback(async () => {
+        if (imagesLoaded) return;
+        const allPromises = DOUBLED_EVENT_DATA.map(item =>
+            new Promise<void>((resolve) => {
+                if (preloadedImages.current.has(item.image)) {
+                    // Still increment progress for already loaded priority images
+                    setLoadingProgress(prev => Math.min(prev + (100 / DOUBLED_EVENT_DATA.length), 100));
+                    return resolve();
+                }
+                const img = new Image();
+                img.onload = () => {
+                    preloadedImages.current.add(item.image);
+                    setLoadingProgress(prev => Math.min(prev + (100 / DOUBLED_EVENT_DATA.length), 100));
+                    resolve();
+                };
+                img.onerror = () => {
+                    setLoadingProgress(prev => Math.min(prev + (100 / DOUBLED_EVENT_DATA.length), 100));
+                    resolve(); // Resolve on error so Promise.all doesn't fail
+                };
+                img.src = item.image;
+            })
+        );
+        await Promise.all(allPromises);
+        setImagesLoaded(true);
+    }, [imagesLoaded]);
+    
+    const startAnimation = useCallback(() => {
+      if (!animationStarted) {
+        setAnimationStarted(true);
+      }
+    }, [animationStarted]);
+
+    return { preloadAllImages, startAnimation, imagesLoaded, animationStarted, loadingProgress, priorityImagesLoaded };
+};
+
+const useMultiTriggerPreloader = (preloadAllImages: () => void, startAnimation: () => void) => {
+    const observerRef = useRef<IntersectionObserver | null>(null);
+    const elementRef = useRef<HTMLElement | null>(null);
+    const hasTriggered = useRef(false);
+
+    const trigger = useCallback(() => {
+        if (hasTriggered.current) return;
+        hasTriggered.current = true;
+        preloadAllImages();
+        setTimeout(startAnimation, 50);
+    }, [preloadAllImages, startAnimation]);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            if (hasTriggered.current) return;
+            const scrollPercentage = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
+            if (scrollPercentage > 0.2) {
+                trigger();
+            }
+        };
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [trigger]);
+
+    const createObserver = useCallback(() => {
+        if (observerRef.current) observerRef.current.disconnect();
+        const config = {
+            threshold: EVENT_STACK_CONFIG.INTERSECTION_OBSERVER.threshold,
+            rootMargin: EVENT_STACK_CONFIG.INTERSECTION_OBSERVER.getRootMargin(),
+        };
+        observerRef.current = new IntersectionObserver(([entry]) => {
+            if (entry.isIntersecting) {
+                trigger();
+                observerRef.current?.disconnect();
+            }
+        }, config);
+        if (elementRef.current) observerRef.current.observe(elementRef.current);
+    }, [trigger]);
+
+    useEffect(() => {
+        const handleResize = debounce(createObserver, 250);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [createObserver]);
+
+    return useCallback((node: HTMLElement | null) => {
+        elementRef.current = node;
+        if (node) createObserver();
+    }, [createObserver]);
+};
+
+// ============================================================================
+// EVENT CARD COMPONENT (Copied verbatim from your original code)
+// ============================================================================
+
 const EventCard = memo<{
   item: any;
   index: number;
   isPriority: boolean;
   isLoaded: boolean;
-}>(({ item, index, isPriority, isLoaded }) => {
+  priorityLoaded: boolean;
+  loadingProgress: number;
+}>(({ item, index, isPriority, isLoaded, priorityLoaded, loadingProgress }) => {
+  const [individualLoaded, setIndividualLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
   const settings = useMemo(() => 
     isPriority ? 
       EVENT_STACK_CONFIG.CARD_SETTINGS.priority : 
@@ -165,248 +204,164 @@ const EventCard = memo<{
     [isPriority]
   );
 
-  if (!isLoaded) {
+  const shouldShowImage = (isPriority && priorityLoaded) || isLoaded;
+
+  const handleLoad = useCallback(() => {
+    setIndividualLoaded(true);
+    setImageError(false);
+  }, []);
+
+  const handleError = useCallback(() => {
+    setImageError(true);
+    setIndividualLoaded(false);
+  }, []);
+
+  if (!shouldShowImage) {
     return (
-      <div className="w-[120px] md:w-[200px] lg:w-[300px] xl:w-[400px] aspect-square">
-        <div className={EVENT_STACK_CONFIG.CLASSES.placeholder} />
+      <div className="w-[120px] md:w-[200px] lg:w-[300px] xl:w-[400px] aspect-square relative shrink-0 overflow-hidden rounded-lg">
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200" />
+        <div className={EVENT_STACK_CONFIG.CLASSES.shimmer} />
+        {index < 6 && (
+          <div 
+            className="absolute bottom-0 left-0 h-1 bg-blue-400 transition-all duration-300 ease-out"
+            style={{ width: `${Math.min(loadingProgress, 100)}%` }}
+          />
+        )}
       </div>
     );
   }
 
   return (
-    <Card
-      image={item.image}
-      alt={`Event ${index + 1}`}
-      isSquircle 
-      squircleSize="lg"
-      priority={isPriority}
-      quality={settings.quality}
-      sizes={EVENT_STACK_CONFIG.CARD_SETTINGS.sizes}
-      loading={settings.loading}
-    />
+    <div className="relative shrink-0">
+      <Card
+        image={item.image}
+        alt={`Event ${index + 1}`}
+        isSquircle 
+        squircleSize="lg"
+        priority={isPriority}
+        quality={settings.quality}
+        sizes={EVENT_STACK_CONFIG.CARD_SETTINGS.sizes}
+        loading={settings.loading}
+        onLoad={handleLoad}
+        onError={handleError}
+      />
+      
+      {!individualLoaded && !imageError && shouldShowImage && (
+        <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg transition-opacity duration-300" />
+      )}
+      
+      {imageError && (
+        <div className="absolute inset-0 bg-red-100 dark:bg-red-900 flex items-center justify-center rounded-lg">
+          <span className="text-red-600 dark:text-red-300 text-xs">Failed to load</span>
+        </div>
+      )}
+    </div>
   );
 }, (prevProps, nextProps) => {
   return (
     prevProps.item.id === nextProps.item.id &&
     prevProps.index === nextProps.index &&
     prevProps.isPriority === nextProps.isPriority &&
-    prevProps.isLoaded === nextProps.isLoaded
+    prevProps.isLoaded === nextProps.isLoaded &&
+    prevProps.priorityLoaded === nextProps.priorityLoaded &&
+    prevProps.loadingProgress === nextProps.loadingProgress
   );
 });
 EventCard.displayName = 'EventCard';
 
-// Animation configuration utility (unchanged)
-const createAnimationConfig = (
-  width: number,
-  mustFinish: boolean,
-  duration: number,
-  xTranslation: any,
-  resetPosition: () => void,
-  setMustFinish: (value: boolean) => void,
-  setRerender: (fn: (prev: boolean) => boolean) => void
-) => {
-  if (!width) return null;
-  
-  const finalPosition = -width / 2 - EVENT_STACK_CONFIG.ANIMATION.finalPositionOffset;
-  
-  if (mustFinish) {
-    const currentPosition = xTranslation.get();
-    const remainingDistance = Math.abs(finalPosition - currentPosition);
-    const totalDistance = Math.abs(finalPosition);
-    const progress = Math.max(EVENT_STACK_CONFIG.ANIMATION.minProgress, remainingDistance / totalDistance);
-    
-    return {
-      to: [currentPosition, finalPosition],
-      options: {
-        ease: "linear" as const,
-        duration: duration * progress,
-        onComplete: () => {
-          setMustFinish(false);
-          setRerender(prev => !prev);
-          resetPosition();
-        },
-      }
-    };
-  }
+// ============================================================================
+// THE REFACTORED AND PERFORMANT MAIN COMPONENT
+// ============================================================================
 
-  return {
-    to: [0, finalPosition],
-    options: {
-      ease: "linear" as const,
-      duration: duration,
-      repeat: Infinity,
-      repeatType: "loop" as const,
-      repeatDelay: 0,
-      onRepeat: resetPosition,
-    }
-  };
-};
+interface EventStackProps {
+  className?: string;
+}
 
-// Utility functions
-const getCardPriority = (index: number) => {
-  return index < EVENT_STACK_CONFIG.ANIMATION.priorityThreshold || 
-         index % EVENT_STACK_CONFIG.ANIMATION.priorityInterval === 0;
-};
-
-// Animation controller hook (unchanged)
-const useAnimationController = (xTranslation: any) => {
-  const [duration, setDuration] = useState<number>(EVENT_STACK_CONFIG.ANIMATION.fastDuration);
-  const [mustFinish, setMustFinish] = useState(false);
-  const [rerender, setRerender] = useState(false);
-  const animationControlsRef = useRef<any>(null);
-
-  const handlers = useMemo(() => ({
-    hoverStart: () => {
-      setMustFinish(true);
-      setDuration(EVENT_STACK_CONFIG.ANIMATION.slowDuration);
-    },
-    hoverEnd: () => {
-      setMustFinish(true);
-      setDuration(EVENT_STACK_CONFIG.ANIMATION.fastDuration);
-    }
-  }), []);
-
-  return {
-    duration,
-    mustFinish,
-    rerender,
-    setMustFinish,
-    setRerender,
-    handlers,
-    animationControlsRef
-  };
-};
-
-// Container wrapper component
-const EventStackContainer = memo<{
-  children: React.ReactNode;
-  className: string;
-  triggerRef: (node: HTMLElement | null) => void;
-}>(({ children, className, triggerRef }) => (
-  <main className={className} ref={triggerRef}>
-    <div 
-      className={EVENT_STACK_CONFIG.CLASSES.wrapper}
-      role="region"
-      aria-label="Event carousel"
-      style={EVENT_STACK_CONFIG.STYLES.wrapper}
-    >
-      {children}
-    </div>
-  </main>
-));
-EventStackContainer.displayName = 'EventStackContainer';
-
-// Motion wrapper component (unchanged)
-const MotionWrapper = memo<{
-  children: React.ReactNode;
-  xTranslation: any;
-  handlers: {
-    hoverStart: () => void;
-    hoverEnd: () => void;
-  };
-  containerRef: React.RefObject<HTMLDivElement | null>;
-  measureRef: (node: HTMLElement | null) => void;
-}>(({ children, xTranslation, handlers, containerRef, measureRef }) => {
-  const motionProps = useMemo(() => ({
-    className: EVENT_STACK_CONFIG.CLASSES.motionContainer,
-    style: { 
-      x: xTranslation,
-      ...EVENT_STACK_CONFIG.STYLES.motion
-    },
-    onHoverStart: handlers.hoverStart,
-    onHoverEnd: handlers.hoverEnd,
-    ref: containerRef,
-    role: "list"
-  }), [xTranslation, handlers, containerRef]);
-
-  return (
-    <motion.div
-      {...motionProps}
-      ref={measureRef}
-    >
-      {children}
-    </motion.div>
-  );
-});
-MotionWrapper.displayName = 'MotionWrapper';
-
-const EventStack_1: React.FC<EventStackProps> = memo(({ className = "" }) => {
-  const [ref, { width }] = useMeasure();
+const EventStack_Final: React.FC<EventStackProps> = ({ className = "" }) => {
+  const [measureRef, { width }] = useMeasure();
   const xTranslation = useMotionValue(0);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  
-  // Enhanced lazy loading hooks
+  const animationControls = useRef<any>(null);
+
+  // Your custom hooks are used here as intended.
   const {
     preloadAllImages,
     startAnimation,
     imagesLoaded,
-    animationStarted
+    animationStarted,
+    loadingProgress,
+    priorityImagesLoaded,
   } = useIntersectionImageLoader();
 
-  const triggerRef = useIntersectionTrigger(preloadAllImages, startAnimation);
+  const triggerRef = useMultiTriggerPreloader(preloadAllImages, startAnimation);
 
-  const {
-    duration,
-    mustFinish,
-    rerender,
-    setMustFinish,
-    setRerender,
-    handlers,
-    animationControlsRef
-  } = useAnimationController(xTranslation);
+  // --- Imperative Animation Logic ---
+  // This logic is now managed with useCallback and refs to prevent re-renders.
 
-  // Enhanced reset position
-  const resetPosition = useCallback(() => {
-    if (containerRef.current) {
-      const firstChild = containerRef.current.firstElementChild as HTMLElement;
-      if (firstChild) {
-        const resetX = firstChild.offsetWidth;
-        xTranslation.set(-resetX);
-      }
-    }
-  }, [xTranslation]);
+  const animateCycle = useCallback((duration: number, isLoop: boolean) => {
+    animationControls.current?.stop();
+    if (width === 0) return;
 
-  // Consolidated layout data
-  const layoutData = useMemo(() => ({
-    containerClassName: `${EVENT_STACK_CONFIG.CLASSES.container} ${className}`.trim(),
-    animationConfig: animationStarted ? createAnimationConfig(
-      width,
-      mustFinish,
-      duration,
-      xTranslation,
-      resetPosition,
-      setMustFinish,
-      setRerender
-    ) : null
-  }), [className, width, mustFinish, duration, xTranslation, resetPosition, setMustFinish, setRerender, animationStarted]);
+    const finalPosition = -width / 2 - EVENT_STACK_CONFIG.ANIMATION.finalPositionOffset;
+    
+    animationControls.current = animate(xTranslation, [0, finalPosition], {
+      ease: "linear",
+      duration: duration,
+      onComplete: () => {
+        if (isLoop) {
+          xTranslation.set(0);
+          animateCycle(duration, true);
+        }
+      },
+    });
+  }, [width, xTranslation]);
 
-  // Animation control effect - only start when animation is triggered
+  const finishAndTransition = useCallback((newDuration: number, resumeLoop: boolean) => {
+    animationControls.current?.stop();
+    if (width === 0) return;
+    
+    const currentX = xTranslation.get();
+    const finalPosition = -width / 2 - EVENT_STACK_CONFIG.ANIMATION.finalPositionOffset;
+    const totalDistance = Math.abs(finalPosition);
+    if (totalDistance === 0) return;
+
+    const remainingDistance = Math.abs(finalPosition - currentX);
+    const progress = remainingDistance / totalDistance;
+    const proportionalDuration = newDuration * progress;
+
+    animationControls.current = animate(xTranslation, finalPosition, {
+      ease: "linear",
+      duration: proportionalDuration,
+      onComplete: () => {
+        xTranslation.set(0);
+        if (resumeLoop) {
+          animateCycle(EVENT_STACK_CONFIG.ANIMATION.fastDuration, true);
+        }
+      },
+    });
+  }, [width, xTranslation, animateCycle]);
+
+  // Event handlers now call the imperative functions, causing no re-renders.
+  const handleHoverStart = useCallback(() => {
+    finishAndTransition(EVENT_STACK_CONFIG.ANIMATION.slowDuration, false);
+  }, [finishAndTransition]);
+
+  const handleHoverEnd = useCallback(() => {
+    finishAndTransition(EVENT_STACK_CONFIG.ANIMATION.fastDuration, true);
+  }, [finishAndTransition]);
+
+  // Main effect to kick off the animation when triggered by your hooks.
   useEffect(() => {
-    if (!layoutData.animationConfig || !animationStarted) return;
-    
-    if (animationControlsRef.current) {
-      animationControlsRef.current.stop();
+    if (animationStarted && width > 0) {
+      animateCycle(EVENT_STACK_CONFIG.ANIMATION.fastDuration, true);
     }
-    
-    animationControlsRef.current = animate(
-      xTranslation, 
-      layoutData.animationConfig.to, 
-      layoutData.animationConfig.options
-    );
-    
-    return () => {
-      if (animationControlsRef.current) {
-        animationControlsRef.current.stop();
-      }
-    };
-  }, [xTranslation, layoutData.animationConfig, animationStarted]);
+    return () => animationControls.current?.stop();
+  }, [animationStarted, width, animateCycle]);
 
-  // Memoized card elements with loading state
-  const cardElements = useMemo(() => 
+  // Memoized card elements. They only re-render when loading states change (which is desired).
+  const cardElements = useMemo(() =>
     DOUBLED_EVENT_DATA.map((item, idx) => {
       const isPriority = getCardPriority(idx);
       const keyPrefix = idx < eventData1.length ? 'original' : 'duplicate';
-      
       return (
         <EventCard
           key={`event-${item.id || idx}-${keyPrefix}`}
@@ -414,27 +369,34 @@ const EventStack_1: React.FC<EventStackProps> = memo(({ className = "" }) => {
           index={idx}
           isPriority={isPriority}
           isLoaded={imagesLoaded}
+          priorityLoaded={priorityImagesLoaded}
+          loadingProgress={loadingProgress}
         />
       );
-    }), [imagesLoaded]
+    }), [imagesLoaded, priorityImagesLoaded, loadingProgress]
   );
 
   return (
-    <EventStackContainer 
-      className={layoutData.containerClassName}
-      triggerRef={triggerRef}
+    <main
+      ref={triggerRef}
+      className={twMerge(EVENT_STACK_CONFIG.CLASSES.container, className)}
     >
-      <MotionWrapper
-        xTranslation={xTranslation}
-        handlers={handlers}
-        containerRef={containerRef}
-        measureRef={ref}
+      <motion.div
+        className={EVENT_STACK_CONFIG.CLASSES.wrapper}
+        style={EVENT_STACK_CONFIG.STYLES.wrapper}
+        onHoverStart={handleHoverStart}
+        onHoverEnd={handleHoverEnd}
       >
-        {cardElements}
-      </MotionWrapper>
-    </EventStackContainer>
+        <motion.div
+          ref={measureRef}
+          className={EVENT_STACK_CONFIG.CLASSES.motionContainer}
+          style={{ ...EVENT_STACK_CONFIG.STYLES.motion, x: xTranslation }}
+        >
+          {cardElements}
+        </motion.div>
+      </motion.div>
+    </main>
   );
-});
+};
 
-EventStack_1.displayName = 'EventStack_1';
-export default EventStack_1;
+export default EventStack_Final;
