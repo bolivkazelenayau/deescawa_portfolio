@@ -52,7 +52,7 @@ const CLIP_PATH_STYLE = {
 const CLASSES = {
   // Layout containers
   footerContainer: "h-[105dvh] md:h-[800px] lg:h-[1000px] footer-container md:mt-0",
-  footerContent: "fixed bottom-0 h-[105vh] md:h-[800px] lg:h-[1000px] w-full bg-stone-900 text-white xs:py-16",
+  footerContent: "fixed bottom-0 h-[105vh] md:h-[800px] lg:h-[1000px] w-full bg-stone-900 text-white xs:py-16 md:py-0",
   mainContainer: "md:py-32 xs:py-16 container p-4 md:p-8 lg:py-48 mt-[-1vh]",
   innerContainer: "lg:py-48 xl:py-32 xs:py-16",
   
@@ -74,13 +74,13 @@ const CLASSES = {
   navButton: "text-md font-light lg:text-xl w-auto tracking-normal",
   
   // Contact section
-  contactContainer: "flex items-center mt-4 xs:-mt-8 d:mt-0",
+  contactContainer: "flex items-center mt-4 xs:-mt-8 md:mt-0",
   emailButton: "mt-4 xs-max-md:mt-0",
   socialIcons: "flex items-center gap-2 ml-4 lg:gap-4 xl:translate-y-2 xs:translate-y-2",
   socialIcon: "text-white/70 hover:text-white transition-colors duration-200 xs:text-5xl lg:text-5xl",
   
   // Copyright
-  copyright: "py-10 text-white/30 text-sm z-10 lg:ml-8 xs:ml-0 col-span-full mt-8 xs:-mt-8"
+  copyright: "py-10 text-white/30 text-sm z-10 lg:ml-8 xs:ml-0 col-span-full mt-8 xs:-mt-8 md:mt-0"
 } as const
 
 // Optimized debounce with RAF
