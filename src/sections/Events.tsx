@@ -19,9 +19,9 @@ const EVENTS_CONFIG = {
   CLASSES: {
     section: "overflow-hidden -mb-64 relative",
     main: "relative",
-    eventStack: "xs:-mt-24 w-full xs:w-[80vw] lg:w-[60vw] min-w-300 relative",
+    eventStack: "xs:-mt-24 w-full xs:w-[80vw] lg:w-[80vw] min-w-300 relative",
     container: "container flex flex-col gap-4 lg:flex-row lg:gap-12 relative isolate",
-    contentWrapper: "flex-1 min-w-0",
+    contentWrapper: "flex-1 min-w-",
     skeletonLoader: "h-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"
   },
   LOCALE_STYLES: {
@@ -44,7 +44,7 @@ const EVENTS_CONFIG = {
   },
   BASE_STYLES: {
     squircle: "py-12 h-auto transition-colors duration-100 relative mx-auto",
-    contentWrapper: "flex flex-col gap-2 xs:gap-4 md:gap-8 lg:-py-4",
+    contentWrapper: "flex flex-col gap-4 xs:gap-4 md:gap-8 lg:-py-4",
     heading: "kern text-5xl md:text-8xl font-medium tracking-[-2px] text-white dark:text-black xs:py-12 lg:py-10 xs:-mt-12 lg:-mt-8 transition-colors duration-100",
     subtitle: "kern text-2xl md:text-3xl lg:text-5xl font-normal tracking-[-1px] text-white dark:text-black xs:-mt-12 lg:-mt-8 transition-colors duration-100",
     description: "kern xs:text-xs md:text-lg font-normal text-white dark:text-black xs:mt-0 lg:-mt-4 transition-colors duration-100"

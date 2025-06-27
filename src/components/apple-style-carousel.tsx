@@ -499,7 +499,7 @@ export function AppleStyleCarousel({
     lectures.map((lecture, index) => (
       <CarouselItem
         key={lecture.id}
-        className="md:basis-2/3 xl:basis-1/4 2xl:basis-1/3"
+        className="md:basis-2/3 xl:basis-1/3"
         onMouseEnter={() => handlers.mouseEnter(index)}
         onMouseLeave={handlers.mouseLeave}
       >

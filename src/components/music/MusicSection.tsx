@@ -20,7 +20,7 @@ const MUSIC_SECTION_CONFIG = {
   CLASSES: {
     section: "section -mb-64 music-section",
     container: "container",
-    title: "kern text-5xl md:text-6xl lg:text-7xl 2xl:text-8xl font-medium tracking-[-1px] py-72",
+    title: "kern text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-medium tracking-[-1px] py-72",
     subtitlesContainer: "flex flex-col gap-8 -mt-60 lg:w-[80%]",
     subtitle: "text-xl sm:text-2xl md:text-3xl lg:text-5xl font-regular tracking-[-1px] text-left music-subtitle",
     carouselContainer: "mt-24"
