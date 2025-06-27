@@ -51,9 +51,9 @@ const CLIP_PATH_STYLE = {
 // Consolidated class names with better semantic naming
 const CLASSES = {
   // Layout containers
-  footerContainer: "h-[105dvh] md:h-[800px] xl:h-[1200px] footer-container md:mt-0",
-footerContent: "fixed bottom-0 h-[105vh] md:h-[800px] xl:h-[1200px] w-full bg-stone-900 text-white xs:py-16 md:py-0 xl:py-50",
-  mainContainer: "md:py-32 xs:py-16 w-full px-4 md:px-8 xl:py-48 mt-[-1vh]",
+  footerContainer: "h-[105dvh] md:h-[800px] 2xl:h-[1200px] footer-container md:mt-0",
+footerContent: "fixed bottom-0 h-[105vh] md:h-[800px] 2xl:h-[1200px] w-full bg-stone-900 text-white xs:py-16 md:py-0 xl:py-16 2xl:py-32 3xl:py-50",
+  mainContainer: "md:py-32 xs:py-16 w-full px-4 md:px-8 2xl:py-48 mt-[-1vh]",
   innerContainer: "xl:py-48 2xl:py-32 xs:py-16",
 
   // Grid and content
@@ -64,10 +64,10 @@ footerContent: "fixed bottom-0 h-[105vh] md:h-[800px] xl:h-[1200px] w-full bg-st
   // Status indicator
   statusContainer: "flex items-center gap-3 py-4 lg:ml-8 xs:ml-0",
   statusDot: "size-3 rounded-full bg-green-400 animate-pulse",
-  statusText: "kern uppercase text-sm md:text-base",
+  statusText: "kern uppercase text-sm md:text-base tracking-[0.02em]",
 
   // Typography
-  heading: "text-5xl md:text-6xl xl:text-8xl py-12 -mt-6 font-extralight footer-text-hidden-initially",
+  heading: "text-5xl md:text-5xl xl:text-7xl 3xl:text-8xl py-12 -mt-6 font-extralight footer-text-hidden-initially",
 
   // Navigation
   nav: "font-light flex flex-col items-start md:items-end gap-3 md:gap-4 lg:gap-6 mt-6 xs:-mt-0 md:mt-0 w-full", // <-- add w-full

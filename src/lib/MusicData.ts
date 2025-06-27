@@ -37,28 +37,28 @@ export const musicData = [
     id: 1,
     albumCover: "/images/music/bashnya.png",
     name: "Башня",
-    description: "Надо найти пресс-релиз, а пока напишу что-то умное, дабы заполнить негативное пространство",
+    description: "Сочетание техно, британского рейва и русского вокала. Трек о внутреннем освобождении и возможности выйти в мир",
     bandLink: "https://band.link/album3"
   },
   {
     id: 2,
     albumCover: "/images/music/finding_balance.png",
     name: "Finding Balance",
-    description: "Второй мини-альбом Finding Balance — танцевальная бейс-музыка (дабстеп, хафтайм, фьюче битс) про баланс в творчестве и жизни",
+    description: "Танцевальная бейс-музыка (дабстеп, хафтайм, фьюче битс) про нахождение баланса в творчестве и жизни",
     bandLink: "https://band.link/album2"
   },
   {
     id: 3,
     albumCover: "/images/music/hometown.png",
     name: "Hometown EP",
-    description: "Дебютный мини-альбом Hometown — деконструкция эмбиента и танцевальной музыки \nс многослойным сюжетом об обсессиях и эскапизме",
+    description: "Деконструкция эмбиента и танцевальной музыки с многослойным сюжетом об обсессиях и эскапизме",
     bandLink: "https://band.link/hometown"
   },
   {
     id: 4,
     albumCover: "/images/music/album4.jpg",
     name: "SoundCloud Vault",
-    description: "Сборник старых приколов для заполнения карточки",
+    description: "Архив (ремиксы, бутлеги и синглы) отражающий путь поиска собственного звучания",
     bandLink: "https://band.link/album4"
   },
 ] as const

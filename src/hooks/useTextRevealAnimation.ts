@@ -4,6 +4,24 @@ import { stagger, useAnimate, AnimationPlaybackControls } from "framer-motion";
 import { useEffect, useRef, useCallback, useMemo, useState } from "react";
 import SplitType from "split-type";
 
+// Функция обработки типографики
+const processTypography = (text: string, language: 'ru' | 'en'): string => {
+  const hangingWords = {
+    ru: ['и', 'в', 'на', 'с', 'для', 'от', 'до', 'по', 'за', 'под', 'над', 'при', 'без', 'через', 'о', 'об', 'к', 'у'],
+    en: ['a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by']
+  };
+  
+  const words = hangingWords[language] || [];
+  let processedText = text;
+  
+  words.forEach(word => {
+    const regex = new RegExp(`\\b${word}\\s+`, 'gi');
+    processedText = processedText.replace(regex, `${word}\u00A0`);
+  });
+  
+  return processedText;
+};
+
 type AnimationOptions = {
   entranceDuration?: number;
   exitDuration?: number;
@@ -14,9 +32,10 @@ type AnimationOptions = {
   entranceY?: string;
   exitY?: string;
   onStart?: () => void;
+  enableTypography?: boolean;
+  language?: 'ru' | 'en';
 };
 
-// Static constants for better performance
 const DEFAULT_OPTIONS: Readonly<AnimationOptions> = {
   entranceDuration: 0.75,
   exitDuration: 0.7,
@@ -24,6 +43,8 @@ const DEFAULT_OPTIONS: Readonly<AnimationOptions> = {
   exitStagger: 0.02,
   entranceY: "25%",
   exitY: "-35%",
+  enableTypography: true,
+  language: 'ru',
 } as const;
 
 const SPLIT_CONFIG = {
@@ -40,7 +61,7 @@ const ANIMATION_CONSTANTS = {
   REDUCED_MOTION_DURATION: 0.01,
 } as const;
 
-// LRU Cache implementation for better memory management
+// LRU Cache implementation
 class LRUCache<K, V> {
   private cache = new Map<K, V>();
   private maxSize: number;
@@ -75,7 +96,6 @@ class LRUCache<K, V> {
   }
 }
 
-// Optimized CSS cache with LRU eviction
 const CSS_CACHE = new LRUCache<string, string>(ANIMATION_CONSTANTS.MAX_CSS_CACHE_SIZE);
 
 const getCSSTemplate = (uniqueId: string): string => {
@@ -114,7 +134,6 @@ const getCSSTemplate = (uniqueId: string): string => {
   return css;
 };
 
-// Cached reduced motion detection
 let cachedReducedMotion: boolean | null = null;
 let mediaQueryListener: MediaQueryList | null = null;
 
@@ -135,7 +154,6 @@ const getReducedMotionPreference = (): boolean => {
   return cachedReducedMotion;
 };
 
-// Optimized batch style setter using RAF
 const setBatchWordStyles = (words: HTMLElement[], entranceY: string): void => {
   if (!words.length) return;
   
@@ -148,7 +166,6 @@ const setBatchWordStyles = (words: HTMLElement[], entranceY: string): void => {
   });
 };
 
-// Enhanced parent overflow handling with WeakSet for processed elements
 const processedParents = new WeakSet<Element>();
 
 const optimizeParentOverflow = (element: HTMLElement): void => {
@@ -156,7 +173,6 @@ const optimizeParentOverflow = (element: HTMLElement): void => {
   let parent = element.parentElement;
   let depth = 0;
   
-  // Collect parents that need processing
   while (parent && parent !== document.body && depth < ANIMATION_CONSTANTS.MAX_PARENT_DEPTH) {
     if (!processedParents.has(parent)) {
       parentsToProcess.push(parent);
@@ -166,7 +182,6 @@ const optimizeParentOverflow = (element: HTMLElement): void => {
     depth++;
   }
   
-  // Batch process all parents in one RAF
   if (parentsToProcess.length > 0) {
     requestAnimationFrame(() => {
       for (const p of parentsToProcess) {
@@ -179,7 +194,6 @@ const optimizeParentOverflow = (element: HTMLElement): void => {
   }
 };
 
-// Optimized numeric value parser with caching
 const numericCache = new Map<string, number>();
 
 const parseNumericValue = (value: string): number => {
@@ -208,7 +222,6 @@ const useTextRevealAnimation = (
   const rafIdRef = useRef<number | null>(null);
   const cleanupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Optimized options memoization with split dependencies
   const baseOptions = useMemo(() => ({
     ...DEFAULT_OPTIONS,
     ...options
@@ -220,7 +233,9 @@ const useTextRevealAnimation = (
     options.entranceStagger,
     options.exitStagger,
     options.entranceY,
-    options.exitY
+    options.exitY,
+    options.enableTypography,
+    options.language
   ]);
 
   const animOptions = useMemo(() => {
@@ -241,7 +256,6 @@ const useTextRevealAnimation = (
     };
   }, [baseOptions]);
 
-  // Initialize unique ID and CSS with proper cleanup
   useEffect(() => {
     uniqueIdRef.current = `text-reveal-${Math.random().toString(36).substring(2, 9)}`;
     
@@ -254,7 +268,6 @@ const useTextRevealAnimation = (
     document.head.appendChild(styleElementRef.current);
     
     return () => {
-      // Comprehensive cleanup
       if (rafIdRef.current) {
         cancelAnimationFrame(rafIdRef.current);
         rafIdRef.current = null;
@@ -272,29 +285,32 @@ const useTextRevealAnimation = (
     };
   }, []);
 
-  // Optimized initialization with better error recovery
   const initializeSplit = useCallback(() => {
     if (!scope.current) return false;
 
     try {
       const element = scope.current;
       
-      // Efficient style application
+      // ОБРАБОТКА ТИПОГРАФИКИ
+      if (animOptions.enableTypography && animOptions.language) {
+        const originalHTML = element.innerHTML;
+        const processedHTML = processTypography(originalHTML, animOptions.language);
+        if (originalHTML !== processedHTML) {
+          element.innerHTML = processedHTML;
+        }
+      }
+      
       element.style.cssText += `overflow: visible; padding-top: ${animOptions._paddingTop}px; padding-bottom: ${animOptions._paddingTop}px;`;
       
-      // Optimize parent overflow
       optimizeParentOverflow(element);
       
-      // Clean up existing split
       if (splitInstance.current) {
         splitInstance.current.revert();
         splitInstance.current = null;
       }
       
-      // Initialize new split
       splitInstance.current = new SplitType(element, SPLIT_CONFIG as any);
       
-      // Efficient word selection and styling
       const words = element.querySelectorAll(".word") as NodeListOf<HTMLElement>;
       wordsRef.current = Array.from(words);
       
@@ -311,16 +327,14 @@ const useTextRevealAnimation = (
       setIsInitialized(false);
       return false;
     }
-  }, [animOptions._paddingTop, animOptions.entranceY]);
+  }, [animOptions._paddingTop, animOptions.entranceY, animOptions.enableTypography, animOptions.language]);
 
-  // Initialize with proper cleanup
   useEffect(() => {
     const timer = setTimeout(initializeSplit, ANIMATION_CONSTANTS.INIT_DELAY);
     
     return () => {
       clearTimeout(timer);
       
-      // Stop animation
       if (animationRef.current) {
         try {
           animationRef.current.stop();
@@ -330,7 +344,6 @@ const useTextRevealAnimation = (
         animationRef.current = null;
       }
       
-      // Clean up SplitType
       if (splitInstance.current) {
         try {
           splitInstance.current.revert();
@@ -340,14 +353,12 @@ const useTextRevealAnimation = (
         splitInstance.current = null;
       }
       
-      // Reset state
       wordsRef.current = [];
       setIsInitialized(false);
       hasAnimatedRef.current = false;
     };
   }, [initializeSplit]);
 
-  // Optimized animation condition check
   const shouldAnimate = useCallback((): boolean => {
     if (!hasAnimatedRef.current) return true;
     
@@ -359,13 +370,11 @@ const useTextRevealAnimation = (
     return false;
   }, [animationKey]);
 
-  // Enhanced entrance animation with will-change optimization
   const entranceAnimation = useCallback(() => {
     if (!wordsRef.current.length || !isInitialized || !scope.current) return null;
     
     if (!shouldAnimate()) return null;
 
-    // Trigger onStart callback
     if (options.onStart) {
       try {
         options.onStart();
@@ -376,7 +385,6 @@ const useTextRevealAnimation = (
 
     scope.current.classList.add('animation-ready');
 
-    // Stop existing animation
     if (animationRef.current) {
       try {
         animationRef.current.stop();
@@ -387,7 +395,6 @@ const useTextRevealAnimation = (
     }
 
     try {
-      // Handle reduced motion
       if (animOptions._isReducedMotion) {
         rafIdRef.current = requestAnimationFrame(() => {
           const styleTemplate = `opacity: 1; transform: translateY(0); display: inline-block; overflow: visible; position: relative; will-change: auto;`;
@@ -399,7 +406,6 @@ const useTextRevealAnimation = (
         return null;
       }
 
-      // Set will-change before animation
       for (const word of wordsRef.current) {
         word.style.willChange = 'transform, opacity';
       }
@@ -414,7 +420,6 @@ const useTextRevealAnimation = (
           duration: animOptions.entranceDuration,
           delay: stagger(animOptions.entranceStagger || 0),
           onComplete: () => {
-            // Clean up will-change after animation
             for (const word of wordsRef.current) {
               word.style.willChange = 'auto';
             }
@@ -426,7 +431,6 @@ const useTextRevealAnimation = (
       return animationRef.current;
     } catch (error) {
       console.error("Error during entrance animation:", error);
-      // Clean up will-change on error
       for (const word of wordsRef.current) {
         word.style.willChange = 'auto';
       }
@@ -434,7 +438,6 @@ const useTextRevealAnimation = (
     }
   }, [animate, animOptions, isInitialized, shouldAnimate, options.onStart]);
 
-  // Enhanced exit animation
   const exitAnimation = useCallback(() => {
     if (!wordsRef.current.length || !isInitialized) return null;
 
@@ -458,7 +461,6 @@ const useTextRevealAnimation = (
         return null;
       }
 
-      // Set will-change before animation
       for (const word of wordsRef.current) {
         word.style.willChange = 'transform, opacity';
       }
@@ -473,7 +475,6 @@ const useTextRevealAnimation = (
           duration: animOptions.exitDuration,
           delay: stagger(animOptions.exitStagger || 0, { from: "last" }),
           onComplete: () => {
-            // Clean up will-change after animation
             for (const word of wordsRef.current) {
               word.style.willChange = 'auto';
             }
@@ -484,7 +485,6 @@ const useTextRevealAnimation = (
       return animationRef.current;
     } catch (error) {
       console.error("Error during exit animation:", error);
-      // Clean up will-change on error
       for (const word of wordsRef.current) {
         word.style.willChange = 'auto';
       }
@@ -492,14 +492,12 @@ const useTextRevealAnimation = (
     }
   }, [animate, animOptions, isInitialized]);
 
-  // Optimized refresh with comprehensive cleanup
   const refreshSplit = useCallback(() => {
     if (!scope.current) return;
     
     setIsInitialized(false);
     scope.current.classList.remove('animation-ready');
     
-    // Stop animation
     if (animationRef.current) {
       try {
         animationRef.current.stop();
@@ -509,13 +507,11 @@ const useTextRevealAnimation = (
       animationRef.current = null;
     }
     
-    // Clean up RAF
     if (rafIdRef.current) {
       cancelAnimationFrame(rafIdRef.current);
       rafIdRef.current = null;
     }
     
-    // Clean up SplitType
     if (splitInstance.current) {
       try {
         splitInstance.current.revert();
@@ -525,15 +521,12 @@ const useTextRevealAnimation = (
       splitInstance.current = null;
     }
     
-    // Reset state
     wordsRef.current = [];
     hasAnimatedRef.current = false;
     
-    // Re-initialize with small delay
     cleanupTimeoutRef.current = setTimeout(initializeSplit, 10);
   }, [initializeSplit]);
 
-  // Force re-animation
   const forceAnimate = useCallback(() => {
     hasAnimatedRef.current = false;
     entranceAnimation();
