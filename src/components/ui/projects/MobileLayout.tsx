@@ -3,7 +3,6 @@ import ProjectTitle from "./ProjectTitle";
 import ArrowIcon from "./ArrowIcon";
 import dynamic from "next/dynamic";
 import ConditionalImage from "@/components/ConditionalImage";
-import React from "react";
 
 // Enhanced loading state
 const SquircleImage = dynamic(() => import("./SquircleImage"), {
@@ -25,19 +24,14 @@ interface MobileLayoutProps {
   showImage?: boolean;
 }
 
-// Consolidated configuration object
-const MOBILE_CONFIG = {
+// Move outside and freeze for better performance
+const MOBILE_CONFIG = Object.freeze({
   CLASSES: {
-    // Layout containers
     container: "group-hover/project:text-stone-900 md:hidden flex flex-col h-full w-full",
     imageContainer: "image-container aspect-video w-full relative",
     contentWrapper: "relative mt-auto p-12 w-full",
-    
-    // Content positioning
     titleWrapper: "absolute left-0 -bottom-1 flex flex-col max-w-[calc(100%-20px)]",
     arrowWrapper: "absolute right-0 bottom-0",
-    
-    // Image styling
     imageBase: "w-full h-full",
     imageCover: "w-full h-full object-cover"
   },
@@ -45,84 +39,38 @@ const MOBILE_CONFIG = {
     borderRadius: 12,
     smoothing: 0.8
   }
-} as const;
+} as const);
 
-// Utility function to get image configuration
-const getImageConfig = (useSquircle: boolean, image: string, name: string, width: number, height: number) => ({
-  src: image,
-  alt: `${name} image`,
-  width,
-  height,
-  className: useSquircle ? MOBILE_CONFIG.CLASSES.imageBase : MOBILE_CONFIG.CLASSES.imageCover
-});
-
-// Extracted image component for better separation
-const ProjectImage = memo(({
-  config,
-  useSquircle,
-  borderRadius,
-  smoothing
-}: {
-  config: ReturnType<typeof getImageConfig>;
+// Simplified image component
+const ProjectImage = memo<{
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  className: string;
   useSquircle: boolean;
   borderRadius: number;
   smoothing: number;
-}) => {
+}>(({ src, alt, width, height, className, useSquircle, borderRadius, smoothing }) => {
+  const commonProps = useMemo(() => ({
+    src,
+    alt,
+    width,
+    height,
+    className
+  }), [src, alt, width, height, className]);
+
   return useSquircle ? (
     <SquircleImage
-      {...config}
+      {...commonProps}
       borderRadius={borderRadius}
       smoothing={smoothing}
     />
   ) : (
-    <ConditionalImage {...config} />
+    <ConditionalImage {...commonProps} />
   );
 });
 ProjectImage.displayName = 'ProjectImage';
-
-// Image section component using Fragment to avoid wrapper
-const ImageSection = memo(({
-  showImage,
-  imageConfig,
-  useSquircle,
-  borderRadius,
-  smoothing
-}: {
-  showImage: boolean;
-  imageConfig: ReturnType<typeof getImageConfig>;
-  useSquircle: boolean;
-  borderRadius: number;
-  smoothing: number;
-}) => {
-  if (!showImage) return null;
-
-  return (
-    <div className={MOBILE_CONFIG.CLASSES.imageContainer}>
-      <ProjectImage
-        config={imageConfig}
-        useSquircle={useSquircle}
-        borderRadius={borderRadius}
-        smoothing={smoothing}
-      />
-    </div>
-  );
-});
-ImageSection.displayName = 'ImageSection';
-
-// Content section with title and arrow using Fragment
-const ContentSection = memo(({ name, description }: { name: string; description: string }) => (
-  <div className={MOBILE_CONFIG.CLASSES.contentWrapper}>
-    <>
-      <div className={MOBILE_CONFIG.CLASSES.titleWrapper}>
-        <ProjectTitle name={name} description={description} />
-      </div>
-      <div className={MOBILE_CONFIG.CLASSES.arrowWrapper}>
-        <ArrowIcon />
-      </div>
-    </>
-  </div>
-));
-ContentSection.displayName = 'ContentSection';
 
 const MobileLayout: FC<MobileLayoutProps> = memo(({ 
   name, 
@@ -136,25 +84,49 @@ const MobileLayout: FC<MobileLayoutProps> = memo(({
   smoothing = MOBILE_CONFIG.DEFAULTS.smoothing,
   showImage = true
 }) => {
-  // Single memoized calculation for all layout data
-  const layoutData = useMemo(() => ({
-    containerClasses: className 
+  // Memoized container classes
+  const containerClasses = useMemo(() => 
+    className 
       ? `${MOBILE_CONFIG.CLASSES.container} ${className}`
       : MOBILE_CONFIG.CLASSES.container,
-    imageConfig: getImageConfig(useSquircle, image, name, width, height)
-  }), [className, useSquircle, image, name, width, height]);
+    [className]
+  );
+
+  // Memoized image props
+  const imageClassName = useMemo(() => 
+    useSquircle ? MOBILE_CONFIG.CLASSES.imageBase : MOBILE_CONFIG.CLASSES.imageCover,
+    [useSquircle]
+  );
+
+  const altText = useMemo(() => `${name} image`, [name]);
 
   return (
-    <div className={layoutData.containerClasses}>
-      <ImageSection
-        showImage={showImage}
-        imageConfig={layoutData.imageConfig}
-        useSquircle={useSquircle}
-        borderRadius={borderRadius}
-        smoothing={smoothing}
-      />
+    <div className={containerClasses}>
+      {/* Image Section */}
+      {showImage && (
+        <div className={MOBILE_CONFIG.CLASSES.imageContainer}>
+          <ProjectImage
+            src={image}
+            alt={altText}
+            width={width}
+            height={height}
+            className={imageClassName}
+            useSquircle={useSquircle}
+            borderRadius={borderRadius}
+            smoothing={smoothing}
+          />
+        </div>
+      )}
       
-      <ContentSection name={name} description={description} />
+      {/* Content Section */}
+      <div className={MOBILE_CONFIG.CLASSES.contentWrapper}>
+        <div className={MOBILE_CONFIG.CLASSES.titleWrapper}>
+          <ProjectTitle name={name} description={description} />
+        </div>
+        <div className={MOBILE_CONFIG.CLASSES.arrowWrapper}>
+          <ArrowIcon />
+        </div>
+      </div>
     </div>
   );
 });

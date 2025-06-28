@@ -1,9 +1,10 @@
-import React, { memo, useMemo, lazy, Suspense } from "react";
+import React, { memo, useMemo } from "react";
 import SquircleContainer from "@/components/SquircleContainer";
 import SmartText from "@/components/SmartText";
+import { EventStackWrapper } from "@/components/ui/events/EventStackWrapper";
 
-// Lazy load EventStack component
-const EventStack_1 = lazy(() => import("@/components/ui/events/EventStack_1"));
+// Remove this import since it causes the circular dependency:
+// import EventStack_1 from "@/components/ui/events/EventStack_1";
 
 interface EventsProps {
   locale: 'en' | 'ru';
@@ -14,8 +15,8 @@ interface EventsProps {
   };
 }
 
-// Consolidated configuration object
-const EVENTS_CONFIG = {
+// Move outside and freeze for better performance
+const EVENTS_CONFIG = Object.freeze({
   CLASSES: {
     section: "overflow-hidden -mb-64 relative",
     main: "relative",
@@ -70,22 +71,15 @@ const EVENTS_CONFIG = {
     color: "black" as const,
     darkModeColor: "white" as const
   }
-} as const;
+} as const);
 
-// Utility functions
-const getLocaleStyles = (locale: 'en' | 'ru') => {
-  return EVENTS_CONFIG.LOCALE_STYLES[locale];
-};
-
-const getContentWithFallback = (
-  translation: string, 
-  fallback: string
-): string => {
+// Optimized utility functions
+const getContentWithFallback = (translation: string, fallback: string): string => {
   return translation || fallback;
 };
 
 const generateClassNames = (locale: 'en' | 'ru') => {
-  const localeStyles = getLocaleStyles(locale);
+  const localeStyles = EVENTS_CONFIG.LOCALE_STYLES[locale];
   const baseStyles = EVENTS_CONFIG.BASE_STYLES;
 
   return {
@@ -97,19 +91,12 @@ const generateClassNames = (locale: 'en' | 'ru') => {
   };
 };
 
-// Skeleton loader component
-const EventStackSkeleton = memo(() => (
-  <div className={EVENTS_CONFIG.CLASSES.skeletonLoader} />
-));
-EventStackSkeleton.displayName = 'EventStackSkeleton';
-
-// Text content component
+// Optimized text content component
 const TextContent = memo<{
   content: string;
-  className: string;
   locale: 'en' | 'ru';
   additionalClassName?: string;
-}>(({ content, className, locale, additionalClassName }) => (
+}>(({ content, locale, additionalClassName }) => (
   <SmartText
     language={locale}
     {...EVENTS_CONFIG.SMART_TEXT_PROPS}
@@ -120,118 +107,62 @@ const TextContent = memo<{
 ));
 TextContent.displayName = 'TextContent';
 
-// Content sections using Fragment
-const ContentSections = memo<{
-  classNames: ReturnType<typeof generateClassNames>;
-  content: {
-    heading: string;
-    subtitle: string;
-    description: string;
-  };
-  locale: 'en' | 'ru';
-}>(({ classNames, content, locale }) => (
-  <>
-    <h2 className={classNames.heading}>
-      <TextContent 
-        content={content.heading} 
-        className={classNames.heading}
-        locale={locale}
-      />
-    </h2>
-
-    <div className={classNames.contentWrapper}>
-      <>
-        <h3 className={classNames.subtitle}>
-          <TextContent 
-            content={content.subtitle} 
-            className={classNames.subtitle}
-            locale={locale}
-          />
-        </h3>
-        <h3 className={classNames.description}>
-          <TextContent 
-            content={content.description} 
-            className={classNames.description}
-            locale={locale}
-            additionalClassName="events-description"
-          />
-        </h3>
-      </>
-    </div>
-  </>
-));
-ContentSections.displayName = 'ContentSections';
-
-// Events content component
-const EventsContent = memo<{
-  translations: { heading: string; subtitle: string; description: string };
-  locale: 'en' | 'ru';
-}>(({ translations, locale }) => {
+// Simplified events content component
+const Events = memo<EventsProps>(({ locale, serverTranslations }) => {
+  // Memoize class names and content
   const config = useMemo(() => {
     const classNames = generateClassNames(locale);
     const fallbacks = EVENTS_CONFIG.FALLBACKS[locale];
     
     const content = {
-      heading: getContentWithFallback(translations.heading, fallbacks.heading),
-      subtitle: getContentWithFallback(translations.subtitle, fallbacks.subtitle),
-      description: getContentWithFallback(translations.description, fallbacks.description)
+      heading: getContentWithFallback(serverTranslations.heading, fallbacks.heading),
+      subtitle: getContentWithFallback(serverTranslations.subtitle, fallbacks.subtitle),
+      description: getContentWithFallback(serverTranslations.description, fallbacks.description)
     };
 
     return { classNames, content };
-  }, [translations, locale]);
+  }, [serverTranslations, locale]);
 
-  return (
-    <SquircleContainer
-      {...EVENTS_CONFIG.SQUIRCLE_PROPS}
-      className={config.classNames.squircle}
-    >
-      <ContentSections
-        classNames={config.classNames}
-        content={config.content}
-        locale={locale}
-      />
-    </SquircleContainer>
-  );
-});
-EventsContent.displayName = 'EventsContent';
-
-// Event stack section wrapper
-const EventStackSection = memo(() => (
-  <div className={EVENTS_CONFIG.CLASSES.eventStack}>
-    <Suspense fallback={<EventStackSkeleton />}>
-      <EventStack_1 />
-    </Suspense>
-  </div>
-));
-EventStackSection.displayName = 'EventStackSection';
-
-// Main content layout
-const EventsLayout = memo<{
-  translations: { heading: string; subtitle: string; description: string };
-  locale: 'en' | 'ru';
-}>(({ translations, locale }) => (
-  <div className={EVENTS_CONFIG.CLASSES.container}>
-    <>
-      <div className={EVENTS_CONFIG.CLASSES.contentWrapper}>
-        <EventsContent
-          translations={translations}
-          locale={locale}
-        />
-      </div>
-      <EventStackSection />
-    </>
-  </div>
-));
-EventsLayout.displayName = 'EventsLayout';
-
-const Events = memo<EventsProps>(({ locale, serverTranslations }) => {
   return (
     <section id="events" className={EVENTS_CONFIG.CLASSES.section}>
       <main className={EVENTS_CONFIG.CLASSES.main}>
-        <EventsLayout
-          translations={serverTranslations}
-          locale={locale}
-        />
+        <div className={EVENTS_CONFIG.CLASSES.container}>
+          {/* Content Section */}
+          <div className={EVENTS_CONFIG.CLASSES.contentWrapper}>
+            <SquircleContainer
+              {...EVENTS_CONFIG.SQUIRCLE_PROPS}
+              className={config.classNames.squircle}
+            >
+              <h2 className={config.classNames.heading}>
+                <TextContent 
+                  content={config.content.heading} 
+                  locale={locale}
+                />
+              </h2>
+
+              <div className={config.classNames.contentWrapper}>
+                <h3 className={config.classNames.subtitle}>
+                  <TextContent 
+                    content={config.content.subtitle} 
+                    locale={locale}
+                  />
+                </h3>
+                <h3 className={config.classNames.description}>
+                  <TextContent 
+                    content={config.content.description} 
+                    locale={locale}
+                    additionalClassName="events-description"
+                  />
+                </h3>
+              </div>
+            </SquircleContainer>
+          </div>
+
+          {/* Event Stack Section - Using EventStackWrapper */}
+          <div className={EVENTS_CONFIG.CLASSES.eventStack}>
+            <EventStackWrapper />
+          </div>
+        </div>
       </main>
     </section>
   );

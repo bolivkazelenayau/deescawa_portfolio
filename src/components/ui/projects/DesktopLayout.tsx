@@ -3,7 +3,6 @@ import ProjectTitle from "./ProjectTitle";
 import ArrowIcon from "./ArrowIcon";
 import dynamic from "next/dynamic";
 import ConditionalImage from "@/components/ConditionalImage";
-import React from "react";
 
 // Enhanced loading state with better UX
 const SquircleImage = dynamic(() => import("./SquircleImage"), {
@@ -24,8 +23,8 @@ interface DesktopLayoutProps {
   showImage?: boolean;
 }
 
-// Consolidated constants for better organization
-const LAYOUT_CONFIG = {
+// Move outside component and freeze for better performance
+const LAYOUT_CONFIG = Object.freeze({
   THRESHOLDS: {
     HORIZONTAL: 1.5,
     SQUARE_MIN: 0.8,
@@ -33,42 +32,29 @@ const LAYOUT_CONFIG = {
     VERTICAL: 0.8
   },
   CLASSES: {
-    // Layout containers
     container: "hidden md:grid md:grid-cols-[1fr_300px_max-content] md:gap-8 w-full h-full group/project",
     titleWrapper: "lg:group-hover/project:pl-8 transition-all duration-300",
     imageWrapper: "relative md:group/project flex items-center justify-center",
     arrowWrapper: "flex items-center justify-end",
-    
-    // Image containers by aspect ratio
     imageContainer: "absolute mx-auto opacity-0 scale-90 group-hover/project:opacity-100 group-hover/project:scale-110 transition-all duration-300 z-5",
     imageBase: "w-full h-full",
-    
-    // Responsive sizing
     horizontal: "w-full max-h-[180px] top-[55%] -translate-y-1/2",
     square: "w-[180px] h-[180px] top-1/2 -translate-y-[45%]",
     vertical: "h-[200px] w-auto max-w-[150px] top-1/2 -translate-y-[45%]",
     default: "w-full max-h-[180px] top-[55%] -translate-y-1/2"
   }
-} as const;
+} as const);
 
-// Utility function to classify aspect ratio and return all needed classes
+// Optimized utility function with better performance
 const getImageLayout = (aspectRatio: number) => {
   const { THRESHOLDS, CLASSES } = LAYOUT_CONFIG;
   
+  // Use early returns for better performance
   if (aspectRatio > THRESHOLDS.HORIZONTAL) {
     return {
       type: 'horizontal' as const,
       isVertical: false,
       containerClasses: `${CLASSES.imageContainer} ${CLASSES.horizontal}`,
-      imageClasses: `${CLASSES.imageBase} object-cover`
-    };
-  }
-  
-  if (aspectRatio >= THRESHOLDS.SQUARE_MIN && aspectRatio <= THRESHOLDS.SQUARE_MAX) {
-    return {
-      type: 'square' as const,
-      isVertical: false,
-      containerClasses: `${CLASSES.imageContainer} ${CLASSES.square}`,
       imageClasses: `${CLASSES.imageBase} object-cover`
     };
   }
@@ -82,6 +68,15 @@ const getImageLayout = (aspectRatio: number) => {
     };
   }
   
+  if (aspectRatio >= THRESHOLDS.SQUARE_MIN && aspectRatio <= THRESHOLDS.SQUARE_MAX) {
+    return {
+      type: 'square' as const,
+      isVertical: false,
+      containerClasses: `${CLASSES.imageContainer} ${CLASSES.square}`,
+      imageClasses: `${CLASSES.imageBase} object-cover`
+    };
+  }
+  
   return {
     type: 'default' as const,
     isVertical: false,
@@ -90,32 +85,32 @@ const getImageLayout = (aspectRatio: number) => {
   };
 };
 
-// Extracted image component for better separation of concerns
-const ProjectImage = memo(({
-  layout,
-  commonProps,
-  useSquircle,
-  borderRadius,
-  smoothing
-}: {
-  layout: ReturnType<typeof getImageLayout>;
-  commonProps: {
-    src: string;
-    alt: string;
-    width: number;
-    height: number;
-    className: string;
-  };
+// Simplified and optimized image component
+const ProjectImage = memo<{
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  className: string;
   useSquircle: boolean;
   borderRadius: number;
   smoothing: number;
-}) => {
+  isVertical: boolean;
+}>(({ src, alt, width, height, className, useSquircle, borderRadius, smoothing, isVertical }) => {
+  const commonProps = useMemo(() => ({
+    src,
+    alt,
+    width,
+    height,
+    className
+  }), [src, alt, width, height, className]);
+
   return useSquircle ? (
     <SquircleImage
       {...commonProps}
       borderRadius={borderRadius}
       smoothing={smoothing}
-      objectFit={layout.isVertical ? "object-contain" : "object-cover"}
+      objectFit={isVertical ? "object-contain" : "object-cover"}
     />
   ) : (
     <ConditionalImage {...commonProps} />
@@ -123,58 +118,7 @@ const ProjectImage = memo(({
 });
 ProjectImage.displayName = 'ProjectImage';
 
-// Main layout sections as separate components using Fragment
-const TitleSection = memo(({ name, description }: { name: string; description: string }) => (
-  <div className={LAYOUT_CONFIG.CLASSES.titleWrapper}>
-    <ProjectTitle name={name} description={description} />
-  </div>
-));
-TitleSection.displayName = 'TitleSection';
-
-const ImageSection = memo(({
-  showImage,
-  layout,
-  imageProps,
-  useSquircle,
-  borderRadius,
-  smoothing
-}: {
-  showImage: boolean;
-  layout: ReturnType<typeof getImageLayout>;
-  imageProps: {
-    src: string;
-    alt: string;
-    width: number;
-    height: number;
-    className: string;
-  };
-  useSquircle: boolean;
-  borderRadius: number;
-  smoothing: number;
-}) => (
-  <div className={LAYOUT_CONFIG.CLASSES.imageWrapper}>
-    {showImage && (
-      <div className={layout.containerClasses}>
-        <ProjectImage
-          layout={layout}
-          commonProps={imageProps}
-          useSquircle={useSquircle}
-          borderRadius={borderRadius}
-          smoothing={smoothing}
-        />
-      </div>
-    )}
-  </div>
-));
-ImageSection.displayName = 'ImageSection';
-
-const ArrowSection = memo(() => (
-  <div className={LAYOUT_CONFIG.CLASSES.arrowWrapper}>
-    <ArrowIcon />
-  </div>
-));
-ArrowSection.displayName = 'ArrowSection';
-
+// Simplified main component with better optimization
 const DesktopLayout: FC<DesktopLayoutProps> = memo(({ 
   name, 
   description, 
@@ -186,37 +130,45 @@ const DesktopLayout: FC<DesktopLayoutProps> = memo(({
   smoothing = 0.8,
   showImage = true
 }) => {
-  // Single memoized calculation that returns everything we need
-  const layoutData = useMemo(() => {
+  // Single memoized calculation for layout
+  const layout = useMemo(() => {
     const aspectRatio = width / height;
-    const layout = getImageLayout(aspectRatio);
-    
-    return {
-      layout,
-      imageProps: {
-        src: image,
-        alt: `${name} image`,
-        width,
-        height,
-        className: layout.imageClasses
-      }
-    };
-  }, [width, height, image, name]);
+    return getImageLayout(aspectRatio);
+  }, [width, height]);
+
+  // Memoized alt text
+  const altText = useMemo(() => `${name} image`, [name]);
 
   return (
     <div className={LAYOUT_CONFIG.CLASSES.container}>
-      <TitleSection name={name} description={description} />
+      {/* Title Section */}
+      <div className={LAYOUT_CONFIG.CLASSES.titleWrapper}>
+        <ProjectTitle name={name} description={description} />
+      </div>
       
-      <ImageSection
-        showImage={showImage}
-        layout={layoutData.layout}
-        imageProps={layoutData.imageProps}
-        useSquircle={useSquircle}
-        borderRadius={borderRadius}
-        smoothing={smoothing}
-      />
+      {/* Image Section */}
+      <div className={LAYOUT_CONFIG.CLASSES.imageWrapper}>
+        {showImage && (
+          <div className={layout.containerClasses}>
+            <ProjectImage
+              src={image}
+              alt={altText}
+              width={width}
+              height={height}
+              className={layout.imageClasses}
+              useSquircle={useSquircle}
+              borderRadius={borderRadius}
+              smoothing={smoothing}
+              isVertical={layout.isVertical}
+            />
+          </div>
+        )}
+      </div>
       
-      <ArrowSection />
+      {/* Arrow Section */}
+      <div className={LAYOUT_CONFIG.CLASSES.arrowWrapper}>
+        <ArrowIcon />
+      </div>
     </div>
   );
 });

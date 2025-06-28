@@ -1,38 +1,38 @@
 "use client";
 
+import { memo } from 'react';
 import Image from 'next/image';
 import ExportedImage from 'next-image-export-optimizer';
 
 interface ConditionalImageProps {
-  src: string | any;
+  src: string;
   alt: string;
-  [key: string]: any;
+  width?: number;
+  height?: number;
+  className?: string;
+  priority?: boolean;
+  loading?: 'lazy' | 'eager';
+  sizes?: string;
+  quality?: number;
+  fill?: boolean;
+  style?: React.CSSProperties;
+  onLoad?: () => void;
+  onError?: () => void;
+  placeholder?: 'blur' | 'empty';
+  blurDataURL?: string;
 }
 
-const devLoader = ({ src }: { src: string }) => {
-  return src;
-};
+// Build-time constants
+const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
+const devLoader = ({ src }: { src: string }): string => src;
 
-const ConditionalImage: React.FC<ConditionalImageProps> = (props) => {
-  // Use build-time environment detection
-  const isDev = process.env.NODE_ENV === 'development';
-
-  if (isDev) {
-    const originalSrc = typeof props.src === 'object' && props.src.src 
-      ? props.src.src 
-      : props.src;
-      
-    return (
-      <Image 
-        {...props} 
-        src={originalSrc}
-        loader={devLoader} 
-        unoptimized 
-      />
-    );
+const ConditionalImage: React.FC<ConditionalImageProps> = memo((props) => {
+  if (IS_DEVELOPMENT) {
+    return <Image {...props} loader={devLoader} unoptimized />;
   }
 
   return <ExportedImage {...props} />;
-};
+});
 
+ConditionalImage.displayName = 'ConditionalImage';
 export default ConditionalImage;

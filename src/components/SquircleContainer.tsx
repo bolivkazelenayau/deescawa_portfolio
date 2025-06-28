@@ -1,4 +1,3 @@
-// components/SquircleContainer.tsx
 "use client"
 
 import React, { useMemo, memo } from 'react';
@@ -16,55 +15,59 @@ interface SquircleContainerProps {
   style?: React.CSSProperties;
 }
 
-const BORDER_RADIUS_MAP = {
+// Move outside and freeze for better performance
+const BORDER_RADIUS_MAP = Object.freeze({
   sm: 24,
   md: 32,
   lg: 48,
-} as const;
+} as const);
 
-const CONTAINER_STYLE = {
+const CONTAINER_STYLE = Object.freeze({
   position: 'relative' as const,
   overflow: 'hidden' as const,
-};
+  zIndex: 1,
+  isolation: 'isolate' as const
+});
 
 const SquircleContainer: React.FC<SquircleContainerProps> = memo(({
   children,
   className = '',
   size = 'lg',
-  color = 'transparent', // Changed default to transparent for videos
-  darkModeColor = 'transparent', // Changed default to transparent for videos
+  color = 'transparent',
+  darkModeColor = 'transparent',
   style,
 }) => {
   const { theme, resolvedTheme } = useTheme();
   
+  // Simplified dark mode detection
   const isDarkMode = useMemo(() => 
     theme === 'dark' || resolvedTheme === 'dark',
     [theme, resolvedTheme]
   );
 
-  const borderRadius = useMemo(() => 
-    BORDER_RADIUS_MAP[size], 
-    [size]
-  );
+  // Removed unnecessary useMemo for simple lookup
+  const borderRadius = BORDER_RADIUS_MAP[size];
 
+  // Memoized background color calculation
   const backgroundColor = useMemo(() => 
     isDarkMode ? darkModeColor : color,
     [isDarkMode, darkModeColor, color]
   );
 
+  // Memoized style merging to prevent object recreation
+  const mergedStyle = useMemo(() => ({
+    ...CONTAINER_STYLE,
+    ...style
+  }), [style]);
+
   return (
-<Monoco
-    borderRadius={borderRadius}
-    background={backgroundColor}
-    className={className}
-    style={{ 
-      ...CONTAINER_STYLE, 
-      ...style,
-      zIndex: 1, // Higher z-index
-      isolation: 'isolate' // Force new stacking context
-    }}
-    clip={true}
-  >
+    <Monoco
+      borderRadius={borderRadius}
+      background={backgroundColor}
+      className={className}
+      style={mergedStyle}
+      clip={true}
+    >
       {children}
     </Monoco>
   );

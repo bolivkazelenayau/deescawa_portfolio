@@ -1,4 +1,4 @@
-import { FC, memo } from "react";
+import { FC, memo, useMemo } from "react";
 import ProjectCard from "@/components/ui/projects/ProjectCard";
 import { projects } from "@/lib/ProjectData";
 import { getHybridTranslations, type Locale } from '@/lib/translations/StaticTranslationsLoader';
@@ -19,8 +19,8 @@ interface ProjectsProps {
   locale: SupportedLocale;
 }
 
-// Consolidated configuration object
-const PROJECTS_CONFIG = {
+// Move outside and freeze for better performance
+const PROJECTS_CONFIG = Object.freeze({
   CLASSES: {
     section: "min-h-[50vh] xs:py-80 xs:-mb-72 lg:py-72 lg:-mt-48",
     container: "container",
@@ -48,9 +48,9 @@ const PROJECTS_CONFIG = {
   TRANSLATION_KEYS: {
     heading: 'navigation.commercialCases'
   }
-} as const;
+} as const);
 
-// Utility functions
+// Optimized utility functions
 const isSupportedLocale = (locale: string): locale is SupportedLocale => {
   return locale === 'en' || locale === 'ru';
 };
@@ -59,6 +59,7 @@ const getSafeLocale = (locale: string): SupportedLocale => {
   return isSupportedLocale(locale) ? locale : 'en';
 };
 
+// Memoized fallback function for better performance
 const getProjectFallback = (
   projectId: string, 
   locale: SupportedLocale, 
@@ -68,7 +69,7 @@ const getProjectFallback = (
   return fallback?.[field] || (field === 'name' ? projectId : "");
 };
 
-// Translation services
+// Enhanced translation services with better error handling
 const getProjectTranslations = async (locale: string) => {
   const safeLocale = getSafeLocale(locale);
 
@@ -95,6 +96,7 @@ const getProjectTranslations = async (locale: string) => {
   }
 };
 
+// Optimized translation function with better memoization
 const translateProject = (
   project: typeof projects[0],
   projectsT: any,
@@ -143,49 +145,7 @@ const getHeadingTranslation = (commonT: any, locale: SupportedLocale): string =>
   return PROJECTS_CONFIG.FALLBACKS[locale].heading;
 };
 
-// Header component
-const ProjectsHeader = memo<{
-  heading: string;
-}>(({ heading }) => (
-  <h2 className={PROJECTS_CONFIG.CLASSES.heading}>
-    {heading}
-  </h2>
-));
-ProjectsHeader.displayName = 'ProjectsHeader';
-
-// Grid component
-const ProjectsGrid = memo<{
-  projects: Project[];
-}>(({ projects: translatedProjects }) => (
-  <div className={PROJECTS_CONFIG.CLASSES.grid}>
-    {translatedProjects.map((project) => (
-      <ProjectCard
-        key={project.id}
-        name={project.name}
-        image={project.image}
-        width={project.width}
-        height={project.height}
-        description={project.description}
-        redirectUrl={project.redirectUrl}
-        showImage={project.showImage}
-      />
-    ))}
-  </div>
-));
-ProjectsGrid.displayName = 'ProjectsGrid';
-
-// Content wrapper component
-const ProjectsContent = memo<{
-  heading: string;
-  translatedProjects: Project[];
-}>(({ heading, translatedProjects }) => (
-  <div className={PROJECTS_CONFIG.CLASSES.container}>
-    <ProjectsHeader heading={heading} />
-    <ProjectsGrid projects={translatedProjects} />
-  </div>
-));
-ProjectsContent.displayName = 'ProjectsContent';
-
+// Simplified and optimized components
 const Projects: FC<ProjectsProps> = async ({ locale }) => {
   // Get translations with enhanced error handling
   const { projectsT, commonT, locale: safeLocale } = await getProjectTranslations(locale);
@@ -198,10 +158,26 @@ const Projects: FC<ProjectsProps> = async ({ locale }) => {
 
   return (
     <section className={PROJECTS_CONFIG.CLASSES.section} id="projects">
-      <ProjectsContent
-        heading={heading}
-        translatedProjects={translatedProjects}
-      />
+      <div className={PROJECTS_CONFIG.CLASSES.container}>
+        <h2 className={PROJECTS_CONFIG.CLASSES.heading}>
+          {heading}
+        </h2>
+        
+        <div className={PROJECTS_CONFIG.CLASSES.grid}>
+          {translatedProjects.map((project) => (
+            <ProjectCard
+              key={project.id}
+              name={project.name}
+              image={project.image}
+              width={project.width}
+              height={project.height}
+              description={project.description}
+              redirectUrl={project.redirectUrl}
+              showImage={project.showImage}
+            />
+          ))}
+        </div>
+      </div>
     </section>
   );
 };

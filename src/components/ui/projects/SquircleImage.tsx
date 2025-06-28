@@ -15,55 +15,54 @@ interface SquircleImageProps {
   objectFit?: "object-cover" | "object-contain" | "object-fill" | "object-none" | "object-scale-down"
 }
 
-// Static constants
-const DEFAULT_BORDER_RADIUS = 36;
-const DEFAULT_SMOOTHING = 0.8;
-const DEFAULT_OBJECT_FIT = "object-cover";
-const BASE_IMAGE_CLASSES = "w-full h-full";
+// Move outside component and freeze for better performance
+const CONFIG = Object.freeze({
+  DEFAULTS: {
+    borderRadius: 36,
+    smoothing: 0.8,
+    objectFit: "object-cover" as const,
+    className: ""
+  },
+  BASE_CLASSES: "w-full h-full"
+});
 
 const SquircleImage: FC<SquircleImageProps> = memo(({
   src,
   alt,
   width,
   height,
-  className = "",
-  borderRadius = DEFAULT_BORDER_RADIUS,
-  smoothing = DEFAULT_SMOOTHING,
-  objectFit = DEFAULT_OBJECT_FIT
+  className = CONFIG.DEFAULTS.className,
+  borderRadius = CONFIG.DEFAULTS.borderRadius,
+  smoothing = CONFIG.DEFAULTS.smoothing,
+  objectFit = CONFIG.DEFAULTS.objectFit
 }) => {
   // Memoized image classes - only recalculate when objectFit changes
   const imageClasses = useMemo(() => 
-    `${BASE_IMAGE_CLASSES} ${objectFit}`,
+    `${CONFIG.BASE_CLASSES} ${objectFit}`,
     [objectFit]
   );
 
+  // Memoized Monoco props to prevent object recreation
+  const monocoProps = useMemo(() => ({
+    borderRadius,
+    smoothing,
+    clip: true,
+    className
+  }), [borderRadius, smoothing, className]);
+
+  // Memoized image props to prevent object recreation
+  const imageProps = useMemo(() => ({
+    src,
+    alt,
+    width,
+    height,
+    className: imageClasses
+  }), [src, alt, width, height, imageClasses]);
+
   return (
-    <Monoco
-      borderRadius={borderRadius}
-      smoothing={smoothing}
-      clip={true}
-      className={className}
-    >
-      <ConditionalImage
-        src={src}
-        alt={alt}
-        width={width}
-        height={height}
-        className={imageClasses}
-      />
+    <Monoco {...monocoProps}>
+      <ConditionalImage {...imageProps} />
     </Monoco>
-  );
-}, (prevProps, nextProps) => {
-  // Optimized shallow comparison
-  return (
-    prevProps.src === nextProps.src &&
-    prevProps.alt === nextProps.alt &&
-    prevProps.width === nextProps.width &&
-    prevProps.height === nextProps.height &&
-    prevProps.className === nextProps.className &&
-    prevProps.borderRadius === nextProps.borderRadius &&
-    prevProps.smoothing === nextProps.smoothing &&
-    prevProps.objectFit === nextProps.objectFit
   );
 });
 
