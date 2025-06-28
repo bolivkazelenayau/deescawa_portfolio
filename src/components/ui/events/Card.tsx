@@ -68,13 +68,12 @@ const Card: React.FC<CardProps> = memo(({
     if (onLoad) onLoad();
   }, [onLoad]);
 
-  const handleError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+  const handleError = useCallback(() => {
     if (process.env.NODE_ENV === 'development') {
       console.warn(`Failed to load image: ${image}`);
     }
     setHasError(true);
     setIsLoaded(false);
-    e.currentTarget.src = PLACEHOLDER_IMAGE;
     if (onError) onError();
   }, [image, onError]);
 
