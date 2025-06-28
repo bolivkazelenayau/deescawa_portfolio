@@ -22,18 +22,18 @@ const CLASSES = {
   logo: "isolate z-25 transition-all duration-150 ease-out",
   blurContainer: "fixed top-0 left-0 w-full h-20 z-10",
   rightContainer: "fixed top-0 right-0 h-20 z-20 transition-all duration-150 ease-out",
-  
+
   // Inner containers
   innerContainer: "container max-w-full!",
   controlsContainer: "flex justify-end items-center h-20 gap-4 transition-all duration-150 ease-out",
-  
+
   // Contact button
   contactLink: "hidden md:inline-flex",
   contactButton: "hidden md:inline-flex uppercase min-w-[120px] justify-center transition-all duration-150 ease-out",
-  
+
   // Menu button
   menuButton: "bg-white dark:bg-black border-stone-300/60 dark:border-stone-600/60 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all duration-150 ease-out",
-  
+
   // Control containers
   navControlsContainer: "nav-controls-container",
   themeToggleContainer: "theme-toggle-container",
@@ -51,7 +51,7 @@ const FALLBACK_CONTACT_TEXT = {
 const debounceRAF = (func: Function, delay: number = 0) => {
   let rafId: number | null = null
   let timeoutId: NodeJS.Timeout | null = null
-  
+
   return (...args: any[]) => {
     if (rafId !== null) {
       cancelAnimationFrame(rafId)
@@ -59,7 +59,7 @@ const debounceRAF = (func: Function, delay: number = 0) => {
     if (timeoutId !== null) {
       clearTimeout(timeoutId)
     }
-    
+
     if (delay > 0) {
       timeoutId = setTimeout(() => {
         rafId = requestAnimationFrame(() => func.apply(null, args))
@@ -71,31 +71,31 @@ const debounceRAF = (func: Function, delay: number = 0) => {
 }
 
 // Contact button component with cleaner structure
-const ContactButton = memo(({ 
-  locale, 
-  serverTranslations, 
-  clientT 
-}: { 
-  locale: 'en' | 'ru'; 
+const ContactButton = memo(({
+  locale,
+  serverTranslations,
+  clientT
+}: {
+  locale: 'en' | 'ru';
   serverTranslations?: any;
-  clientT: any; 
+  clientT: any;
 }) => {
   const contactText = useMemo(() => {
     if (serverTranslations?.contactButton) return serverTranslations.contactButton;
-    
+
     const clientText = clientT('header.contactButton');
     if (clientText && clientText !== 'header.contactButton') return clientText;
-    
+
     return FALLBACK_CONTACT_TEXT[locale];
   }, [serverTranslations?.contactButton, clientT, locale]);
-  
+
   return (
     <Link href={`mailto:${EMAIL_ADDRESS}`} className={CLASSES.contactLink}>
-      <Button 
-        variant="primary" 
-        isSquircle={true} 
-        squircleSize="md" 
-        className={CLASSES.contactButton}
+      <Button
+        variant="primary"
+        isSquircle={true}
+        squircleSize="md"
+        className={`${CLASSES.contactButton} !bg-white !text-black dark:!bg-black dark:!text-white`}
       >
         {contactText}
       </Button>
@@ -105,10 +105,10 @@ const ContactButton = memo(({
 ContactButton.displayName = 'ContactButton';
 
 // Navigation controls with stable styling
-const NavigationControls = memo(({ 
-  isOpen, 
-  handleSetIsOpen, 
-  mounted 
+const NavigationControls = memo(({
+  isOpen,
+  handleSetIsOpen,
+  mounted
 }: {
   isOpen: boolean;
   handleSetIsOpen: (value: boolean) => void;
@@ -119,7 +119,7 @@ const NavigationControls = memo(({
   }
 
   return (
-    <MenuButton 
+    <MenuButton
       isOpen={isOpen}
       setIsOpen={handleSetIsOpen}
       className={CLASSES.menuButton}
@@ -129,11 +129,11 @@ const NavigationControls = memo(({
 NavigationControls.displayName = 'NavigationControls';
 
 // Utility controls using Fragment to avoid wrapper divs
-const UtilityControls = memo(({ 
-  mounted, 
-  locale, 
+const UtilityControls = memo(({
+  mounted,
+  locale,
   serverTranslations,
-  clientT 
+  clientT
 }: {
   mounted: boolean;
   locale: 'en' | 'ru';
@@ -154,7 +154,7 @@ const UtilityControls = memo(({
     <>
       <ThemeToggle />
       <LanguageSwitcher />
-      <ContactButton 
+      <ContactButton
         locale={locale}
         serverTranslations={serverTranslations}
         clientT={clientT}
@@ -167,7 +167,7 @@ UtilityControls.displayName = 'UtilityControls';
 // Enhanced BlurBackground with smooth Framer Motion animation
 const BlurBackground = memo(() => {
   const { scrollY } = useScroll();
-  
+
   const blurOpacity = useTransform(scrollY, [0, 150], [0, 1]);
   const blurAmount = useTransform(scrollY, [0, 150], [0, 10]);
 
@@ -202,7 +202,7 @@ const Header = memo(({ onNavToggle, locale, serverTranslations }: HeaderProps) =
   const [mounted, setMounted] = useState(false);
   const [isLocaleTransitioning, setIsLocaleTransitioning] = useState(false);
   const lastLocaleRef = useRef(locale);
-  
+
   const { t: clientT } = useClientTranslation(locale, 'common');
 
   // Detect locale changes and add transition class
@@ -210,13 +210,13 @@ const Header = memo(({ onNavToggle, locale, serverTranslations }: HeaderProps) =
     if (lastLocaleRef.current !== locale) {
       setIsLocaleTransitioning(true);
       document.documentElement.classList.add('locale-transitioning');
-      
+
       const timer = setTimeout(() => {
         setIsLocaleTransitioning(false);
         document.documentElement.classList.remove('locale-transitioning');
         lastLocaleRef.current = locale;
       }, 150);
-      
+
       return () => clearTimeout(timer);
     }
   }, [locale]);
@@ -245,7 +245,7 @@ const Header = memo(({ onNavToggle, locale, serverTranslations }: HeaderProps) =
   }, [handleSetIsOpen]);
 
   return (
-    <header 
+    <header
       className="main-header"
       style={{
         transition: isLocaleTransitioning ? 'all 0.15s ease-out' : 'none',
@@ -253,13 +253,13 @@ const Header = memo(({ onNavToggle, locale, serverTranslations }: HeaderProps) =
       }}
     >
       {/* Mobile Navigation */}
-      <MobileNav 
+      <MobileNav
         isOpen={isOpen}
         onNavItemClick={handleClickMobileNavItem}
         navItems={navItems}
         setIsOpen={handleSetIsOpen}
       />
-      
+
       {/* Logo Section */}
       <div className={CLASSES.logoContainer}>
         <Logo className={CLASSES.logo} />
@@ -272,12 +272,12 @@ const Header = memo(({ onNavToggle, locale, serverTranslations }: HeaderProps) =
       <div className={CLASSES.rightContainer}>
         <div className={CLASSES.innerContainer}>
           <div className={CLASSES.controlsContainer}>
-            <NavigationControls 
+            <NavigationControls
               isOpen={isOpen}
               handleSetIsOpen={handleSetIsOpen}
               mounted={mounted}
             />
-            <UtilityControls 
+            <UtilityControls
               mounted={mounted}
               locale={locale}
               serverTranslations={serverTranslations}

@@ -70,8 +70,9 @@
   --color-gray-200: 0 0% 89.8%;
   --color-gray-300: 0 0% 83.1%;
 
-  --color-orange-red: color-mix(in srgb, orange 60%, red 40%);
-  --color-orange-red-foreground: white;
+--color-orange-red: black;
+--color-orange-red-foreground: white;
+
 }
 
 @utility container {

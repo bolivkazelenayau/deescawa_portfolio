@@ -33,7 +33,8 @@ export const generateViewport = (): Viewport => {
     ],
     width: "device-width",
     initialScale: 1,
-    maximumScale: 1,
+    maximumScale: 5, // Change this from 1 to 5
+    userScalable: true, // Add this explicitly
   };
 };
 

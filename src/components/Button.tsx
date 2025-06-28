@@ -29,12 +29,13 @@ const BUTTON_CONFIG = {
     "default": { borderRadius: 12, smoothing: 0.4 }
   },
   CLASSES: {
-    base: "inline-flex items-center gap-2 transition duration-500 relative group/button",
+    base: "inline-flex items-center gap-2 transition duration-300 relative group/button",
     variants: {
-      primary: "bg-orange-red border-orange-red text-orange-red-foreground",
-      secondary: "border-orange-red hover:bg-orange-red hover:text-orange-red-foreground",
-      text: "h-auto px-0 border-transparent after:transition-all after:duration-500 after:content-[''] after:h-px after:w-0 after:absolute after:top-full after:left-0 after:bg-orange-red after:origin-left hover:after:w-full",
-      switcher: "p-[2px] border-stone-400 bg-white dark:border-gray-700 dark:bg-gray-900"
+      primary: "bg-orange-red border-orange-red/30 text-orange-red-foreground dark:bg-orange-red-foreground dark:border-orange-red-foreground/30 dark:text-orange-red",
+
+      secondary: "border-white/30 hover:bg-orange-red hover:text-orange-red-foreground hover:border-transparent",
+      text: "h-auto px-0 border-transparent after:transition-all after:duration-300 after:content-[''] after:h-px after:w-0 after:absolute after:top-full after:left-0 after:bg-white after:origin-left hover:after:w-full",
+      switcher: "p-[2px] border-stone-400 bg-white dark:border-white/30 dark:bg-gray-900"
     },
     shapes: {
       default: "h-11 px-6 rounded-xl border uppercase",
@@ -42,26 +43,31 @@ const BUTTON_CONFIG = {
       switcherSquircle: "h-11 w-[90px] border flex-row"
     },
     switcher: {
-      container: "p-1 bg-white border border-stone-300 w-[110px] h-12 dark:bg-black dark:border-stone-900",
+      container: "p-1 bg-white border border-stone-300 w-[110px] h-12 dark:bg-black dark:border-white/30",
       background: "absolute rounded-full z-0 bg-black dark:bg-white",
       option: "relative z-10 flex-1 h-full flex items-center justify-center text-sm font-semibold uppercase cursor-pointer transition-colors",
       optionActive: "text-white dark:text-black",
       optionInactive: "text-black dark:text-white"
     }
   },
-  STYLES: {
-    switcher: {
-      borderRadius: '999px',
-      overflow: 'hidden',
-      width: '110px',
-      height: '48px',
-    },
-    switcherBackground: {
-      height: 'calc(100% - 4px)',
-      width: '48%',
-      top: '2px'
-    }
+  
+STYLES: {
+  switcher: {
+    borderRadius: '999px',
+    overflow: 'hidden',
+    width: '110px',
+    height: '48px',
   },
+  switcherBackground: {
+    height: 'calc(100% - 4px)',
+    width: '47%',
+    top: '2px',
+    left: '2px', // Keep only this
+    // Remove right: '-2px'
+    transition: 'transform 0.2s ease',
+  }
+},
+
   ANIMATIONS: {
     spring: {
       type: "spring" as const,
@@ -82,7 +88,7 @@ const getButtonClasses = (
   const baseClasses = BUTTON_CONFIG.CLASSES.base;
   const widthClass = fullWidth ? "w-full" : "w-auto";
   const variantClass = BUTTON_CONFIG.CLASSES.variants[variant];
-  
+
   let shapeClass: string;
   if (!isSquircle || useDefaultRounding) {
     shapeClass = BUTTON_CONFIG.CLASSES.shapes.default;
@@ -91,7 +97,7 @@ const getButtonClasses = (
   } else {
     shapeClass = BUTTON_CONFIG.CLASSES.shapes.squircle;
   }
-  
+
   return twMerge(baseClasses, widthClass, shapeClass, variantClass, className);
 };
 
@@ -112,20 +118,20 @@ const ButtonContent = memo(({ children, iconAfter }: { children: ReactNode; icon
 ButtonContent.displayName = 'ButtonContent';
 
 // Switcher option component
-const SwitcherOption = memo(({ 
-  option, 
-  isActive, 
-  onClick 
-}: { 
-  option: { value: string; label: string }; 
-  isActive: boolean; 
+const SwitcherOption = memo(({
+  option,
+  isActive,
+  onClick
+}: {
+  option: { value: string; label: string };
+  isActive: boolean;
   onClick: () => void;
 }) => (
   <div
     className={twMerge(
       BUTTON_CONFIG.CLASSES.switcher.option,
-      isActive 
-        ? BUTTON_CONFIG.CLASSES.switcher.optionActive 
+      isActive
+        ? BUTTON_CONFIG.CLASSES.switcher.optionActive
         : BUTTON_CONFIG.CLASSES.switcher.optionInactive
     )}
     onClick={onClick}
@@ -144,7 +150,7 @@ const SwitcherBackground = memo(({ activeIndex }: { activeIndex: number }) => {
       x: activeIndex === 0 ? '2px' : 'calc(100% + 2px)'
     },
     animate: {
-      x: activeIndex === 0 ? '2px' : 'calc(100% + 2px)'
+      x: activeIndex === 0 ? '2px' : 'calc(100% - 1px)'
     },
     transition: {
       x: BUTTON_CONFIG.ANIMATIONS.spring,
@@ -177,7 +183,7 @@ const SwitcherButton = memo(({
   buttonClassName: string;
 }) => {
   const activeIndex = options.findIndex(opt => opt.value === activeOption);
-  
+
   const optionHandlers = useMemo(() => {
     if (!onOptionChange) return {};
     return options.reduce((acc, option) => {
@@ -201,7 +207,7 @@ const SwitcherButton = memo(({
             key={option.value}
             option={option}
             isActive={activeIndex === options.findIndex(opt => opt.value === option.value)}
-            onClick={optionHandlers[option.value] || (() => {})}
+            onClick={optionHandlers[option.value] || (() => { })}
           />
         ))}
       </div>
@@ -211,15 +217,15 @@ const SwitcherButton = memo(({
 SwitcherButton.displayName = 'SwitcherButton';
 
 // Text button component
-const TextButton = memo(({ 
-  buttonClassName, 
-  children, 
-  iconAfter, 
-  ...rest 
-}: { 
-  buttonClassName: string; 
-  children: ReactNode; 
-  iconAfter?: ReactNode; 
+const TextButton = memo(({
+  buttonClassName,
+  children,
+  iconAfter,
+  ...rest
+}: {
+  buttonClassName: string;
+  children: ReactNode;
+  iconAfter?: ReactNode;
 } & ButtonHTMLAttributes<HTMLButtonElement>) => (
   <button className={buttonClassName} {...rest}>
     <>
@@ -231,19 +237,19 @@ const TextButton = memo(({
 TextButton.displayName = 'TextButton';
 
 // Squircle button component
-const SquircleButton = memo(({ 
-  squircleConfig, 
-  buttonClassName, 
-  fullWidth, 
-  children, 
-  iconAfter, 
-  ...rest 
-}: { 
-  squircleConfig: { borderRadius: number; smoothing: number }; 
-  buttonClassName: string; 
-  fullWidth: boolean; 
-  children: ReactNode; 
-  iconAfter?: ReactNode; 
+const SquircleButton = memo(({
+  squircleConfig,
+  buttonClassName,
+  fullWidth,
+  children,
+  iconAfter,
+  ...rest
+}: {
+  squircleConfig: { borderRadius: number; smoothing: number };
+  buttonClassName: string;
+  fullWidth: boolean;
+  children: ReactNode;
+  iconAfter?: ReactNode;
 } & ButtonHTMLAttributes<HTMLButtonElement>) => {
   const monocoStyle = useMemo(() => ({
     width: fullWidth ? '100%' : 'auto',
@@ -268,15 +274,15 @@ const SquircleButton = memo(({
 SquircleButton.displayName = 'SquircleButton';
 
 // Regular button component
-const RegularButton = memo(({ 
-  buttonClassName, 
-  children, 
-  iconAfter, 
-  ...rest 
-}: { 
-  buttonClassName: string; 
-  children: ReactNode; 
-  iconAfter?: ReactNode; 
+const RegularButton = memo(({
+  buttonClassName,
+  children,
+  iconAfter,
+  ...rest
+}: {
+  buttonClassName: string;
+  children: ReactNode;
+  iconAfter?: ReactNode;
 } & ButtonHTMLAttributes<HTMLButtonElement>) => (
   <button className={buttonClassName} {...rest}>
     <ButtonContent children={children} iconAfter={iconAfter} />

@@ -7,7 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { ScrollRestorationHandler } from "@/components/ScrollRestorationHandler";
 import { ThemeMetaUpdater } from "@/components/theme_management/ThemeMetaUpdater";
 import { VideoProvider } from "@/contexts/VideoContext";
-import { Metadata } from "next";
+import { Metadata, Viewport } from "next";
 import { ConditionalLenis } from "@/components/ConditionalLenis";
 
 const pretendard = localFont({

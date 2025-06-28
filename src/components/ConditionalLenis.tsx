@@ -30,9 +30,18 @@ export function ConditionalLenis({ children }: { children: React.ReactNode }) {
   }
 
   // Conditionally wrap with ReactLenis
-  return shouldUseLenis ? (
-    <ReactLenis root>{children}</ReactLenis>
-  ) : (
-    <>{children}</>
-  );
+return shouldUseLenis ? (
+  <ReactLenis 
+    root
+    options={{
+      touchMultiplier: 0, // Disable touch scrolling
+      wheelMultiplier: 1,
+      gestureOrientation: "vertical",
+    }}
+  >
+    {children}
+  </ReactLenis>
+) : (
+  <>{children}</>
+)
 }
