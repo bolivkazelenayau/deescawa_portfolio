@@ -56,14 +56,14 @@ STYLES: {
     borderRadius: '999px',
     overflow: 'hidden',
     width: '110px',
-    height: '48px',
+    height: '44px',
   },
   switcherBackground: {
-    height: 'calc(100% - 4px)',
-    width: '47%',
-    top: '2px',
-    left: '2px', // Keep only this
-    // Remove right: '-2px'
+    position: 'absolute',
+    height: 'calc(100% - 2px)',
+    width: '48%',
+    top: '1px',
+     left: 2,
     transition: 'transform 0.2s ease',
   }
 },
@@ -144,19 +144,21 @@ SwitcherOption.displayName = 'SwitcherOption';
 
 // Switcher background animation
 const SwitcherBackground = memo(({ activeIndex }: { activeIndex: number }) => {
-  const animationConfig = useMemo(() => ({
-    initial: {
-      scale: 1.2,
-      x: activeIndex === 0 ? '2px' : 'calc(100% + 2px)'
-    },
-    animate: {
-      x: activeIndex === 0 ? '2px' : 'calc(100% - 1px)'
-    },
-    transition: {
-      x: BUTTON_CONFIG.ANIMATIONS.spring,
-      scale: { duration: 0 }
-    }
-  }), [activeIndex]);
+const animationConfig = useMemo(() => ({
+  initial: {
+    scale: 1.2,
+    x: activeIndex === 0 ? '2%' : '48px'
+  },
+  animate: {
+    x: activeIndex === 0 ? '2%' : '47px'
+  },
+  transition: {
+    x: BUTTON_CONFIG.ANIMATIONS.spring,
+    scale: { duration: 0 }
+  }
+}), [activeIndex]);
+
+
 
   return (
     <motion.div
@@ -166,6 +168,7 @@ const SwitcherBackground = memo(({ activeIndex }: { activeIndex: number }) => {
     />
   );
 });
+
 SwitcherBackground.displayName = 'SwitcherBackground';
 
 // Switcher component
