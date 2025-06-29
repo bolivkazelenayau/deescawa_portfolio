@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useCallback, memo, useEffect, useMemo, useRef } from "react"
-import { motion, useScroll, useTransform } from "framer-motion"
+import { motion, useScroll, useTransform } from "motion/react"
 import Button from "@/components/Button"
 import ThemeToggle from "@/components/ui/themeToggle"
 import { Logo } from "@/components/ui/header_nav/Logo"

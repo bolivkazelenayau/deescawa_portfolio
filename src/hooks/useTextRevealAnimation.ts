@@ -4,7 +4,19 @@ import { stagger, useAnimate, AnimationPlaybackControls } from "framer-motion";
 import { useEffect, useRef, useCallback, useMemo, useState } from "react";
 import SplitType from "split-type";
 
-// Функция обработки типографики
+// ✅ Адаптивные настройки производительности
+const getPerformanceSettings = () => {
+  if (typeof window === 'undefined') return { isMobile: false, isLowEnd: false, isSlowConnection: false };
+  
+  const isMobile = window.innerWidth < 768;
+  const isLowEnd = 'deviceMemory' in navigator && (navigator as any).deviceMemory < 4;
+  const connection = (navigator as any).connection;
+  const isSlowConnection = connection?.effectiveType === 'slow-2g' || connection?.effectiveType === '2g';
+  
+  return { isMobile, isLowEnd, isSlowConnection };
+};
+
+// ✅ Оптимизированная обработка типографики
 const processTypography = (text: string, language: 'ru' | 'en'): string => {
   const hangingWords = {
     ru: ['и', 'в', 'на', 'с', 'для', 'от', 'до', 'по', 'за', 'под', 'над', 'при', 'без', 'через', 'о', 'об', 'к', 'у'],
@@ -34,6 +46,7 @@ type AnimationOptions = {
   onStart?: () => void;
   enableTypography?: boolean;
   language?: 'ru' | 'en';
+  enableIntersectionObserver?: boolean;
 };
 
 const DEFAULT_OPTIONS: Readonly<AnimationOptions> = {
@@ -45,6 +58,7 @@ const DEFAULT_OPTIONS: Readonly<AnimationOptions> = {
   exitY: "-35%",
   enableTypography: true,
   language: 'ru',
+  enableIntersectionObserver: true,
 } as const;
 
 const SPLIT_CONFIG = {
@@ -56,12 +70,13 @@ const SPLIT_CONFIG = {
 const ANIMATION_CONSTANTS = {
   MAX_PARENT_DEPTH: 5,
   INIT_DELAY: 0,
-  RAF_CLEANUP_DELAY: 0,
   MAX_CSS_CACHE_SIZE: 30,
   REDUCED_MOTION_DURATION: 0.01,
+  WORD_COUNT_LIMIT: 100,
+  BATCH_SIZE: 20,
 } as const;
 
-// LRU Cache implementation
+// ✅ Улучшенный LRU Cache
 class LRUCache<K, V> {
   private cache = new Map<K, V>();
   private maxSize: number;
@@ -96,8 +111,12 @@ class LRUCache<K, V> {
   }
 }
 
+// ✅ Глобальные кэши
 const CSS_CACHE = new LRUCache<string, string>(ANIMATION_CONSTANTS.MAX_CSS_CACHE_SIZE);
+const NUMERIC_CACHE = new Map<string, number>();
+const PROCESSED_PARENTS = new WeakSet<Element>();
 
+// ✅ Оптимизированная генерация CSS
 const getCSSTemplate = (uniqueId: string): string => {
   const cached = CSS_CACHE.get(uniqueId);
   if (cached) return cached;
@@ -134,6 +153,7 @@ const getCSSTemplate = (uniqueId: string): string => {
   return css;
 };
 
+// ✅ Кэшированная проверка reduced motion
 let cachedReducedMotion: boolean | null = null;
 let mediaQueryListener: MediaQueryList | null = null;
 
@@ -154,6 +174,7 @@ const getReducedMotionPreference = (): boolean => {
   return cachedReducedMotion;
 };
 
+// ✅ Batch стилизация с RAF
 const setBatchWordStyles = (words: HTMLElement[], entranceY: string): void => {
   if (!words.length) return;
   
@@ -166,17 +187,16 @@ const setBatchWordStyles = (words: HTMLElement[], entranceY: string): void => {
   });
 };
 
-const processedParents = new WeakSet<Element>();
-
+// ✅ Оптимизация overflow родителей
 const optimizeParentOverflow = (element: HTMLElement): void => {
   const parentsToProcess: HTMLElement[] = [];
   let parent = element.parentElement;
   let depth = 0;
   
   while (parent && parent !== document.body && depth < ANIMATION_CONSTANTS.MAX_PARENT_DEPTH) {
-    if (!processedParents.has(parent)) {
+    if (!PROCESSED_PARENTS.has(parent)) {
       parentsToProcess.push(parent);
-      processedParents.add(parent);
+      PROCESSED_PARENTS.add(parent);
     }
     parent = parent.parentElement;
     depth++;
@@ -194,16 +214,40 @@ const optimizeParentOverflow = (element: HTMLElement): void => {
   }
 };
 
-const numericCache = new Map<string, number>();
-
+// ✅ Кэшированный парсинг числовых значений
 const parseNumericValue = (value: string): number => {
-  if (numericCache.has(value)) {
-    return numericCache.get(value)!;
+  if (NUMERIC_CACHE.has(value)) {
+    return NUMERIC_CACHE.get(value)!;
   }
   
   const parsed = parseFloat(value);
-  numericCache.set(value, parsed);
+  NUMERIC_CACHE.set(value, parsed);
   return parsed;
+};
+
+// ✅ Проверка видимости элемента
+const isElementVisible = (element: HTMLElement): boolean => {
+  const rect = element.getBoundingClientRect();
+  const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+  return rect.top < windowHeight && rect.bottom > 0;
+};
+
+// ✅ Оптимизация для больших текстов
+const optimizeForLargeTexts = (words: HTMLElement[]) => {
+  if (words.length <= ANIMATION_CONSTANTS.WORD_COUNT_LIMIT) {
+    return { words, shouldOptimize: false };
+  }
+  
+  const { isMobile, isLowEnd } = getPerformanceSettings();
+  
+  if (isMobile || isLowEnd) {
+    return {
+      words: words.slice(0, Math.floor(ANIMATION_CONSTANTS.WORD_COUNT_LIMIT * 0.7)),
+      shouldOptimize: true
+    };
+  }
+  
+  return { words, shouldOptimize: false };
 };
 
 const useTextRevealAnimation = (
@@ -221,11 +265,25 @@ const useTextRevealAnimation = (
   const lastAnimationKeyRef = useRef(animationKey);
   const rafIdRef = useRef<number | null>(null);
   const cleanupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const intersectionObserverRef = useRef<IntersectionObserver | null>(null);
   
-  const baseOptions = useMemo(() => ({
-    ...DEFAULT_OPTIONS,
-    ...options
-  }), [
+  // ✅ Адаптивные опции с учетом производительности
+  const baseOptions = useMemo(() => {
+    const mergedOptions = { ...DEFAULT_OPTIONS, ...options };
+    const { isMobile, isLowEnd, isSlowConnection } = getPerformanceSettings();
+    
+    if (isMobile || isLowEnd || isSlowConnection) {
+      return {
+        ...mergedOptions,
+        entranceStagger: Math.max(0.01, (mergedOptions.entranceStagger || 0.05) * 0.5),
+        exitStagger: Math.max(0.01, (mergedOptions.exitStagger || 0.02) * 0.5),
+        entranceDuration: Math.max(0.3, (mergedOptions.entranceDuration || 0.75) * 0.7),
+        exitDuration: Math.max(0.3, (mergedOptions.exitDuration || 0.7) * 0.7),
+      };
+    }
+    
+    return mergedOptions;
+  }, [
     options.entranceDuration,
     options.exitDuration,
     options.entranceDelay,
@@ -235,7 +293,8 @@ const useTextRevealAnimation = (
     options.entranceY,
     options.exitY,
     options.enableTypography,
-    options.language
+    options.language,
+    options.enableIntersectionObserver
   ]);
 
   const animOptions = useMemo(() => {
@@ -256,6 +315,7 @@ const useTextRevealAnimation = (
     };
   }, [baseOptions]);
 
+  // ✅ Инициализация с уникальным ID и стилями
   useEffect(() => {
     uniqueIdRef.current = `text-reveal-${Math.random().toString(36).substring(2, 9)}`;
     
@@ -278,6 +338,11 @@ const useTextRevealAnimation = (
         cleanupTimeoutRef.current = null;
       }
       
+      if (intersectionObserverRef.current) {
+        intersectionObserverRef.current.disconnect();
+        intersectionObserverRef.current = null;
+      }
+      
       if (styleElementRef.current && document.head.contains(styleElementRef.current)) {
         document.head.removeChild(styleElementRef.current);
         styleElementRef.current = null;
@@ -285,13 +350,14 @@ const useTextRevealAnimation = (
     };
   }, []);
 
+  // ✅ Оптимизированная инициализация SplitType
   const initializeSplit = useCallback(() => {
     if (!scope.current) return false;
 
     try {
       const element = scope.current;
       
-      // ОБРАБОТКА ТИПОГРАФИКИ
+      // Обработка типографики
       if (animOptions.enableTypography && animOptions.language) {
         const originalHTML = element.innerHTML;
         const processedHTML = processTypography(originalHTML, animOptions.language);
@@ -312,7 +378,11 @@ const useTextRevealAnimation = (
       splitInstance.current = new SplitType(element, SPLIT_CONFIG as any);
       
       const words = element.querySelectorAll(".word") as NodeListOf<HTMLElement>;
-      wordsRef.current = Array.from(words);
+      const wordsArray = Array.from(words);
+      
+      // ✅ Оптимизация для больших текстов
+      const { words: optimizedWords } = optimizeForLargeTexts(wordsArray);
+      wordsRef.current = optimizedWords;
       
       if (wordsRef.current.length > 0) {
         setBatchWordStyles(wordsRef.current, animOptions.entranceY || "25%");
@@ -329,8 +399,31 @@ const useTextRevealAnimation = (
     }
   }, [animOptions._paddingTop, animOptions.entranceY, animOptions.enableTypography, animOptions.language]);
 
+  // ✅ Intersection Observer для lazy анимаций
+  const setupIntersectionObserver = useCallback(() => {
+    if (!animOptions.enableIntersectionObserver || !scope.current) return;
+    
+    intersectionObserverRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !hasAnimatedRef.current) {
+            entranceAnimation();
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: '50px' }
+    );
+    
+    intersectionObserverRef.current.observe(scope.current);
+  }, [animOptions.enableIntersectionObserver]);
+
+  // ✅ Основной useEffect для инициализации
   useEffect(() => {
-    const timer = setTimeout(initializeSplit, ANIMATION_CONSTANTS.INIT_DELAY);
+    const timer = setTimeout(() => {
+      if (initializeSplit()) {
+        setupIntersectionObserver();
+      }
+    }, ANIMATION_CONSTANTS.INIT_DELAY);
     
     return () => {
       clearTimeout(timer);
@@ -357,7 +450,7 @@ const useTextRevealAnimation = (
       setIsInitialized(false);
       hasAnimatedRef.current = false;
     };
-  }, [initializeSplit]);
+  }, [initializeSplit, setupIntersectionObserver]);
 
   const shouldAnimate = useCallback((): boolean => {
     if (!hasAnimatedRef.current) return true;
@@ -370,8 +463,12 @@ const useTextRevealAnimation = (
     return false;
   }, [animationKey]);
 
+  // ✅ Оптимизированная анимация входа
   const entranceAnimation = useCallback(() => {
     if (!wordsRef.current.length || !isInitialized || !scope.current) return null;
+    
+    // Проверка видимости элемента
+    if (!isElementVisible(scope.current)) return null;
     
     if (!shouldAnimate()) return null;
 
@@ -406,9 +503,12 @@ const useTextRevealAnimation = (
         return null;
       }
 
-      for (const word of wordsRef.current) {
-        word.style.willChange = 'transform, opacity';
-      }
+      // ✅ Batch установка will-change
+      requestAnimationFrame(() => {
+        for (const word of wordsRef.current) {
+          word.style.willChange = 'transform, opacity';
+        }
+      });
 
       animationRef.current = animate(
         wordsRef.current,
@@ -420,9 +520,11 @@ const useTextRevealAnimation = (
           duration: animOptions.entranceDuration,
           delay: stagger(animOptions.entranceStagger || 0),
           onComplete: () => {
-            for (const word of wordsRef.current) {
-              word.style.willChange = 'auto';
-            }
+            requestAnimationFrame(() => {
+              for (const word of wordsRef.current) {
+                word.style.willChange = 'auto';
+              }
+            });
           }
         }
       );
@@ -431,13 +533,16 @@ const useTextRevealAnimation = (
       return animationRef.current;
     } catch (error) {
       console.error("Error during entrance animation:", error);
-      for (const word of wordsRef.current) {
-        word.style.willChange = 'auto';
-      }
+      requestAnimationFrame(() => {
+        for (const word of wordsRef.current) {
+          word.style.willChange = 'auto';
+        }
+      });
       return null;
     }
   }, [animate, animOptions, isInitialized, shouldAnimate, options.onStart]);
 
+  // ✅ Оптимизированная анимация выхода
   const exitAnimation = useCallback(() => {
     if (!wordsRef.current.length || !isInitialized) return null;
 
@@ -461,9 +566,11 @@ const useTextRevealAnimation = (
         return null;
       }
 
-      for (const word of wordsRef.current) {
-        word.style.willChange = 'transform, opacity';
-      }
+      requestAnimationFrame(() => {
+        for (const word of wordsRef.current) {
+          word.style.willChange = 'transform, opacity';
+        }
+      });
 
       animationRef.current = animate(
         wordsRef.current,
@@ -475,9 +582,11 @@ const useTextRevealAnimation = (
           duration: animOptions.exitDuration,
           delay: stagger(animOptions.exitStagger || 0, { from: "last" }),
           onComplete: () => {
-            for (const word of wordsRef.current) {
-              word.style.willChange = 'auto';
-            }
+            requestAnimationFrame(() => {
+              for (const word of wordsRef.current) {
+                word.style.willChange = 'auto';
+              }
+            });
           }
         }
       );
@@ -485,13 +594,16 @@ const useTextRevealAnimation = (
       return animationRef.current;
     } catch (error) {
       console.error("Error during exit animation:", error);
-      for (const word of wordsRef.current) {
-        word.style.willChange = 'auto';
-      }
+      requestAnimationFrame(() => {
+        for (const word of wordsRef.current) {
+          word.style.willChange = 'auto';
+        }
+      });
       return null;
     }
   }, [animate, animOptions, isInitialized]);
 
+  // ✅ Обновление разбивки
   const refreshSplit = useCallback(() => {
     if (!scope.current) return;
     
@@ -512,6 +624,11 @@ const useTextRevealAnimation = (
       rafIdRef.current = null;
     }
     
+    if (intersectionObserverRef.current) {
+      intersectionObserverRef.current.disconnect();
+      intersectionObserverRef.current = null;
+    }
+    
     if (splitInstance.current) {
       try {
         splitInstance.current.revert();
@@ -524,8 +641,12 @@ const useTextRevealAnimation = (
     wordsRef.current = [];
     hasAnimatedRef.current = false;
     
-    cleanupTimeoutRef.current = setTimeout(initializeSplit, 10);
-  }, [initializeSplit]);
+    cleanupTimeoutRef.current = setTimeout(() => {
+      if (initializeSplit()) {
+        setupIntersectionObserver();
+      }
+    }, 10);
+  }, [initializeSplit, setupIntersectionObserver]);
 
   const forceAnimate = useCallback(() => {
     hasAnimatedRef.current = false;

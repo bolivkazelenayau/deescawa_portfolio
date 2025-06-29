@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build && next-image-export-optimizer",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "find:deps": "depcheck",
+     "find:unused": "knip"
   },
   "dependencies": {
     "@monokai/monoco": "^0.2.2",
@@ -52,8 +54,10 @@
     "@typescript-eslint/typescript-estree": "^6.15.0",
     "@typescript-eslint/utils": "^6.15.0",
     "compression-webpack-plugin": "^11.1.0",
+    "depcheck": "^1.4.7",
     "eslint": "^8",
     "eslint-config-next": "15.3.3",
+    "knip": "^5.61.3",
     "postcss": "^8",
     "tailwindcss": "^4.1.8",
     "typescript": "^5"
