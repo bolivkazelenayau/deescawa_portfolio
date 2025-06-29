@@ -2,7 +2,6 @@ import CompressionPlugin from 'compression-webpack-plugin';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-
   output: 'export',
   eslint: {
     ignoreDuringBuilds: true,
@@ -26,12 +25,12 @@ const nextConfig = {
   trailingSlash: true,
   basePath: '',
   assetPrefix: '',
-
-   webpack: (config, { isServer }) => {
+  
+  webpack: (config, { isServer }) => {
     if (!isServer) {
       config.plugins.push(
         new CompressionPlugin({
-          test: /\.(js|css|html|svg)$/,
+          test: /\.(js|css|html|svg|woff|woff2|ttf|eot)$/,
           algorithm: 'gzip',
           threshold: 1024,
           minRatio: 0.8,
@@ -39,7 +38,34 @@ const nextConfig = {
         })
       );
     }
+
+    // ✅ Добавляем правило для обработки шрифтов
+    config.module.rules.push({
+      test: /\.(woff|woff2|eot|ttf|otf)$/,
+      type: 'asset/resource',
+      generator: {
+        filename: 'static/fonts/[name].[hash][ext]',
+      },
+    });
+
     return config;
+  },
+
+  turbopack: {
+    rules: {
+      // ✅ Правила для Turbopack (для dev режима)
+      '*.woff': {
+        loaders: ['file-loader'],
+        as: '*.woff',
+      },
+      '*.woff2': {
+        loaders: ['file-loader'],
+        as: '*.woff2',
+      },
+    },
+    resolveAlias: {
+
+    },
   },
 };
 

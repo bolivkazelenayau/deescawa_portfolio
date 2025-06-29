@@ -1,20 +1,16 @@
 // src/app/layout.tsx
 import { ReactScan } from "@/components/ReactScan";
 import React from "react";
-import localFont from "next/font/local"
 import "./[locale]/globals.css";
 import { ThemeProvider } from "next-themes";
 import { ScrollRestorationHandler } from "@/components/ScrollRestorationHandler";
 import { ThemeMetaUpdater } from "@/components/theme_management/ThemeMetaUpdater";
 import { VideoProvider } from "@/contexts/VideoContext";
-import { Metadata, Viewport } from "next";
+import { Metadata } from "next";
 import { ConditionalLenis } from "@/components/ConditionalLenis";
 
-const pretendard = localFont({
-  src: "../fonts/Pretendard/variable/woff2/PretendardStdVariable.woff2",
-  variable: '--font-pretendard',
-  display: 'swap',
-});
+import { pretendard } from "@/fonts";
+
 
 export const metadata: Metadata = {
   icons: {
