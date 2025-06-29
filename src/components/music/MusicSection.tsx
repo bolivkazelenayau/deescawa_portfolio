@@ -4,7 +4,6 @@ import React, { useRef, useEffect, useMemo, memo, useCallback } from 'react'
 import { useStableTranslation } from '@/hooks/useStableTranslation'
 import { musicData } from '@/lib/MusicData'
 import { MusicCarousel } from './MusicCarousel'
-import { useImagePreloader } from '@/hooks/useImagePreloader'
 import SmartText from '@/components/SmartText'
 
 interface MusicSectionProps {
@@ -56,12 +55,6 @@ const MUSIC_SECTION_CONFIG = Object.freeze({
     title: Object.freeze({ preserveLineBreaks: true, preventWordBreaking: true }),
     subtitle1: Object.freeze({ preserveLineBreaks: false, preventWordBreaking: true }),
     subtitle2: Object.freeze({ preserveLineBreaks: true, preventWordBreaking: true })
-  },
-  PRELOADER_OPTIONS: {
-    eager: false,
-    concurrent: 6, // Increased for better performance
-    timeout: 8000,
-    preloadRange: 2
   }
 } as const);
 
@@ -81,61 +74,6 @@ const debounceRAF = (func: Function, wait: number = 250) => {
     cancelAnimationFrame(rafId);
     timeout = setTimeout(later, wait);
   };
-};
-
-// Ultra-optimized intersection observer hook with enhanced features
-const useIntersectionPreloader = (preloadAllImages: () => void) => {
-  const sectionRef = useRef<HTMLElement>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const hasTriggered = useRef(false);
-
-  // Memoized observer creation with dynamic configuration
-  const createObserver = useCallback(() => {
-    if (observerRef.current) observerRef.current.disconnect();
-    
-    const config = {
-      rootMargin: MUSIC_SECTION_CONFIG.INTERSECTION_OBSERVER.getDynamicRootMargin(),
-      threshold: MUSIC_SECTION_CONFIG.INTERSECTION_OBSERVER.threshold
-    };
-
-    observerRef.current = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !hasTriggered.current) {
-          hasTriggered.current = true;
-          // Use RAF for better timing
-          requestAnimationFrame(() => {
-            preloadAllImages();
-          });
-          observerRef.current?.disconnect();
-        }
-      },
-      config
-    );
-
-    if (sectionRef.current) {
-      observerRef.current.observe(sectionRef.current);
-    }
-  }, [preloadAllImages]);
-
-  // Debounced resize handler for dynamic root margin updates
-  const debouncedCreateObserver = useMemo(() => 
-    debounceRAF(createObserver),
-    [createObserver]
-  );
-
-  useEffect(() => {
-    createObserver();
-    
-    // Re-create observer on resize for dynamic root margin
-    window.addEventListener('resize', debouncedCreateObserver, { passive: true });
-    
-    return () => {
-      observerRef.current?.disconnect();
-      window.removeEventListener('resize', debouncedCreateObserver);
-    };
-  }, [createObserver, debouncedCreateObserver]);
-
-  return sectionRef;
 };
 
 // Ultra-optimized text component with better prop handling
@@ -164,11 +102,10 @@ const OptimizedSmartText = memo<{
 });
 OptimizedSmartText.displayName = 'OptimizedSmartText';
 
-// Enhanced carousel wrapper with error boundary and loading states
+// ✅ Enhanced carousel wrapper with simplified props (removed allImagesPreloaded)
 const CarouselWrapper = memo<{
   locale: 'en' | 'ru';
-  allImagesPreloaded: boolean;
-}>(({ locale, allImagesPreloaded }) => {
+}>(({ locale }) => {
   const [carouselError, setCarouselError] = React.useState(false);
 
   const handleCarouselError = useCallback(() => {
@@ -194,24 +131,19 @@ const CarouselWrapper = memo<{
       <MusicCarousel
         albums={musicData}
         locale={locale}
-        allImagesPreloaded={allImagesPreloaded}
+        // ✅ Removed allImagesPreloaded prop - now handled internally by MusicCarousel
       />
     </React.Suspense>
   );
 });
 CarouselWrapper.displayName = 'CarouselWrapper';
 
-// Main ultra-optimized component
+// ✅ Main ultra-optimized component (removed image preloader logic)
 export const MusicSection = memo<MusicSectionProps>(({ locale }) => {
   const { t } = useStableTranslation(locale, 'music');
   
-  // Enhanced image preloader with optimized settings
-  const { preloadAllImages, allImagesPreloaded } = useImagePreloader(
-    musicData, 
-    MUSIC_SECTION_CONFIG.PRELOADER_OPTIONS
-  );
-  
-  const sectionRef = useIntersectionPreloader(preloadAllImages);
+  // ✅ Removed useImagePreloader - now handled internally by MusicCarousel
+  const sectionRef = useRef<HTMLElement>(null);
 
   // Memoize translations with stable reference
   const translations = useMemo(() => {
@@ -222,7 +154,7 @@ export const MusicSection = memo<MusicSectionProps>(({ locale }) => {
     return { title, subtitle1, subtitle2 };
   }, [t]);
 
-  // Memoize section content to prevent unnecessary re-renders
+  // ✅ Memoize section content (removed allImagesPreloaded dependency)
   const sectionContent = useMemo(() => (
     <div className={MUSIC_SECTION_CONFIG.CLASSES.container}>
       <OptimizedSmartText
@@ -251,13 +183,10 @@ export const MusicSection = memo<MusicSectionProps>(({ locale }) => {
       </div>
 
       <div className={MUSIC_SECTION_CONFIG.CLASSES.carouselContainer}>
-        <CarouselWrapper
-          locale={locale}
-          allImagesPreloaded={allImagesPreloaded}
-        />
+        <CarouselWrapper locale={locale} />
       </div>
     </div>
-  ), [locale, translations, allImagesPreloaded]);
+  ), [locale, translations]); // ✅ Removed allImagesPreloaded from dependencies
 
   return (
     <section 
