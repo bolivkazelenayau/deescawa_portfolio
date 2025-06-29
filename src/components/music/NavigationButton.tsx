@@ -6,12 +6,13 @@ interface NavigationButtonProps {
   direction: "left" | "right"
   onClick: () => void
   disabled?: boolean
+  className?: string;
 }
 
-export const NavigationButton: React.FC<NavigationButtonProps> = React.memo(({ 
-  direction, 
-  onClick, 
-  disabled 
+export const NavigationButton: React.FC<NavigationButtonProps> = React.memo(({
+  direction,
+  onClick,
+  disabled
 }) => (
   <button
     onClick={onClick}

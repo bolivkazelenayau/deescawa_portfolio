@@ -1,7 +1,7 @@
 import * as React from "react"
 import { memo, useMemo } from "react"
 import { cn } from "@/lib/utils"
-
+import ConditionalImage from '@/components/ConditionalImage'
 
 // Cache for className computations
 const classNameCache = new Map<string, string>();
@@ -30,9 +30,58 @@ const BASE_CLASSES = {
   footer: "flex items-center p-6 pt-0"
 } as const;
 
-const Card = memo(React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={getClassName(BASE_CLASSES.card, className)} {...props} />
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  image?: string;
+  alt?: string;
+  sizes?: string;
+  priority?: boolean;
+  imageClassName?: string;
+  loading?: "eager" | "lazy";
+  fill?: boolean;
+  width?: number;
+  height?: number;
+  quality?: number;
+  onImageLoad?: () => void;
+  onImageError?: () => void;
+}
+
+const Card = memo(React.forwardRef<HTMLDivElement, CardProps>(
+  ({ 
+    image, 
+    alt = "Card image", 
+    sizes, 
+    priority = false, 
+    imageClassName, 
+    loading,
+    fill = false,
+    width,
+    height,
+    quality,
+    onImageLoad,
+    onImageError,
+    className, 
+    children, 
+    ...props 
+  }, ref) => (
+    <div ref={ref} className={getClassName(BASE_CLASSES.card, className)} {...props}>
+      {image && (
+        <ConditionalImage
+          src={image}
+          alt={alt}
+          sizes={sizes}
+          priority={priority}
+          className={imageClassName}
+          loading={loading}
+          fill={fill}
+          width={width}
+          height={height}
+          quality={quality}
+          onLoad={onImageLoad}
+          onError={onImageError}
+        />
+      )}
+      {children}
+    </div>
   )
 ));
 Card.displayName = "Card";

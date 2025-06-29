@@ -6,6 +6,7 @@ interface DotIndicatorsProps {
   count: number
   activeIndex: number
   onDotClick: (index: number) => void
+    className?: string;
 }
 
 export const DotIndicators: React.FC<DotIndicatorsProps> = React.memo(({ 

@@ -1,9 +1,9 @@
 "use client"
 
-import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useMemo, memo, useTransition } from 'react'
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel"
 import { cn } from "@/lib/utils"
-import { musicData, CAROUSEL_CONFIG, type Album } from '@/lib/MusicData'
+import { type Album } from '@/lib/MusicData'
 import { MusicCard } from './MusicCard.'
 import { NavigationButton } from './NavigationButton'
 import { DotIndicators } from '@/components/ui/DotIndicators'
@@ -13,47 +13,90 @@ interface MusicCarouselProps {
   albums: readonly Album[]
   locale: 'en' | 'ru'
   allImagesPreloaded: boolean
-  onError?: () => void // Added error handling
+  onError?: () => void
 }
 
-// Ultra-optimized configuration with Object.freeze for better memory efficiency
+// Simplified configuration for your specific needs
 const MUSIC_CAROUSEL_CONFIG = Object.freeze({
   HOVER: {
-    debounceDelay: 50,
-    throttleDelay: 16 // ~60fps for smooth interactions
+    debounceDelay: 8,
+    throttleDelay: 4
   },
   PERFORMANCE: {
     intersectionThreshold: 0.1,
-    preloadRange: 1 // Cards to preload around current view
+    preloadRange: 3,
+    initialLoadCount: 5
   },
   CLASSES: {
-    container: "relative w-full",
+    container: "relative w-full overflow-visible",
     carousel: "w-full",
-    carouselContent: "-ml-2 md:-ml-4 py-8",
-    carouselItem: "pl-2 md:pl-4 flex items-center justify-center will-change-transform",
-    navigationContainer: "flex justify-center items-center gap-4 mt-8"
+    carouselContent: "-ml-2 md:-ml-4 py-12 pb-16",
+    carouselItem: "pl-2 md:pl-4 flex items-center justify-center transform-gpu",
+    navigationContainer: "flex justify-center items-center gap-4 mt-6 mb-4",
+    shadowWrapper: "relative overflow-visible p-4"
   },
   CAROUSEL_OPTIONS: Object.freeze({
     skipSnaps: false,
     dragFree: false,
     containScroll: 'trimSnaps' as const,
     slidesToScroll: 1,
-    duration: 25 // Smooth animation duration
+    duration: 15,
+    startIndex: 0,
+    loop: true
   }),
+  // Simplified slide basis - only what you need
   SLIDE_BASIS: Object.freeze({
     1: "basis-full",
-    2: "basis-1/2",
-    3: "basis-1/3"
+    2: "basis-full sm:basis-1/2", // lg: 2 cards
+    3: "basis-full sm:basis-1/2 lg:basis-1/2 xl:basis-1/3" // xl & 2xl: 3 cards
   })
 } as const);
 
-// Enhanced throttle with RAF for better performance
-const throttleRAF = (func: Function, delay: number = 16) => {
+// Simple responsive slides hook - exactly what you asked for
+const useResponsiveSlides = () => {
+  const [slidesToShow, setSlidesToShow] = useState(3);
+
+  useEffect(() => {
+    const updateSlides = () => {
+      const width = window.innerWidth;
+      
+      if (width < 640) {
+        setSlidesToShow(1); // Mobile: 1 card
+      } else if (width < 1024) {
+        setSlidesToShow(2); // sm & md: 2 cards  
+      } else if (width < 1280) {
+        setSlidesToShow(2); // lg: 2 cards (your requirement)
+      } else {
+        setSlidesToShow(3); // xl & 2xl: 3 cards (your requirement)
+      }
+    };
+
+    updateSlides();
+    
+    let timeoutId: NodeJS.Timeout;
+    const debouncedUpdate = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(updateSlides, 150);
+    };
+    
+    window.addEventListener('resize', debouncedUpdate, { passive: true });
+    
+    return () => {
+      window.removeEventListener('resize', debouncedUpdate);
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
+  return slidesToShow;
+};
+
+// Optimized throttle with immediate execution
+const throttleImmediate = (func: Function, delay: number = 4) => {
   let lastRun = 0;
   let rafId: number;
   
   return function executedFunction(...args: any[]) {
-    const now = Date.now();
+    const now = performance.now();
     
     if (now - lastRun >= delay) {
       lastRun = now;
@@ -61,8 +104,8 @@ const throttleRAF = (func: Function, delay: number = 16) => {
     } else {
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
-        if (Date.now() - lastRun >= delay) {
-          lastRun = Date.now();
+        if (performance.now() - lastRun >= delay) {
+          lastRun = performance.now();
           func(...args);
         }
       });
@@ -70,64 +113,33 @@ const throttleRAF = (func: Function, delay: number = 16) => {
   };
 };
 
-// Optimized utility functions with memoization
-const getSlideBasisClass = (slidesToShow: number): string => {
-  return MUSIC_CAROUSEL_CONFIG.SLIDE_BASIS[slidesToShow as keyof typeof MUSIC_CAROUSEL_CONFIG.SLIDE_BASIS] || "basis-1/3";
-};
-
-const getCarouselOptions = () => ({
-  ...CAROUSEL_CONFIG,
-  ...MUSIC_CAROUSEL_CONFIG.CAROUSEL_OPTIONS
-});
-
-// Enhanced hover management hook with throttling
+// Ultra-optimized hover state with useTransition
 const useOptimizedHoverState = () => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastHoverTime = useRef(0);
-
-  // Throttled hover handlers for better performance
-  const throttledSetHover = useMemo(() => 
-    throttleRAF((index: number | null) => {
-      setHoveredIndex(index);
+  const [isPending, startTransition] = useTransition();
+  
+  const throttledSetHover = useMemo(() =>
+    throttleImmediate((index: number | null) => {
+      startTransition(() => {
+        setHoveredIndex(index);
+      });
     }, MUSIC_CAROUSEL_CONFIG.HOVER.throttleDelay),
     []
   );
 
   const handlers = useMemo(() => ({
     mouseEnter: (index: number) => {
-      const now = Date.now();
-      if (now - lastHoverTime.current < MUSIC_CAROUSEL_CONFIG.HOVER.debounceDelay) return;
-      
-      lastHoverTime.current = now;
-      
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-        hoverTimeoutRef.current = null;
-      }
-      
       throttledSetHover(index);
     },
     mouseLeave: () => {
-      hoverTimeoutRef.current = setTimeout(() => {
-        throttledSetHover(null);
-        hoverTimeoutRef.current = null;
-      }, MUSIC_CAROUSEL_CONFIG.HOVER.debounceDelay);
+      throttledSetHover(null);
     }
   }), [throttledSetHover]);
 
-  useEffect(() => {
-    return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  return { hoveredIndex, handlers };
+  return { hoveredIndex, handlers, isPending };
 };
 
-// Ultra-optimized carousel item component with better performance
+// Optimized carousel item with better memoization
 const MusicCarouselItem = memo<{
   album: Album;
   index: number;
@@ -151,144 +163,136 @@ const MusicCarouselItem = memo<{
   locale,
   allImagesPreloaded
 }) => {
-  // Memoized classes to prevent recalculation
-  const itemClasses = useMemo(() => 
+  const itemClasses = useMemo(() =>
     cn(
       MUSIC_CAROUSEL_CONFIG.CLASSES.carouselItem,
-      getSlideBasisClass(slidesToShow)
+      MUSIC_CAROUSEL_CONFIG.SLIDE_BASIS[slidesToShow as keyof typeof MUSIC_CAROUSEL_CONFIG.SLIDE_BASIS] || "basis-1/3"
     ),
     [slidesToShow]
   );
 
-  // Memoized mouse handlers
   const handleMouseEnter = useCallback(() => {
     onMouseEnter(index);
   }, [index, onMouseEnter]);
 
-  // Enhanced containment for better rendering performance
   const itemStyle = useMemo(() => ({
-    contain: 'layout style paint' as const,
-    willChange: isHovered ? 'transform, opacity' : 'auto'
+    contain: 'layout style' as const,
+    willChange: isHovered ? 'transform, opacity' : 'auto',
+    transform: 'translateZ(0)'
   }), [isHovered]);
 
   return (
-    <CarouselItem
-      key={album.id}
-      className={itemClasses}
-      style={itemStyle}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={onMouseLeave}
-    >
-      <MusicCard
-        album={album}
-        isHovered={isHovered}
-        onCardClick={onCardClick}
-        locale={locale}
-        allImagesPreloaded={allImagesPreloaded}
-        priority={index < 3} // Priority loading for first 3 items
-      />
+    <CarouselItem className={itemClasses} style={itemStyle}>
+      <div className={MUSIC_CAROUSEL_CONFIG.CLASSES.shadowWrapper}>
+        <MusicCard
+          album={album}
+          isHovered={isHovered}
+          isVisible={isVisible}
+          priority={index < MUSIC_CAROUSEL_CONFIG.PERFORMANCE.initialLoadCount}
+          onCardClick={onCardClick}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={onMouseLeave}
+          locale={locale}
+          allImagesPreloaded={allImagesPreloaded}
+        />
+      </div>
     </CarouselItem>
   );
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.album.id === nextProps.album.id &&
+    prevProps.isHovered === nextProps.isHovered &&
+    prevProps.isVisible === nextProps.isVisible &&
+    prevProps.allImagesPreloaded === nextProps.allImagesPreloaded &&
+    prevProps.slidesToShow === nextProps.slidesToShow
+  );
 });
+
 MusicCarouselItem.displayName = 'MusicCarouselItem';
 
-// Enhanced navigation controls with better accessibility
+// Navigation with your original 'left' and 'right' directions
 const NavigationControls = memo<{
   canScrollPrev: boolean;
   canScrollNext: boolean;
   scrollPrev: () => void;
   scrollNext: () => void;
+  scrollToIndex: (index: number) => void;
   currentSlide: number;
   totalSlides: number;
-}>(({ canScrollPrev, canScrollNext, scrollPrev, scrollNext, currentSlide, totalSlides }) => (
-  <div 
-    className={MUSIC_CAROUSEL_CONFIG.CLASSES.navigationContainer}
-    role="group"
-    aria-label="Carousel navigation"
-  >
-    <NavigationButton 
-      direction="left" 
-      onClick={scrollPrev} 
-      disabled={!canScrollPrev}
-      aria-label={`Go to previous slide. Current slide ${currentSlide + 1} of ${totalSlides}`}
-    />
-    <NavigationButton 
-      direction="right" 
-      onClick={scrollNext} 
-      disabled={!canScrollNext}
-      aria-label={`Go to next slide. Current slide ${currentSlide + 1} of ${totalSlides}`}
-    />
-  </div>
-));
-NavigationControls.displayName = 'NavigationControls';
+}>(({ canScrollPrev, canScrollNext, scrollPrev, scrollNext, scrollToIndex, currentSlide, totalSlides }) => {
+  const [isPending, startTransition] = useTransition();
 
-// Enhanced carousel wrapper with error boundary
-const CarouselWrapper = memo<{
-  children: React.ReactNode;
-  setApi: (api: any) => void;
-  onError?: () => void;
-}>(({ children, setApi, onError }) => {
-  const [hasError, setHasError] = useState(false);
-  const carouselOptions = useMemo(() => getCarouselOptions(), []);
+  const handleScrollPrev = useCallback(() => {
+    startTransition(() => {
+      scrollPrev();
+    });
+  }, [scrollPrev]);
 
-  useEffect(() => {
-    const handleError = (error: ErrorEvent) => {
-      console.error('Carousel error:', error);
-      setHasError(true);
-      onError?.();
-    };
+  const handleScrollNext = useCallback(() => {
+    startTransition(() => {
+      scrollNext();
+    });
+  }, [scrollNext]);
 
-    window.addEventListener('error', handleError);
-    return () => window.removeEventListener('error', handleError);
-  }, [onError]);
-
-  if (hasError) {
-    return (
-      <div className="flex items-center justify-center h-64 text-gray-500">
-        <p>Failed to load carousel. Please refresh the page.</p>
-      </div>
-    );
-  }
+  const handleDotClick = useCallback((index: number) => {
+    startTransition(() => {
+      scrollToIndex(index);
+    });
+  }, [scrollToIndex]);
 
   return (
-    <Carousel
-      setApi={setApi}
-      className={MUSIC_CAROUSEL_CONFIG.CLASSES.carousel}
-      opts={carouselOptions}
-    >
-      <CarouselContent className={MUSIC_CAROUSEL_CONFIG.CLASSES.carouselContent}>
-        {children}
-      </CarouselContent>
-    </Carousel>
+    <div className={MUSIC_CAROUSEL_CONFIG.CLASSES.navigationContainer}>
+      <NavigationButton
+        direction="left" // Kept as 'left' as you requested
+        onClick={handleScrollPrev}
+        disabled={!canScrollPrev || isPending}
+      />
+      <DotIndicators
+        count={totalSlides}
+        activeIndex={currentSlide}
+        onDotClick={handleDotClick}
+      />
+      <NavigationButton
+        direction="right" // Kept as 'right' as you requested
+        onClick={handleScrollNext}
+        disabled={!canScrollNext || isPending}
+      />
+    </div>
   );
 });
-CarouselWrapper.displayName = 'CarouselWrapper';
 
-// Visibility tracking hook for performance optimization
-const useVisibilityTracking = (activeIndex: number, slidesToShow: number, totalItems: number) => {
+NavigationControls.displayName = 'NavigationControls';
+
+// Smart visibility tracking with preloading
+const useSmartVisibility = (activeIndex: number, slidesToShow: number, totalItems: number) => {
   return useMemo(() => {
     const visibleIndices = new Set<number>();
     const preloadRange = MUSIC_CAROUSEL_CONFIG.PERFORMANCE.preloadRange;
     
-    // Calculate visible and preload ranges
-    const start = Math.max(0, activeIndex - preloadRange);
-    const end = Math.min(totalItems - 1, activeIndex + slidesToShow + preloadRange);
+    // Current visible items
+    for (let i = 0; i < slidesToShow; i++) {
+      const index = (activeIndex + i) % totalItems;
+      visibleIndices.add(index);
+    }
     
-    for (let i = start; i <= end; i++) {
-      visibleIndices.add(i);
+    // Preload adjacent items
+    for (let i = -preloadRange; i <= preloadRange; i++) {
+      const index = (activeIndex + i + totalItems) % totalItems;
+      visibleIndices.add(index);
     }
     
     return visibleIndices;
   }, [activeIndex, slidesToShow, totalItems]);
 };
 
-export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({ 
-  albums, 
-  locale, 
+export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
+  albums,
+  locale,
   allImagesPreloaded,
   onError
 }) => {
-  const { hoveredIndex, handlers } = useOptimizedHoverState();
+  const { hoveredIndex, handlers, isPending } = useOptimizedHoverState();
+  const slidesToShow = useResponsiveSlides(); // Use our simple hook
   
   const {
     api,
@@ -296,16 +300,13 @@ export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
     activeIndex,
     canScrollPrev,
     canScrollNext,
-    slidesToShow,
     scrollPrev,
     scrollNext,
     scrollToIndex
   } = useCarouselState();
 
-  // Visibility tracking for performance optimization
-  const visibleIndices = useVisibilityTracking(activeIndex, slidesToShow, albums.length);
+  const visibleIndices = useSmartVisibility(activeIndex, slidesToShow, albums.length);
 
-  // Enhanced event handlers with error handling
   const eventHandlers = useMemo(() => ({
     cardClick: (album: Album) => {
       try {
@@ -319,7 +320,21 @@ export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
     }
   }), [onError]);
 
-  // Ultra-optimized carousel items with visibility optimization
+  // Preload critical images
+  useEffect(() => {
+    if (!allImagesPreloaded) {
+      const criticalImages = albums
+        .slice(0, MUSIC_CAROUSEL_CONFIG.PERFORMANCE.initialLoadCount)
+        .map(album => album.cover);
+      
+      criticalImages.forEach(src => {
+        const img = new Image();
+        img.loading = 'eager';
+        img.src = src;
+      });
+    }
+  }, [albums, allImagesPreloaded]);
+
   const carouselItems = useMemo(() =>
     albums.map((album: Album, index: number) => (
       <MusicCarouselItem
@@ -327,7 +342,7 @@ export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
         album={album}
         index={index}
         slidesToShow={slidesToShow}
-        isHovered={index === hoveredIndex}
+        isHovered={hoveredIndex === index}
         isVisible={visibleIndices.has(index)}
         onMouseEnter={handlers.mouseEnter}
         onMouseLeave={handlers.mouseLeave}
@@ -336,48 +351,38 @@ export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
         allImagesPreloaded={allImagesPreloaded}
       />
     )), [
-      albums, 
-      slidesToShow, 
-      hoveredIndex, 
+      albums,
+      slidesToShow,
+      hoveredIndex,
       visibleIndices,
-      handlers.mouseEnter, 
-      handlers.mouseLeave, 
-      eventHandlers.cardClick, 
-      locale, 
+      handlers.mouseEnter,
+      handlers.mouseLeave,
+      eventHandlers.cardClick,
+      locale,
       allImagesPreloaded
     ]
   );
 
-  // Enhanced container with better accessibility and performance
-  const containerStyle = useMemo(() => ({
-    contain: 'layout style paint' as const
-  }), []);
-
   return (
-    <div 
-      className={MUSIC_CAROUSEL_CONFIG.CLASSES.container}
-      style={containerStyle}
-      role="region"
-      aria-label="Music albums carousel"
-    >
-      <CarouselWrapper setApi={setApi} onError={onError}>
-        {carouselItems}
-      </CarouselWrapper>
-
+    <div className={MUSIC_CAROUSEL_CONFIG.CLASSES.container}>
+      <Carousel
+        setApi={setApi}
+        opts={MUSIC_CAROUSEL_CONFIG.CAROUSEL_OPTIONS}
+        className={MUSIC_CAROUSEL_CONFIG.CLASSES.carousel}
+      >
+        <CarouselContent className={MUSIC_CAROUSEL_CONFIG.CLASSES.carouselContent}>
+          {carouselItems}
+        </CarouselContent>
+      </Carousel>
+      
       <NavigationControls
         canScrollPrev={canScrollPrev}
         canScrollNext={canScrollNext}
         scrollPrev={scrollPrev}
         scrollNext={scrollNext}
+        scrollToIndex={scrollToIndex}
         currentSlide={activeIndex}
         totalSlides={albums.length}
-      />
-
-      <DotIndicators 
-        count={albums.length} 
-        activeIndex={activeIndex} 
-        onDotClick={scrollToIndex}
-        aria-label="Carousel slide indicators"
       />
     </div>
   );

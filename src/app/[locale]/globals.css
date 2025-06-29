@@ -85,8 +85,8 @@
   }
   
   @media (width >= theme(--breakpoint-md)) {
-    min-width: auto; /* Reset min-width for larger screens */
-    padding-inline: 1rem;
+    min-width: auto;
+    padding-inline: 2rem; /* Increased from 1rem to 2rem */
   }
   
   @media (width >= theme(--breakpoint-lg)) {
@@ -98,7 +98,7 @@
 @utility container-stack {
   padding-inline: 1rem;
   @media (width >= theme(--breakpoint-md)) {
-    padding-inline: 2rem;
+    padding-inline: 2rem; /* This is correct */
   }
   @media (width >= theme(--breakpoint-lg)) {
     padding-inline: 4rem;
