@@ -52,14 +52,14 @@ const CLIP_PATH_STYLE = {
 const CLASSES = {
   // Layout containers
   footerContainer: "h-[105dvh] md:h-[800px] 2xl:h-[1200px] footer-container md:mt-0",
-footerContent: "fixed bottom-0 h-[105vh] md:h-[800px] 2xl:h-[1200px] w-full bg-stone-900 text-white xs:py-16 md:py-0 xl:py-16 2xl:py-32 3xl:py-50",
+  footerContent: "fixed bottom-0 h-[105vh] md:h-[800px] 2xl:h-[1200px] w-full bg-stone-900 text-white xs:py-16 md:py-0 xl:py-16 2xl:py-32 3xl:py-50",
   mainContainer: "md:py-32 xs:py-16 w-full px-4 md:px-8 2xl:py-48 mt-[-1vh]",
   innerContainer: "xl:py-48 2xl:py-32 xs:py-16",
 
   // Grid and content
   contentGrid: "grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-0 md:items-center",
   headingSection: "md:col-span-2 lg:ml-8 xs:ml-0",
-  navSection: "w-[90%] flex md:justify-end",
+  navSection: "w-[94%] flex md:justify-end",
 
   // Status indicator
   statusContainer: "flex items-center gap-3 py-4 lg:ml-8 xs:ml-0",

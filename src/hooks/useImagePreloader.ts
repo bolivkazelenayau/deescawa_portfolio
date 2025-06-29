@@ -3,16 +3,22 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import type { Album } from '@/lib/MusicData'
 
 interface UseImagePreloaderOptions {
-  concurrent?: number // Limit concurrent downloads
-  timeout?: number    // Timeout per image
-  eager?: boolean     // Start preloading immediately
+  concurrent?: number
+  timeout?: number
+  eager?: boolean
+  useOptimizedPaths?: boolean // New option for optimized images
 }
 
 export const useImagePreloader = (
   albums: readonly Album[], 
   options: UseImagePreloaderOptions = {}
 ) => {
-  const { concurrent = 6, timeout = 10000, eager = false } = options
+  const { 
+    concurrent = 4, // Reduced from 6 for better performance
+    timeout = 8000, // Reduced timeout
+    eager = false,
+    useOptimizedPaths = true // Default to using optimized paths
+  } = options
   
   const [allImagesPreloaded, setAllImagesPreloaded] = useState(false)
   const [loadedCount, setLoadedCount] = useState(0)
@@ -20,17 +26,26 @@ export const useImagePreloader = (
   const preloadingRef = useRef(false)
   const abortControllerRef = useRef<AbortController | null>(null)
 
-  // Memoize unique image URLs to avoid duplicates
+  // Memoized unique URLs with optimized paths
   const uniqueImageUrls = useRef<string[]>([])
+  
   useEffect(() => {
-    // ✅ Fixed: Changed from album.albumCover to album.cover
-    const urls = [...new Set(albums.map(album => album.cover))]
+    const urls = [...new Set(albums.map(album => {
+      if (useOptimizedPaths && typeof window !== 'undefined') {
+        // Use optimized WEBP paths for production
+        const optimizedPath = `/nextImageExportOptimizer${album.cover.replace(/\.(jpg|jpeg|png)$/i, '-opt-640.WEBP')}`
+        return optimizedPath
+      }
+      return album.cover // Fallback to original path
+    }))]
+    
     uniqueImageUrls.current = urls
     setLoadedCount(0)
     setAllImagesPreloaded(false)
     preloadedImages.current.clear()
-  }, [albums])
+  }, [albums, useOptimizedPaths])
 
+  // Enhanced preload function using link preload for better performance
   const preloadImage = useCallback((src: string, signal?: AbortSignal): Promise<void> => {
     return new Promise((resolve) => {
       if (preloadedImages.current.has(src)) {
@@ -38,16 +53,23 @@ export const useImagePreloader = (
         return
       }
 
-      const img = new Image()
+      // Use link preload for better browser optimization
+      const link = document.createElement('link')
+      link.rel = 'preload'
+      link.as = 'image'
+      link.href = src
+      
       const timeoutId = setTimeout(() => {
         console.warn(`Image preload timeout: ${src}`)
+        cleanup()
         resolve()
       }, timeout)
 
       const cleanup = () => {
         clearTimeout(timeoutId)
-        img.onload = null
-        img.onerror = null
+        if (link.parentNode) {
+          document.head.removeChild(link)
+        }
       }
 
       const handleLoad = () => {
@@ -69,40 +91,61 @@ export const useImagePreloader = (
         return
       }
 
-      signal?.addEventListener('abort', () => {
-        cleanup()
-        resolve()
-      })
+      signal?.addEventListener('abort', cleanup)
 
-      img.onload = handleLoad
-      img.onerror = handleError
-      img.src = src
+      link.onload = handleLoad
+      link.onerror = handleError
+      
+      // Add to DOM to trigger preload
+      document.head.appendChild(link)
     })
   }, [timeout])
 
+  // Optimized batch processing with requestIdleCallback
   const preloadAllImages = useCallback(async () => {
     if (preloadingRef.current || allImagesPreloaded) return
     
-    // Cancel any existing preloading
     abortControllerRef.current?.abort()
     abortControllerRef.current = new AbortController()
-    
     preloadingRef.current = true
     
     try {
       const urls = uniqueImageUrls.current
       
-      // Process images in batches to limit concurrent requests
-      for (let i = 0; i < urls.length; i += concurrent) {
-        if (abortControllerRef.current.signal.aborted) break
-        
-        const batch = urls.slice(i, i + concurrent)
-        const batchPromises = batch.map(url => 
-          preloadImage(url, abortControllerRef.current!.signal)
-        )
-        
-        await Promise.all(batchPromises)
+      // Use requestIdleCallback for better performance
+      const processNextBatch = (startIndex: number): Promise<void> => {
+        return new Promise((resolve) => {
+          const processBatch = () => {
+            if (abortControllerRef.current?.signal.aborted) {
+              resolve()
+              return
+            }
+            
+            const endIndex = Math.min(startIndex + concurrent, urls.length)
+            const batch = urls.slice(startIndex, endIndex)
+            
+            Promise.all(
+              batch.map(url => preloadImage(url, abortControllerRef.current!.signal))
+            ).then(() => {
+              if (endIndex < urls.length) {
+                // Process next batch
+                processNextBatch(endIndex).then(resolve)
+              } else {
+                resolve()
+              }
+            })
+          }
+
+          // Use requestIdleCallback if available, otherwise setTimeout
+          if ('requestIdleCallback' in window) {
+            requestIdleCallback(processBatch, { timeout: 1000 })
+          } else {
+            setTimeout(processBatch, 0)
+          }
+        })
       }
+      
+      await processNextBatch(0)
       
       if (!abortControllerRef.current.signal.aborted) {
         setAllImagesPreloaded(true)
@@ -114,14 +157,39 @@ export const useImagePreloader = (
     }
   }, [preloadImage, concurrent, allImagesPreloaded])
 
-  // Auto-start preloading if eager is true
+  // Intersection Observer for lazy preloading
+  const preloadOnVisible = useCallback((element: Element) => {
+    if (!('IntersectionObserver' in window)) {
+      preloadAllImages()
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            preloadAllImages()
+            observer.disconnect()
+          }
+        })
+      },
+      { threshold: 0.1 }
+    )
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [preloadAllImages])
+
+  // Auto-start preloading if eager
   useEffect(() => {
     if (eager && uniqueImageUrls.current.length > 0) {
-      preloadAllImages()
+      // Delay slightly to avoid blocking initial render
+      const timer = setTimeout(preloadAllImages, 100)
+      return () => clearTimeout(timer)
     }
   }, [eager, preloadAllImages])
 
-  // Cleanup on unmount
+  // Cleanup
   useEffect(() => {
     return () => {
       abortControllerRef.current?.abort()
@@ -134,10 +202,12 @@ export const useImagePreloader = (
 
   return { 
     preloadAllImages, 
+    preloadOnVisible,
     allImagesPreloaded, 
     preloadedImages: preloadedImages.current,
     progress,
     loadedCount,
-    totalCount: uniqueImageUrls.current.length
+    totalCount: uniqueImageUrls.current.length,
+    isPreloading: preloadingRef.current
   }
 }

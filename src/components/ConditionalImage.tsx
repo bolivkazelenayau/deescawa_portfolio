@@ -27,11 +27,17 @@ const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
 const devLoader = ({ src }: { src: string }): string => src;
 
 const ConditionalImage: React.FC<ConditionalImageProps> = memo((props) => {
+  // Set default quality if not provided
+  const optimizedProps = {
+    ...props,
+    quality: props.quality || 75, // Match your next.config.js quality setting
+  };
+
   if (IS_DEVELOPMENT) {
-    return <Image {...props} loader={devLoader} unoptimized />;
+    return <Image {...optimizedProps} loader={devLoader} unoptimized />;
   }
 
-  return <ExportedImage {...props} />;
+  return <ExportedImage {...optimizedProps} />;
 });
 
 ConditionalImage.displayName = 'ConditionalImage';

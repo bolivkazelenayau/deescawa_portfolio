@@ -11,7 +11,7 @@ export interface TypographyConfig {
 
 export const HANGING_WORDS: Record<Language, string[]> = {
   ru: ['с', 'на', 'это', 'в', 'к', 'о', 'у', 'и', 'а', 'но', 'да', 'или', 'что', 'как', 'где', 'когда', 'за', 'до', 'от', 'по', 'со', 'из', 'без', 'для', 'при', 'под', 'над', 'через', 'с', 'ваш'],
-  en: ['a', 'an', 'the', 'in', 'on', 'at', 'to', 'of', 'for', 'with', 'by', 'is', 'are', 'was', 'were', 'from', 'I`m', 'and'],
+  en: ['a', 'an', 'the', 'in', 'on', 'at', 'to', 'of', 'for', 'with', 'by', 'is', 'are', 'was', 'were', 'from', 'I`m', 'and', '2', 'yet'],
   de: ['der', 'die', 'das', 'ein', 'eine', 'in', 'auf', 'mit', 'von', 'zu', 'an', 'bei', 'für'],
   fr: ['le', 'la', 'les', 'un', 'une', 'de', 'du', 'des', 'à', 'au', 'aux', 'en', 'sur', 'avec'],
   es: ['el', 'la', 'los', 'las', 'un', 'una', 'de', 'del', 'en', 'con', 'por', 'para', 'a', 'al']
