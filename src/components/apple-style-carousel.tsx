@@ -9,6 +9,9 @@ import type { CarouselApi } from "@/components/ui/carousel";
 import { Monoco } from '@monokai/monoco-react';
 import SmartText from '@/components/SmartText';
 
+// Declare gtag as a global variable for TypeScript
+declare const gtag: (...args: any[]) => void;
+
 interface Lecture {
   id: string;
   className?: string;
@@ -25,6 +28,7 @@ interface Lecture {
   isSquircle?: boolean;
   borderRadius?: number;
   smoothing?: number;
+  redirectUrl?: string;
 }
 
 interface AppleStyleCarouselProps {
@@ -38,7 +42,7 @@ type HoverSide = "left" | "center" | "right" | null;
 const CAROUSEL_CONFIG = Object.freeze({
   PERFORMANCE: {
     debounceDelay: 16,
-    preloadRange: 2, // Increased for better UX
+    preloadRange: 2,
     containerWidthThirds: {
       left: 1 / 3,
       right: 2 / 3
@@ -52,8 +56,8 @@ const CAROUSEL_CONFIG = Object.freeze({
   CLASSES: {
     container: "relative w-full max-w-9xl scale-90 -mx-4 xs:mx-1 apple-style-carousel",
     carousel: "w-full max-w-9xl mt-8",
-    cardWrapper: "p-1",
-    card: "border-0 shadow-none relative",
+    cardWrapper: "p-1 cursor-pointer transition-transform duration-200 hover:scale-[1.02]",
+    card: "border-0 shadow-none relative transition-shadow duration-200",
     cardContent: "flex flex-col p-6",
     imageContainerRegular: "relative w-full aspect-square overflow-hidden rounded-[24px] mb-4",
     imageContainerSquircle: "relative w-full aspect-square mb-4",
@@ -125,7 +129,7 @@ const useImagePreloader = (lectures: Lecture[]) => {
         loadingPromises.current.delete(src);
         resolve();
       };
-      
+
       img.onload = () => {
         preloadedImages.current.set(src, true);
         cleanup();
@@ -142,9 +146,9 @@ const useImagePreloader = (lectures: Lecture[]) => {
     const { preloadRange } = CAROUSEL_CONFIG.PERFORMANCE;
     const promises: Promise<void>[] = [];
 
-    for (let i = Math.max(0, currentIndex - preloadRange); 
-         i <= Math.min(lectures.length - 1, currentIndex + preloadRange); 
-         i++) {
+    for (let i = Math.max(0, currentIndex - preloadRange);
+      i <= Math.min(lectures.length - 1, currentIndex + preloadRange);
+      i++) {
       if (lectures[i]?.image) {
         promises.push(preloadImage(lectures[i].image));
       }
@@ -153,8 +157,8 @@ const useImagePreloader = (lectures: Lecture[]) => {
     Promise.all(promises).catch(console.warn);
   }, [lectures, preloadImage]);
 
-  return { 
-    preloadNearbyImages, 
+  return {
+    preloadNearbyImages,
     preloadedImages: preloadedImages.current,
     isImagePreloaded: (src: string) => preloadedImages.current.has(src)
   };
@@ -164,19 +168,19 @@ const useImagePreloader = (lectures: Lecture[]) => {
 const getImageClasses = (isActive: boolean, isHovered: boolean, objectPosition?: string) => {
   const positionClass = objectPosition === "center" ? "object-center" :
     objectPosition === "top" ? "object-top" : "object-bottom";
-  
-  const stateClass = isActive || isHovered ? 
-    CAROUSEL_CONFIG.CLASSES.active : 
+
+  const stateClass = isActive || isHovered ?
+    CAROUSEL_CONFIG.CLASSES.active :
     CAROUSEL_CONFIG.CLASSES.inactive;
-  
+
   return cn(CAROUSEL_CONFIG.CLASSES.imageBase, stateClass, positionClass);
 };
 
 const getOverlayClasses = (isActive: boolean, isHovered: boolean) => {
-  const stateClass = isActive || isHovered ? 
-    CAROUSEL_CONFIG.CLASSES.overlayHidden : 
+  const stateClass = isActive || isHovered ?
+    CAROUSEL_CONFIG.CLASSES.overlayHidden :
     CAROUSEL_CONFIG.CLASSES.overlayVisible;
-  
+
   return cn(CAROUSEL_CONFIG.CLASSES.overlay, stateClass);
 };
 
@@ -188,10 +192,10 @@ const getTextClasses = (baseClass: string, isActive: boolean, isHovered: boolean
 // Optimized gradient overlay component
 const GradientOverlay = React.memo<{ side: "left" | "right"; hoverSide: HoverSide }>(
   ({ side, hoverSide }) => {
-    const sideClasses = side === "left" ? 
-      CAROUSEL_CONFIG.CLASSES.gradientLeft : 
+    const sideClasses = side === "left" ?
+      CAROUSEL_CONFIG.CLASSES.gradientLeft :
       CAROUSEL_CONFIG.CLASSES.gradientRight;
-    
+
     const opacityClass = hoverSide === side ? "opacity-0" : "opacity-60";
 
     return (
@@ -218,12 +222,12 @@ const LectureImage = React.memo<{
     return 'Lecture image';
   }, [lecture.name]);
 
-  const imageClasses = useMemo(() => 
+  const imageClasses = useMemo(() =>
     getImageClasses(isActive, isHovered, lecture.transform?.objectPosition),
     [isActive, isHovered, lecture.transform?.objectPosition]
   );
 
-  const overlayClasses = useMemo(() => 
+  const overlayClasses = useMemo(() =>
     getOverlayClasses(isActive, isHovered),
     [isActive, isHovered]
   );
@@ -320,18 +324,18 @@ const ImageContainer = React.memo<{
 ImageContainer.displayName = 'ImageContainer';
 
 // Optimized text component with better memoization
-const LectureText = React.memo<{ 
-  lecture: Lecture; 
-  isActive: boolean; 
+const LectureText = React.memo<{
+  lecture: Lecture;
+  isActive: boolean;
   isHovered: boolean;
   locale?: 'ru' | 'en';
 }>(({ lecture, isActive, isHovered, locale = 'ru' }) => {
-  const titleClasses = useMemo(() => 
+  const titleClasses = useMemo(() =>
     getTextClasses(CAROUSEL_CONFIG.CLASSES.title, isActive, isHovered),
     [isActive, isHovered]
   );
 
-  const descriptionClasses = useMemo(() => 
+  const descriptionClasses = useMemo(() =>
     getTextClasses(CAROUSEL_CONFIG.CLASSES.description, isActive, isHovered),
     [isActive, isHovered]
   );
@@ -344,7 +348,7 @@ const LectureText = React.memo<{
     willChange: isActive || isHovered ? 'opacity' : 'auto'
   }), [isActive, isHovered]);
 
-  const lectureName = useMemo(() => 
+  const lectureName = useMemo(() =>
     typeof lecture.name === 'string' ? lecture.name : '',
     [lecture.name]
   );
@@ -352,7 +356,7 @@ const LectureText = React.memo<{
   return (
     <>
       <h3 className={titleClasses} style={titleStyle}>
-        <SmartText 
+        <SmartText
           language={locale}
           preserveLineBreaks={true}
           preventWordBreaking={true}
@@ -362,7 +366,7 @@ const LectureText = React.memo<{
         </SmartText>
       </h3>
       <p className={descriptionClasses} style={descriptionStyle}>
-        <SmartText 
+        <SmartText
           language={locale}
           preserveLineBreaks={true}
           preventWordBreaking={true}
@@ -376,33 +380,74 @@ const LectureText = React.memo<{
 });
 LectureText.displayName = 'LectureText';
 
-// Optimized card component
+// Optimized card component with Telegram redirect functionality
 const LectureCard = React.memo<{
   lecture: Lecture;
   isActive: boolean;
   isHovered: boolean;
   isImagePreloaded: boolean;
   locale?: 'ru' | 'en';
-}>(({ lecture, isActive, isHovered, isImagePreloaded, locale = 'ru' }) => (
-  <div className={CAROUSEL_CONFIG.CLASSES.cardWrapper}>
-    <Card className={CAROUSEL_CONFIG.CLASSES.card}>
-      <CardContent className={CAROUSEL_CONFIG.CLASSES.cardContent}>
-        <ImageContainer
-          lecture={lecture}
-          isActive={isActive}
-          isHovered={isHovered}
-          isImagePreloaded={isImagePreloaded}
-        />
-        <LectureText
-          lecture={lecture}
-          isActive={isActive}
-          isHovered={isHovered}
-          locale={locale}
-        />
-      </CardContent>
-    </Card>
-  </div>
-));
+}>(({ lecture, isActive, isHovered, isImagePreloaded, locale = 'ru' }) => {
+
+  // Enhanced card styling with clickable feedback
+  const cardClasses = useMemo(() =>
+    cn(
+      CAROUSEL_CONFIG.CLASSES.card,
+      lecture.redirectUrl && "hover:shadow-lg transition-shadow duration-200"
+    ),
+    [lecture.redirectUrl]
+  );
+
+  const cardWrapperClasses = useMemo(() =>
+    cn(
+      CAROUSEL_CONFIG.CLASSES.cardWrapper,
+      lecture.redirectUrl && "hover:scale-[1.02] active:scale-[0.98]"
+    ),
+    [lecture.redirectUrl]
+  );
+
+  // If there's a redirectUrl, wrap in an <a> tag, otherwise use <div>
+  const WrapperComponent = lecture.redirectUrl ? 'a' : 'div';
+  const wrapperProps = lecture.redirectUrl ? {
+    href: lecture.redirectUrl,
+    target: '_blank',
+    rel: 'noopener noreferrer',
+    className: cardWrapperClasses,
+    style: {
+      cursor: 'pointer',
+      userSelect: 'none' as const,
+      textDecoration: 'none',
+      color: 'inherit'
+    }
+  } : {
+    className: cardWrapperClasses,
+    style: {
+      cursor: 'default',
+      userSelect: 'none' as const
+    }
+  };
+
+  return (
+    <WrapperComponent {...wrapperProps}>
+      <Card className={cardClasses}>
+        <CardContent className={CAROUSEL_CONFIG.CLASSES.cardContent}>
+          <ImageContainer
+            lecture={lecture}
+            isActive={isActive}
+            isHovered={isHovered}
+            isImagePreloaded={isImagePreloaded}
+          />
+          <LectureText
+            lecture={lecture}
+            isActive={isActive}
+            isHovered={isHovered}
+            locale={locale}
+          />
+        </CardContent>
+      </Card>
+    </WrapperComponent>
+  );
+});
 LectureCard.displayName = 'LectureCard';
 
 // Navigation components - KEEPING EXACT SAME STRUCTURE
@@ -427,7 +472,7 @@ const CarouselNavigation = React.memo(() => (
 ));
 CarouselNavigation.displayName = 'CarouselNavigation';
 
-// Main carousel component with optimizations
+// Main carousel component with optimizations and Telegram redirect
 export function AppleStyleCarousel({
   lectures,
   locale = 'ru'
@@ -439,6 +484,7 @@ export function AppleStyleCarousel({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const { preloadNearbyImages, isImagePreloaded } = useImagePreloader(lectures);
+
 
   // Optimized event handlers with better memoization
   const handlers = useMemo(() => ({
@@ -505,8 +551,8 @@ export function AppleStyleCarousel({
     };
   }, [api]);
 
-  // Memoized carousel items with better optimization
-  const carouselItems = useMemo(() => 
+  // Memoized carousel items with Telegram redirect functionality
+  const carouselItems = useMemo(() =>
     lectures.map((lecture, index) => (
       <CarouselItem
         key={lecture.id}

@@ -1,6 +1,6 @@
-// components/SquircleVideo.tsx
 "use client";
 
+import { useMemo, memo } from 'react';
 import SquircleContainer from '../SquircleContainer';
 import { PosterOverlay } from './PosterOverlay';
 
@@ -11,34 +11,90 @@ interface SquircleVideoProps {
   isVertical?: boolean;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  priority?: boolean;
+  onPlay?: () => void;
+  onError?: (error: Error) => void;
 }
 
-export function SquircleVideo({ src, poster, title, isVertical = false, size = 'lg', className }: SquircleVideoProps) {
-  const aspectRatioClass = isVertical ? "aspect-[9/16]" : "aspect-video";
-  const borderRadius = size === 'sm' ? 24 : size === 'md' ? 32 : 48;
-  
+// Move outside component and freeze for better performance
+const SQUIRCLE_VIDEO_CONFIG = Object.freeze({
+  SIZES: {
+    sm: { borderRadius: 24, height: 'h-[50vh]' },
+    md: { borderRadius: 32, height: 'h-[60vh]' },
+    lg: { borderRadius: 48, height: 'h-[70vh]' }
+  },
+  ASPECT_RATIOS: {
+    horizontal: "aspect-video",
+    vertical: "aspect-[9/16]"
+  },
+  BASE_STYLES: {
+    overflow: 'hidden' as const,
+    display: 'flex' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const
+  }
+} as const);
+
+export const SquircleVideo = memo<SquircleVideoProps>(({ 
+  src, 
+  poster, 
+  title, 
+  isVertical = false, 
+  size = 'lg', 
+  className = "",
+  priority = false,
+  onPlay,
+  onError
+}) => {
+  // Memoized configuration based on props
+  const config = useMemo(() => {
+    const sizeConfig = SQUIRCLE_VIDEO_CONFIG.SIZES[size];
+    const aspectRatio = isVertical ? 
+      SQUIRCLE_VIDEO_CONFIG.ASPECT_RATIOS.vertical : 
+      SQUIRCLE_VIDEO_CONFIG.ASPECT_RATIOS.horizontal;
+    
+    return {
+      borderRadius: sizeConfig.borderRadius,
+      height: sizeConfig.height,
+      aspectRatio
+    };
+  }, [size, isVertical]);
+
+  // Memoized container classes
+  const containerClasses = useMemo(() => 
+    `${config.height} ${config.aspectRatio} ${className}`.trim(),
+    [config.height, config.aspectRatio, className]
+  );
+
+  // Memoized container style
+  const containerStyle = useMemo(() => ({
+    borderRadius: `${config.borderRadius}px`,
+    ...SQUIRCLE_VIDEO_CONFIG.BASE_STYLES,
+    // Enhanced containment for better performance
+    contain: 'layout style paint' as const
+  }), [config.borderRadius]);
+
+  // Memoized PosterOverlay props
+  const posterProps = useMemo(() => ({
+    src,
+    poster,
+    title,
+    isVertical,
+    priority,
+    onPlay,
+    onError,
+    className: "w-full h-full"
+  }), [src, poster, title, isVertical, priority, onPlay, onError]);
+
   return (
     <SquircleContainer 
       size={size} 
-      className={`h-[60vh] ${aspectRatioClass} ${className || ''}`} // Use h-[80vh] for ~80% of viewport height
-      style={{ 
-        borderRadius: `${borderRadius}px`,
-        overflow: 'hidden',
-        // Add these styles for vertical videos
-        ...(isVertical && {
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        })
-      }}
+      className={containerClasses}
+      style={containerStyle}
     >
-      <PosterOverlay 
-        src={src} 
-        poster={poster} 
-        title={title} 
-        isVertical={isVertical}
-        className="w-full h-full"
-      />
+      <PosterOverlay {...posterProps} />
     </SquircleContainer>
   );
-}
+});
+
+SquircleVideo.displayName = 'SquircleVideo';

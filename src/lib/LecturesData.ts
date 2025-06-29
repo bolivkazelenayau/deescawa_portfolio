@@ -1,10 +1,9 @@
 // LectureData.ts
 
-// Убираем все импорты изображений - файлы из public/ нельзя импортировать как модули
 
 // Define a type for the lecture data structure
 export interface LectureData {
-  id: string; // Changed to string for better translation keys
+  id: string;
   name: string;
   description: string;
   image: string;
@@ -15,19 +14,18 @@ export interface LectureData {
     translateY?: string;
     translateX?: string;
     objectPosition?: string;
-    offsetX?: number; // in pixels
-    offsetY?: number; // in pixels
+    offsetX?: number;
+    offsetY?: number;
   };
-  // Add new properties for more adjustability
   isSquircle?: boolean;
   borderRadius?: number;
   smoothing?: number;
   className?: string;
-  // Add additional properties for potential future use
   url?: string;
   date?: string;
   duration?: string;
   tags?: string[];
+  redirectUrl?: string;
 }
 
 // Default transform values that can be reused
@@ -69,6 +67,7 @@ export const lectures: LectureData[] = [
     height: 600,
     transform: { ...defaultTransforms.top },
     ...defaultSquircleSettings,
+    redirectUrl: "https://t.me/deescawaaaaa/842",
   },
   {
     id: "crowdsourced",
@@ -82,6 +81,7 @@ export const lectures: LectureData[] = [
       translateY: "translate-y-[-5%]",
     },
     ...defaultSquircleSettings,
+    redirectUrl: "https://t.me/musicalwaveschool/2322",
   },
   {
     id: "generative",
@@ -97,6 +97,7 @@ export const lectures: LectureData[] = [
     },
     ...defaultSquircleSettings,
     borderRadius: 42,
+    redirectUrl: "https://t.me/deescawaaaaa/814",
   },
   {
     id: "hometown",
@@ -111,6 +112,7 @@ export const lectures: LectureData[] = [
       offsetX: -10, // Example: nudge 10px to the left using pixels
     },
     ...defaultSquircleSettings,
+    redirectUrl: "https://t.me/deescawaaaaa/628",
   },
   {
     id: "intro_sound_design",
@@ -121,6 +123,7 @@ export const lectures: LectureData[] = [
     height: 600,
     transform: { ...defaultTransforms.top },
     ...defaultSquircleSettings,
+    redirectUrl: "https://t.me/musicalwaveschool/1110",
   },
   {
     id: "halftime",
@@ -135,6 +138,7 @@ export const lectures: LectureData[] = [
     },
     ...defaultSquircleSettings,
     isSquircle: true,
+    redirectUrl: "https://t.me/deescawaaaaa/598",
   },
   {
     id: "fuji-gen",
@@ -150,6 +154,7 @@ export const lectures: LectureData[] = [
     },
     ...defaultSquircleSettings,
     isSquircle: true,
+    redirectUrl: "https://t.me/fujiminsk/776",
   },
   {
     id: "fuji-dubstep",
@@ -166,21 +171,8 @@ export const lectures: LectureData[] = [
     },
     ...defaultSquircleSettings,
     isSquircle: true,
+    redirectUrl: "https://t.me/fujiminsk/850",
   },
-  // {
-  //   id: "mw-gendes",
-  //   name: "",
-  //   description: "",
-  //   image: "/images/lectures/mw_gen_design.jpg",
-  //   width: 1500,
-  //   height: 1500,
-  //   transform: {
-  //     ...defaultTransforms.standard,
-  //     translateY: "translate-y-[0%]",
-  //   },
-  //   ...defaultSquircleSettings,
-  //   isSquircle: true,
-  // },
   {
     id: "my_streams",
     name: "",
@@ -195,6 +187,7 @@ export const lectures: LectureData[] = [
     },
     ...defaultSquircleSettings,
     isSquircle: true,
+    redirectUrl: "https://t.me/deescawaaaaa/766",
   },
 ];
 
@@ -214,11 +207,21 @@ export function createLecture(lectureData: Partial<LectureData>): LectureData {
 }
 
 // Function to get a lecture by ID
-export function getLectureById(id: string): LectureData | undefined {
-  return lectures.find((lecture) => lecture.id === id);
-}
-
-// Function to filter lectures by tag
 export function getLecturesByTag(tag: string): LectureData[] {
   return lectures.filter((lecture) => lecture.tags?.includes(tag));
+}
+
+export function openLectureInTelegram(lecture: LectureData): boolean {
+  if (!lecture.redirectUrl) {
+    console.warn(`No Telegram URL for lecture: ${lecture.id}`);
+    return false;
+  }
+  
+  try {
+    window.open(lecture.redirectUrl, '_blank', 'noopener,noreferrer');
+    return true;
+  } catch (error) {
+    console.error('Failed to open Telegram link:', error);
+    return false;
+  }
 }
