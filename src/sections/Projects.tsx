@@ -145,7 +145,80 @@ const getHeadingTranslation = (commonT: any, locale: SupportedLocale): string =>
   return PROJECTS_CONFIG.FALLBACKS[locale].heading;
 };
 
-// Simplified and optimized components
+// ✅ Create a client component wrapper for preloading
+const ProjectsClient: FC<{
+  translatedProjects: Project[];
+  heading: string;
+}> = ({ translatedProjects, heading }) => {
+  "use client";
+  
+  // ✅ Import hooks dynamically in client component
+  const { useImagePreloader } = require("@/hooks/useImagePreloader");
+  const { useCallback, useMemo, useEffect } = require("react");
+
+  // ✅ Convert projects to preloadable format
+  const projectAlbums = useMemo(() => 
+    translatedProjects.map(project => ({ cover: project.image })), 
+    [translatedProjects]
+  );
+
+  // ✅ Use optimized image preloader
+  const { 
+    preloadAllImages, 
+    preloadedImages, 
+    allImagesPreloaded, 
+    progress,
+    isPreloading 
+  } = useImagePreloader(projectAlbums, { 
+    concurrent: 3, 
+    timeout: 8000, 
+    eager: true, // Projects are likely above the fold
+    useOptimizedPaths: true 
+  });
+
+  // ✅ Check if specific project image is preloaded
+  const isImagePreloaded = useCallback((project: Project) => {
+    const optimizedSrc = process.env.NODE_ENV === 'production' 
+      ? `/nextImageExportOptimizer${project.image.replace(/\.(jpg|jpeg|png)$/i, '-opt-640.WEBP')}`
+      : project.image;
+    return preloadedImages.has(optimizedSrc);
+  }, [preloadedImages]);
+
+  // ✅ Start preloading when component mounts
+  useEffect(() => {
+    const timer = setTimeout(preloadAllImages, 100);
+    return () => clearTimeout(timer);
+  }, [preloadAllImages]);
+
+  return (
+    <section className={PROJECTS_CONFIG.CLASSES.section} id="projects">
+      <div className={PROJECTS_CONFIG.CLASSES.container}>
+        <h2 className={PROJECTS_CONFIG.CLASSES.heading}>
+          {heading}
+        </h2>
+        
+        <div className={PROJECTS_CONFIG.CLASSES.grid}>
+          {translatedProjects.map((project, index) => (
+            <ProjectCard
+              key={project.id}
+              name={project.name}
+              image={project.image}
+              width={project.width}
+              height={project.height}
+              description={project.description}
+              redirectUrl={project.redirectUrl}
+              showImage={project.showImage}
+              isPreloaded={isImagePreloaded(project)} // ✅ Pass preload state
+              priority={index < 3} // ✅ First 3 projects get priority
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// ✅ Server component handles data fetching, client component handles preloading
 const Projects: FC<ProjectsProps> = async ({ locale }) => {
   // Get translations with enhanced error handling
   const { projectsT, commonT, locale: safeLocale } = await getProjectTranslations(locale);
@@ -156,29 +229,12 @@ const Projects: FC<ProjectsProps> = async ({ locale }) => {
     translateProject(project, projectsT, safeLocale)
   );
 
+  // ✅ Pass data to client component for preloading
   return (
-    <section className={PROJECTS_CONFIG.CLASSES.section} id="projects">
-      <div className={PROJECTS_CONFIG.CLASSES.container}>
-        <h2 className={PROJECTS_CONFIG.CLASSES.heading}>
-          {heading}
-        </h2>
-        
-        <div className={PROJECTS_CONFIG.CLASSES.grid}>
-          {translatedProjects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              name={project.name}
-              image={project.image}
-              width={project.width}
-              height={project.height}
-              description={project.description}
-              redirectUrl={project.redirectUrl}
-              showImage={project.showImage}
-            />
-          ))}
-        </div>
-      </div>
-    </section>
+    <ProjectsClient 
+      translatedProjects={translatedProjects}
+      heading={heading}
+    />
   );
 };
 

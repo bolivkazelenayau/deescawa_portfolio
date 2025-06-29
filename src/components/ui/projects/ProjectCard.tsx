@@ -19,6 +19,8 @@ interface ProjectCardProps {
   description: string;
   redirectUrl?: string;
   showImage?: boolean;
+  isPreloaded?: boolean;
+  priority?: boolean;
 }
 
 // Move outside component for better performance
@@ -43,7 +45,7 @@ const LinkWrapper = memo<{
     if (!redirectUrl || redirectUrl.trim() === "") {
       return { type: 'none' as const };
     }
-    
+
     const isExternal = redirectUrl.startsWith('http');
     return {
       type: isExternal ? 'external' as const : 'internal' as const,
@@ -78,7 +80,9 @@ const CardContent = memo<{
   height: number;
   description: string;
   showImage: boolean;
-}>(({ name, image, width, height, description, showImage }) => {
+  isPreloaded?: boolean;
+  priority?: boolean;
+}>(({ name, image, width, height, description, showImage, isPreloaded, priority }) => {
   // Memoize layout props to prevent recreation
   const layoutProps = useMemo(() => ({
     name,
@@ -87,8 +91,10 @@ const CardContent = memo<{
     height,
     description,
     showImage,
+    isPreloaded,
+    priority,
     ...CARD_CONFIG.LAYOUT_PROPS
-  }), [name, image, width, height, description, showImage]);
+  }), [name, image, width, height, description, showImage, isPreloaded, priority]);
 
   return (
     <div className={CARD_CONFIG.CLASSES.container}>
@@ -98,7 +104,7 @@ const CardContent = memo<{
         <div className="md:hidden">
           <MobileLayout {...layoutProps} />
         </div>
-        
+
         {/* Only render desktop layout on desktop screens */}
         <div className="hidden md:block">
           <DesktopLayout {...layoutProps} />

@@ -8,7 +8,7 @@ import { MusicCard } from './MusicCard.'
 import { NavigationButton } from './NavigationButton'
 import { DotIndicators } from '@/components/ui/DotIndicators'
 import { useCarouselState } from '@/hooks/useCarouselState'
-import { useImagePreloader } from "@/hooks/useImagePreloader" // ✅ Import your optimized hook
+import { useImagePreloader } from "@/hooks/useImagePreloader"
 
 interface MusicCarouselProps {
   albums: readonly Album[]
