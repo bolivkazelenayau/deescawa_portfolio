@@ -1,3 +1,5 @@
+const CompressionPlugin = require('compression-webpack-plugin');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'export',
@@ -23,6 +25,21 @@ const nextConfig = {
   trailingSlash: true,
   basePath: '',
   assetPrefix: '',
+  // ✅ Add webpack configuration for compression
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.plugins.push(
+        new CompressionPlugin({
+          test: /\.(js|css|html|svg)$/,
+          algorithm: 'gzip',
+          threshold: 1024, // Only compress files larger than 1KB
+          minRatio: 0.8,   // Only compress if compression ratio is better than 80%
+          deleteOriginalAssets: false, // Keep original files
+        })
+      );
+    }
+    return config;
+  },
 };
 
 export default nextConfig;
