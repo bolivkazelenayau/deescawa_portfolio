@@ -45,7 +45,7 @@ export const musicData = [
       ru: "Сочетание техно, британского рейва и русского вокала. Трек о внутреннем освобождении и возможности выйти в мир",
       en: "A combination of techno, British rave and Russian vocals. A track about inner liberation and the opportunity to go out into the world"
     },
-    bandLink: "https://band.link/album3"
+    bandLink: "https://vibedep.band.link/svetbashni"
   },
   {
     id: 2,
@@ -58,7 +58,7 @@ export const musicData = [
       ru: "Танцевальная бейс-музыка (дабстеп, хафтайм, фьюче битс) про нахождение баланса в творчестве и жизни",
       en: "Dance bass music (dubstep, halftime, future beats) about finding balance in creativity and life"
     },
-    bandLink: "https://band.link/album2"
+    bandLink: "https://band.link/findingbalance"
   },
   {
     id: 3,
@@ -84,7 +84,7 @@ export const musicData = [
       ru: "Архив (ремиксы, бутлеги и синглы) отражающий путь поиска собственного звучания",
       en: "Archive (remixes, bootlegs and singles) reflecting the path of searching for your own sound"
     },
-    bandLink: "https://band.link/album4"
+    bandLink: "https://soundcloud.com/deescawa/sets/entire-discography"
   },
 ] as const
 

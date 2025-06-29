@@ -2,45 +2,45 @@
   "navigation": {
     "lectures": "Lectures"
   },
-  "subtitle": "Here's some stuff that I teach.",
-  "burial": {
-    "name": "Burial",
-    "description": "Learn to create a track in Burial style."
+  "subtitle": "I mentor and share knowledge through lessons, educational content, masterclasses, and lectures. \n\nI have extensive experience (200+ individual students, 2 years of courses at Musical Wave) and a personal ed-tech method that sensitively combines a systematic approach, creative freedom, and dialogue.",
+ "burial": {
+    "name": "Burial-style track",
+    "description": "Breaking down everything: from timbres\nto overall aesthetics"
   },
   "crowdsourced": {
-    "name": "Crowdsourced",
-    "description": "Let's create a track from your selection."
+    "name": "Crowdsourced Club",
+    "description": "Creating a track from sounds \ncollected by the community"
   },
-  "generative": {
+"generative": {
     "name": "Generative\nSound Design",
-    "description": "Dive into sound design\nand create a generative track."
+    "description": "Masterclass on creating complex\ntimbres and their application."
   },
   "hometown": {
-    "name": "Hometown",
-    "description": "Presentation of my creative process\nand artistic direction"
+    "name": "Hometown EP \npresentation",
+    "description": "Preview and deconstruction \nof my debut mini-album."
   },
   "intro_sound_design": {
-    "name": "Intro to Sound Design",
-    "description": "Brief introduction to my tools\nand workflow"
+    "name": "Introduction \nto Sound Design",
+    "description": "Entry-point within \nMusical Wave production course."
   },
   "halftime": {
-    "name": "Halftime",
-    "description": "No words needed. Let's create something extraordinary."
+    "name": "Producing \nHalftime music",
+    "description": "Writing genre music \nlive on stream"
   },
-    "fuji-gen": {
-    "name": "FU-JI: generative sound design",
-    "description": "A ddep dive into the fascinating world of generative patches."
+  "fuji-gen": {
+    "name": "Sound Design \nat FU-JI",
+    "description": "Introductory sound design lecture \nat Minsk FU-JI festival."
   },
-      "fuji-dubstep": {
-    "name": "FU-JI: dubstep",
-    "description": "Let's learn the influences of some nasty wobbles."
+  "fuji-dubstep": {
+    "name": "History of Dubstep \nat FU-JI",
+    "description": "Lecture on genre origins \nand production techniques."
   },
-  "mw-gendes": {
-    "name": "MW: Generative sound design",
-    "description": "Another deep dive into generative fields."
+    "mw-gendes": {
+    "name": "MW: Generative Sound Design",
+    "description": "Even deeper dive \ninto generative fields."
   },
-    "my_streams": {
-    "name": "My production streams",
-    "description": "Hang out with me while I finish music"
+      "my_streams": {
+    "name": "Production Streams",
+    "description": "Finishing music, chatting \nwith people and reviewing their work."
   }
 }

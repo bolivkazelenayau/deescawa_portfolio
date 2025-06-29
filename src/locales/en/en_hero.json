@@ -1,24 +1,24 @@
 {
   "heading": "Hello,  \nI'm Lev Deescawa",
-    "subtitle": "A multidisciplinary audio specialist from Moscow, expressing\nhis unique vision through:",
+    "subtitle": "I work with sound in several directions:",
       "services": [
     {
-      "title": "Creating custom music and sound design for brands & artists",
+      "title": "Custom music and sound design",
       "href": "#projects",
       "external": false
     },
     {
-      "title": "Teaching, mentoring & educational content",
+      "title": "Teaching and mentoring",
       "href": "#lectures",
       "external": false
     },
         {
-      "title": "DJ sets and live performances",
+      "title": "DJ and live sets",
       "href": "#events",
       "external": false
     },
     {
-      "title": "creating my own music",
+      "title": "Original music",
       "href": "#music",
       "external": false
     }
