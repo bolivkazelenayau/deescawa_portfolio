@@ -23,7 +23,8 @@ export const useImagePreloader = (
   // Memoize unique image URLs to avoid duplicates
   const uniqueImageUrls = useRef<string[]>([])
   useEffect(() => {
-    const urls = [...new Set(albums.map(album => album.albumCover))]
+    // ✅ Fixed: Changed from album.albumCover to album.cover
+    const urls = [...new Set(albums.map(album => album.cover))]
     uniqueImageUrls.current = urls
     setLoadedCount(0)
     setAllImagesPreloaded(false)
