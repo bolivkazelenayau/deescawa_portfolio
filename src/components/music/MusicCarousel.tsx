@@ -8,11 +8,11 @@ import { MusicCard } from './MusicCard.'
 import { NavigationButton } from './NavigationButton'
 import { DotIndicators } from '@/components/ui/DotIndicators'
 import { useCarouselState } from '@/hooks/useCarouselState'
+import { useImagePreloader } from "@/hooks/useImagePreloader" // ✅ Import your optimized hook
 
 interface MusicCarouselProps {
   albums: readonly Album[]
   locale: 'en' | 'ru'
-  allImagesPreloaded: boolean
   onError?: () => void
 }
 
@@ -44,15 +44,14 @@ const MUSIC_CAROUSEL_CONFIG = Object.freeze({
     startIndex: 0,
     loop: true
   }),
-  // Simplified slide basis - only what you need
   SLIDE_BASIS: Object.freeze({
     1: "basis-full",
-    2: "basis-full sm:basis-1/2", // lg: 2 cards
-    3: "basis-full sm:basis-1/2 lg:basis-1/2 xl:basis-1/3" // xl & 2xl: 3 cards
+    2: "basis-full sm:basis-1/2",
+    3: "basis-full sm:basis-1/2 lg:basis-1/2 xl:basis-1/3"
   })
 } as const);
 
-// Simple responsive slides hook - exactly what you asked for
+// Simple responsive slides hook
 const useResponsiveSlides = () => {
   const [slidesToShow, setSlidesToShow] = useState(3);
 
@@ -61,13 +60,13 @@ const useResponsiveSlides = () => {
       const width = window.innerWidth;
       
       if (width < 640) {
-        setSlidesToShow(1); // Mobile: 1 card
+        setSlidesToShow(1);
       } else if (width < 1024) {
-        setSlidesToShow(2); // sm & md: 2 cards  
+        setSlidesToShow(2);
       } else if (width < 1280) {
-        setSlidesToShow(2); // lg: 2 cards (your requirement)
+        setSlidesToShow(2);
       } else {
-        setSlidesToShow(3); // xl & 2xl: 3 cards (your requirement)
+        setSlidesToShow(3);
       }
     };
 
@@ -139,6 +138,14 @@ const useOptimizedHoverState = () => {
   return { hoveredIndex, handlers, isPending };
 };
 
+// ✅ Helper function to check if album image is preloaded
+const isAlbumImagePreloaded = (album: Album, preloadedImages: Set<string>): boolean => {
+  const optimizedSrc = process.env.NODE_ENV === 'production' 
+    ? `/nextImageExportOptimizer${album.cover.replace(/\.(jpg|jpeg|png)$/i, '-opt-640.WEBP')}`
+    : album.cover;
+  return preloadedImages.has(optimizedSrc);
+};
+
 // Optimized carousel item with better memoization
 const MusicCarouselItem = memo<{
   album: Album;
@@ -146,22 +153,22 @@ const MusicCarouselItem = memo<{
   slidesToShow: number;
   isHovered: boolean;
   isVisible: boolean;
+  isPreloaded: boolean; // ✅ Add preload state
   onMouseEnter: (index: number) => void;
   onMouseLeave: () => void;
   onCardClick: (album: Album) => void;
   locale: 'en' | 'ru';
-  allImagesPreloaded: boolean;
 }>(({
   album,
   index,
   slidesToShow,
   isHovered,
   isVisible,
+  isPreloaded,
   onMouseEnter,
   onMouseLeave,
   onCardClick,
-  locale,
-  allImagesPreloaded
+  locale
 }) => {
   const itemClasses = useMemo(() =>
     cn(
@@ -188,12 +195,12 @@ const MusicCarouselItem = memo<{
           album={album}
           isHovered={isHovered}
           isVisible={isVisible}
+          isPreloaded={isPreloaded} // ✅ Pass preload state
           priority={index < MUSIC_CAROUSEL_CONFIG.PERFORMANCE.initialLoadCount}
           onCardClick={onCardClick}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={onMouseLeave}
           locale={locale}
-          allImagesPreloaded={allImagesPreloaded}
         />
       </div>
     </CarouselItem>
@@ -203,14 +210,14 @@ const MusicCarouselItem = memo<{
     prevProps.album.id === nextProps.album.id &&
     prevProps.isHovered === nextProps.isHovered &&
     prevProps.isVisible === nextProps.isVisible &&
-    prevProps.allImagesPreloaded === nextProps.allImagesPreloaded &&
+    prevProps.isPreloaded === nextProps.isPreloaded && // ✅ Add to comparison
     prevProps.slidesToShow === nextProps.slidesToShow
   );
 });
 
 MusicCarouselItem.displayName = 'MusicCarouselItem';
 
-// Navigation with your original 'left' and 'right' directions
+// Navigation controls remain the same
 const NavigationControls = memo<{
   canScrollPrev: boolean;
   canScrollNext: boolean;
@@ -243,7 +250,7 @@ const NavigationControls = memo<{
   return (
     <div className={MUSIC_CAROUSEL_CONFIG.CLASSES.navigationContainer}>
       <NavigationButton
-        direction="left" // Kept as 'left' as you requested
+        direction="left"
         onClick={handleScrollPrev}
         disabled={!canScrollPrev || isPending}
       />
@@ -253,7 +260,7 @@ const NavigationControls = memo<{
         onDotClick={handleDotClick}
       />
       <NavigationButton
-        direction="right" // Kept as 'right' as you requested
+        direction="right"
         onClick={handleScrollNext}
         disabled={!canScrollNext || isPending}
       />
@@ -285,14 +292,14 @@ const useSmartVisibility = (activeIndex: number, slidesToShow: number, totalItem
   }, [activeIndex, slidesToShow, totalItems]);
 };
 
+// ✅ Main component with optimized preloading
 export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
   albums,
   locale,
-  allImagesPreloaded,
   onError
 }) => {
   const { hoveredIndex, handlers, isPending } = useOptimizedHoverState();
-  const slidesToShow = useResponsiveSlides(); // Use our simple hook
+  const slidesToShow = useResponsiveSlides();
   
   const {
     api,
@@ -305,7 +312,33 @@ export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
     scrollToIndex
   } = useCarouselState();
 
+  // ✅ Use your optimized image preloader hook
+  const { 
+    preloadAllImages, 
+    preloadedImages, 
+    allImagesPreloaded, 
+    progress,
+    isPreloading 
+  } = useImagePreloader(albums, { 
+    concurrent: 4, 
+    timeout: 8000, 
+    eager: false,
+    useOptimizedPaths: true 
+  });
+
   const visibleIndices = useSmartVisibility(activeIndex, slidesToShow, albums.length);
+
+  // ✅ Smart preloading based on active index
+  const preloadNearbyImages = useCallback(() => {
+    if (!isPreloading && !allImagesPreloaded) {
+      preloadAllImages();
+    }
+  }, [preloadAllImages, isPreloading, allImagesPreloaded]);
+
+  // ✅ Check if specific album image is preloaded
+  const isImagePreloaded = useCallback((album: Album) => {
+    return isAlbumImagePreloaded(album, preloadedImages);
+  }, [preloadedImages]);
 
   const eventHandlers = useMemo(() => ({
     cardClick: (album: Album) => {
@@ -320,21 +353,13 @@ export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
     }
   }), [onError]);
 
-  // Preload critical images
+  // ✅ Start preloading when component mounts or active index changes
   useEffect(() => {
-    if (!allImagesPreloaded) {
-      const criticalImages = albums
-        .slice(0, MUSIC_CAROUSEL_CONFIG.PERFORMANCE.initialLoadCount)
-        .map(album => album.cover);
-      
-      criticalImages.forEach(src => {
-        const img = new Image();
-        img.loading = 'eager';
-        img.src = src;
-      });
-    }
-  }, [albums, allImagesPreloaded]);
+    const timer = setTimeout(preloadNearbyImages, 100);
+    return () => clearTimeout(timer);
+  }, [activeIndex, preloadNearbyImages]);
 
+  // ✅ Updated carousel items with preload state
   const carouselItems = useMemo(() =>
     albums.map((album: Album, index: number) => (
       <MusicCarouselItem
@@ -344,22 +369,22 @@ export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
         slidesToShow={slidesToShow}
         isHovered={hoveredIndex === index}
         isVisible={visibleIndices.has(index)}
+        isPreloaded={isImagePreloaded(album)} // ✅ Pass preload state
         onMouseEnter={handlers.mouseEnter}
         onMouseLeave={handlers.mouseLeave}
         onCardClick={eventHandlers.cardClick}
         locale={locale}
-        allImagesPreloaded={allImagesPreloaded}
       />
     )), [
       albums,
       slidesToShow,
       hoveredIndex,
       visibleIndices,
+      isImagePreloaded, // ✅ Add to dependencies
       handlers.mouseEnter,
       handlers.mouseLeave,
       eventHandlers.cardClick,
-      locale,
-      allImagesPreloaded
+      locale
     ]
   );
 

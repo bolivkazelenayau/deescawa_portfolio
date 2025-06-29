@@ -6,9 +6,10 @@ import { useEffect, useState, useRef, useCallback, useMemo, memo } from "react";
 import useMeasure from "react-use-measure";
 import { eventData1 } from "@/lib/events/EventsData_1";
 import { twMerge } from "tailwind-merge";
+import { useImagePreloader } from "@/hooks/useImagePreloader"; // Import our optimized hook
 
 // ============================================================================
-// ULTRA-OPTIMIZED CONFIGURATION
+// ULTRA-OPTIMIZED CONFIGURATION (keeping your existing config)
 // ============================================================================
 
 const EVENT_STACK_CONFIG = Object.freeze({
@@ -18,13 +19,12 @@ const EVENT_STACK_CONFIG = Object.freeze({
     priorityThreshold: 8,
     priorityInterval: 4,
     finalPositionOffset: 8,
-    throttleDelay: 16, // Reduced for more responsive hover (was 16)
+    throttleDelay: 16,
   },
   HOVER: {
-    // Enhanced hover area detection
-    verticalPadding: 20, // Extra hover area above/below
-    horizontalPadding: 20, // Extra hover area left/right
-    debounceDelay: 5, // Debounce hover end to prevent flickering
+    verticalPadding: 20,
+    horizontalPadding: 20,
+    debounceDelay: 5,
   },
   INTERSECTION_OBSERVER: {
     threshold: 0.05,
@@ -77,7 +77,16 @@ const EVENT_STACK_CONFIG = Object.freeze({
 // Pre-computed doubled data
 const DOUBLED_EVENT_DATA = [...eventData1, ...eventData1];
 
-// Enhanced debounce with RAF for hover
+// Convert event data to Album format for the hook
+const EVENT_ALBUMS = DOUBLED_EVENT_DATA.map((item: any, idx) => ({
+  id: item.id ?? idx,
+  title: item?.title ?? `Event ${idx + 1}`,
+  description: item?.description ?? "",
+  bandLink: item?.bandLink ?? "",
+  cover: item.image
+}));
+
+// Enhanced debounce and throttle functions (keeping your existing ones)
 const debounceRAF = (func: Function, delay: number = 0) => {
   let timeoutId: NodeJS.Timeout;
   let rafId: number;
@@ -96,7 +105,6 @@ const debounceRAF = (func: Function, delay: number = 0) => {
   };
 };
 
-// Enhanced throttle with RAF for better performance
 const throttleRAF = (func: Function, delay: number = 16) => {
   let lastRun = 0;
   let rafId: number;
@@ -112,33 +120,28 @@ const throttleRAF = (func: Function, delay: number = 16) => {
   };
 };
 
-// Memoized priority calculation with better performance
+// Memoized priority calculation
 const getCardPriority = (index: number): boolean => {
   return index < EVENT_STACK_CONFIG.ANIMATION.priorityThreshold || 
          index % EVENT_STACK_CONFIG.ANIMATION.priorityInterval === 0;
 };
 
-// ============================================================================
-// ENHANCED HOVER DETECTION HOOK
-// ============================================================================
-
+// Enhanced hover detection hook (keeping your existing implementation)
 const useEnhancedHoverDetection = (
   containerRef: React.RefObject<HTMLElement | null>,
   onHoverStart: () => void,
   onHoverEnd: () => void
 ) => {
   const isHovering = useRef(false);
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined); // Fixed: added initial value
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
-  // Enhanced hover detection with larger area
   const checkHoverBounds = useCallback((clientX: number, clientY: number) => {
     const container = containerRef.current;
-    if (!container) return false; // Handle null check here
+    if (!container) return false;
 
     const rect = container.getBoundingClientRect();
     const { verticalPadding, horizontalPadding } = EVENT_STACK_CONFIG.HOVER;
 
-    // Expanded hover area
     const expandedRect = {
       left: rect.left - horizontalPadding,
       right: rect.right + horizontalPadding,
@@ -154,7 +157,6 @@ const useEnhancedHoverDetection = (
     );
   }, [containerRef]);
 
-  // Throttled mouse move handler
   const handleMouseMove = useMemo(() => 
     throttleRAF((e: MouseEvent) => {
       const isInBounds = checkHoverBounds(e.clientX, e.clientY);
@@ -166,7 +168,6 @@ const useEnhancedHoverDetection = (
         }
         onHoverStart();
       } else if (!isInBounds && isHovering.current) {
-        // Debounce hover end to prevent flickering
         if (hoverTimeoutRef.current) {
           clearTimeout(hoverTimeoutRef.current);
         }
@@ -181,7 +182,6 @@ const useEnhancedHoverDetection = (
     [checkHoverBounds, onHoverStart, onHoverEnd]
   );
 
-  // Mouse leave handler for immediate cleanup
   const handleMouseLeave = useCallback(() => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
@@ -208,143 +208,7 @@ const useEnhancedHoverDetection = (
   return { isHovering: isHovering.current };
 };
 
-// ============================================================================
-// EXISTING OPTIMIZED HOOKS (keeping your logic intact)
-// ============================================================================
-
-const useOptimizedImageLoader = () => {
-  const [imagesLoaded, setImagesLoaded] = useState(false);
-  const [animationStarted, setAnimationStarted] = useState(false);
-  const [loadingProgress, setLoadingProgress] = useState(0);
-  const [priorityImagesLoaded, setPriorityImagesLoaded] = useState(false);
-  
-  const preloadedImages = useRef(new Set<string>());
-  const loadingPromises = useRef(new Map<string, Promise<void>>());
-  const abortController = useRef<AbortController | null>(null);
-
-  const preloadImage = useCallback((src: string, isPriority: boolean = false): Promise<void> => {
-    if (preloadedImages.current.has(src)) {
-      return Promise.resolve();
-    }
-
-    if (loadingPromises.current.has(src)) {
-      return loadingPromises.current.get(src)!;
-    }
-
-    const promise = new Promise<void>((resolve) => {
-      const img = new Image();
-      
-      img.decoding = 'async';
-      img.loading = 'eager';
-      (img as any).fetchPriority = isPriority ? 'high' : 'auto';
-      
-      const cleanup = () => {
-        loadingPromises.current.delete(src);
-        resolve();
-      };
-
-      const handleLoad = () => {
-        preloadedImages.current.add(src);
-        setLoadingProgress(prev => {
-          const newProgress = Math.min(prev + (100 / DOUBLED_EVENT_DATA.length), 100);
-          return newProgress;
-        });
-        cleanup();
-      };
-
-      const handleError = () => {
-        console.warn(`Failed to preload image: ${src}`);
-        setLoadingProgress(prev => Math.min(prev + (100 / DOUBLED_EVENT_DATA.length), 100));
-        cleanup();
-      };
-
-      if (abortController.current?.signal.aborted) {
-        cleanup();
-        return;
-      }
-
-      abortController.current?.signal.addEventListener('abort', cleanup);
-      
-      img.onload = handleLoad;
-      img.onerror = handleError;
-      img.src = src;
-    });
-
-    loadingPromises.current.set(src, promise);
-    return promise;
-  }, []);
-
-  useEffect(() => {
-    abortController.current = new AbortController();
-    
-    const loadPriorityBatch = async () => {
-      const priorityImages = DOUBLED_EVENT_DATA.slice(0, 6);
-      const batchPromises = priorityImages.map(item => 
-        preloadImage(item.image, true)
-      );
-      
-      try {
-        await Promise.all(batchPromises);
-        if (!abortController.current?.signal.aborted) {
-          setPriorityImagesLoaded(true);
-        }
-      } catch (error) {
-        console.warn('Priority image loading failed:', error);
-        setPriorityImagesLoaded(true);
-      }
-    };
-    
-    loadPriorityBatch();
-    
-    return () => {
-      abortController.current?.abort();
-    };
-  }, [preloadImage]);
-
-  const preloadAllImages = useCallback(async () => {
-    if (imagesLoaded) return;
-    
-    try {
-      const batchSize = 6;
-      const batches = [];
-      
-      for (let i = 0; i < DOUBLED_EVENT_DATA.length; i += batchSize) {
-        const batch = DOUBLED_EVENT_DATA.slice(i, i + batchSize);
-        batches.push(batch);
-      }
-      
-      for (const batch of batches) {
-        if (abortController.current?.signal.aborted) break;
-        
-        const batchPromises = batch.map(item => preloadImage(item.image));
-        await Promise.all(batchPromises);
-      }
-      
-      if (!abortController.current?.signal.aborted) {
-        setImagesLoaded(true);
-      }
-    } catch (error) {
-      console.warn('Image preloading failed:', error);
-      setImagesLoaded(true);
-    }
-  }, [imagesLoaded, preloadImage]);
-  
-  const startAnimation = useCallback(() => {
-    if (!animationStarted) {
-      setAnimationStarted(true);
-    }
-  }, [animationStarted]);
-
-  return { 
-    preloadAllImages, 
-    startAnimation, 
-    imagesLoaded, 
-    animationStarted, 
-    loadingProgress, 
-    priorityImagesLoaded 
-  };
-};
-
+// Simplified trigger hook using intersection observer
 const useMultiTriggerPreloader = (preloadAllImages: () => void, startAnimation: () => void) => {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const elementRef = useRef<HTMLElement | null>(null);
@@ -411,10 +275,7 @@ const useMultiTriggerPreloader = (preloadAllImages: () => void, startAnimation: 
   }, [createObserver]);
 };
 
-// ============================================================================
-// EXISTING OPTIMIZED COMPONENTS (keeping your logic intact)
-// ============================================================================
-
+// Loading and Event Card components (keeping your existing implementations)
 const LoadingCard = memo<{ index: number; loadingProgress: number }>(({ index, loadingProgress }) => {
   const progressWidth = useMemo(() => 
     `${Math.min(loadingProgress, 100)}%`,
@@ -502,10 +363,7 @@ const EventCard = memo<{
 });
 EventCard.displayName = 'EventCard';
 
-// ============================================================================
-// MAIN ULTRA-OPTIMIZED COMPONENT WITH ENHANCED HOVER
-// ============================================================================
-
+// Main component with updated hook
 interface EventStackProps {
   className?: string;
 }
@@ -515,27 +373,45 @@ const EventStack_Final: React.FC<EventStackProps> = ({ className = "" }) => {
   const xTranslation = useMotionValue(0);
   const animationControls = useRef<any>(null);
   const shouldReduceMotion = useReducedMotion();
-  const containerRef = useRef<HTMLElement>(null); 
+  const containerRef = useRef<HTMLElement>(null);
+  const [animationStarted, setAnimationStarted] = useState(false);
 
-  const {
-    preloadAllImages,
-    startAnimation,
-    imagesLoaded,
-    animationStarted,
-    loadingProgress,
-    priorityImagesLoaded,
-  } = useOptimizedImageLoader();
+  // ✅ UPDATED: Use our optimized image preloader hook
+  const { 
+    preloadAllImages, 
+    allImagesPreloaded, 
+    progress, 
+    loadedCount, 
+    totalCount,
+    isPreloading 
+  } = useImagePreloader(EVENT_ALBUMS, { 
+    concurrent: 4, 
+    timeout: 8000, 
+    eager: false,
+    useOptimizedPaths: true 
+  });
+
+  // Create a priority loaded state based on first few images
+  const priorityImagesLoaded = useMemo(() => {
+    return loadedCount >= 6; // First 6 images loaded
+  }, [loadedCount]);
+
+  const startAnimation = useCallback(() => {
+    if (!animationStarted) {
+      setAnimationStarted(true);
+    }
+  }, [animationStarted]);
 
   const triggerRef = useMultiTriggerPreloader(preloadAllImages, startAnimation);
 
-  // Memoized animation config with reduced motion support
+  // Animation configuration (keeping your existing logic)
   const animationConfig = useMemo(() => ({
     fastDuration: shouldReduceMotion ? 0 : EVENT_STACK_CONFIG.ANIMATION.fastDuration,
     slowDuration: shouldReduceMotion ? 0 : EVENT_STACK_CONFIG.ANIMATION.slowDuration,
     finalPositionOffset: EVENT_STACK_CONFIG.ANIMATION.finalPositionOffset,
   }), [shouldReduceMotion]);
 
-  // Your original animation cycle logic (preserved exactly)
+  // Animation functions (keeping your existing implementation)
   const animateCycle = useCallback((duration: number, isLoop: boolean) => {
     animationControls.current?.stop();
     if (width === 0 || shouldReduceMotion) return;
@@ -583,7 +459,7 @@ const EventStack_Final: React.FC<EventStackProps> = ({ className = "" }) => {
     });
   }, [width, xTranslation, animateCycle, animationConfig, shouldReduceMotion]);
 
-  // Enhanced hover handlers with your original logic
+  // Enhanced hover handlers
   const handleHoverStart = useCallback(() => {
     finishAndTransition(animationConfig.slowDuration, false);
   }, [finishAndTransition, animationConfig.slowDuration]);
@@ -594,7 +470,6 @@ const EventStack_Final: React.FC<EventStackProps> = ({ className = "" }) => {
 
   // Use enhanced hover detection
   useEnhancedHoverDetection(containerRef, handleHoverStart, handleHoverEnd);
-
 
   useEffect(() => {
     if (animationStarted && width > 0 && !shouldReduceMotion) {
@@ -609,7 +484,7 @@ const EventStack_Final: React.FC<EventStackProps> = ({ className = "" }) => {
     };
   }, [animationStarted, width, animateCycle, animationConfig.fastDuration, shouldReduceMotion]);
 
-  // Ultra-optimized card elements with better memoization
+  // Updated card elements with new loading states
   const cardElements = useMemo(() => {
     const elements = DOUBLED_EVENT_DATA.map((item, idx) => {
       const isPriority = getCardPriority(idx);
@@ -621,17 +496,17 @@ const EventStack_Final: React.FC<EventStackProps> = ({ className = "" }) => {
           item={item}
           index={idx}
           isPriority={isPriority}
-          isLoaded={imagesLoaded}
+          isLoaded={allImagesPreloaded}
           priorityLoaded={priorityImagesLoaded}
-          loadingProgress={loadingProgress}
+          loadingProgress={progress * 100}
         />
       );
     });
     
     return elements;
-  }, [imagesLoaded, priorityImagesLoaded, loadingProgress]);
+  }, [allImagesPreloaded, priorityImagesLoaded, progress]);
 
-return (
+  return (
     <main
       ref={(node) => {
         triggerRef(node);

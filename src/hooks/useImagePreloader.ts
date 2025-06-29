@@ -1,23 +1,27 @@
-// hooks/useImagePreloader.ts
 import { useState, useRef, useCallback, useEffect } from 'react'
-import type { Album } from '@/lib/MusicData'
+
+// ✅ Define minimal interface that the hook actually needs
+interface PreloadableImage {
+  cover: string;
+}
 
 interface UseImagePreloaderOptions {
   concurrent?: number
   timeout?: number
   eager?: boolean
-  useOptimizedPaths?: boolean // New option for optimized images
+  useOptimizedPaths?: boolean
 }
 
+// ✅ Change the parameter type from Album[] to PreloadableImage[]
 export const useImagePreloader = (
-  albums: readonly Album[], 
+  images: readonly PreloadableImage[], // ✅ Changed from Album[] to PreloadableImage[]
   options: UseImagePreloaderOptions = {}
 ) => {
   const { 
-    concurrent = 4, // Reduced from 6 for better performance
-    timeout = 8000, // Reduced timeout
+    concurrent = 4,
+    timeout = 8000,
     eager = false,
-    useOptimizedPaths = true // Default to using optimized paths
+    useOptimizedPaths = true
   } = options
   
   const [allImagesPreloaded, setAllImagesPreloaded] = useState(false)
@@ -26,26 +30,25 @@ export const useImagePreloader = (
   const preloadingRef = useRef(false)
   const abortControllerRef = useRef<AbortController | null>(null)
 
-  // Memoized unique URLs with optimized paths
+  // Environment-aware URL generation
   const uniqueImageUrls = useRef<string[]>([])
   
-  useEffect(() => {
-    const urls = [...new Set(albums.map(album => {
-      if (useOptimizedPaths && typeof window !== 'undefined') {
-        // Use optimized WEBP paths for production
-        const optimizedPath = `/nextImageExportOptimizer${album.cover.replace(/\.(jpg|jpeg|png)$/i, '-opt-640.WEBP')}`
+useEffect(() => {
+    const urls = [...new Set(images.map(image => { // ✅ Changed from albums to images
+      if (useOptimizedPaths && typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+        const optimizedPath = `/nextImageExportOptimizer${image.cover.replace(/\.(jpg|jpeg|png)$/i, '-opt-640.WEBP')}`
         return optimizedPath
       }
-      return album.cover // Fallback to original path
+      return image.cover // ✅ Changed from album.cover to image.cover
     }))]
     
     uniqueImageUrls.current = urls
     setLoadedCount(0)
     setAllImagesPreloaded(false)
     preloadedImages.current.clear()
-  }, [albums, useOptimizedPaths])
+  }, [images, useOptimizedPaths])
 
-  // Enhanced preload function using link preload for better performance
+  // Enhanced preload function with fallback strategy
   const preloadImage = useCallback((src: string, signal?: AbortSignal): Promise<void> => {
     return new Promise((resolve) => {
       if (preloadedImages.current.has(src)) {
@@ -53,51 +56,95 @@ export const useImagePreloader = (
         return
       }
 
-      // Use link preload for better browser optimization
-      const link = document.createElement('link')
-      link.rel = 'preload'
-      link.as = 'image'
-      link.href = src
+      // ✅ Use different strategies for dev vs production
+      const isDevelopment = process.env.NODE_ENV === 'development'
       
-      const timeoutId = setTimeout(() => {
-        console.warn(`Image preload timeout: ${src}`)
-        cleanup()
-        resolve()
-      }, timeout)
+      if (isDevelopment) {
+        // Use standard Image object in development (more reliable for local files)
+        const img = new Image()
+        
+        const timeoutId = setTimeout(() => {
+          console.warn(`Image preload timeout: ${src}`)
+          cleanup()
+          resolve()
+        }, timeout)
 
-      const cleanup = () => {
-        clearTimeout(timeoutId)
-        if (link.parentNode) {
-          document.head.removeChild(link)
+        const cleanup = () => {
+          clearTimeout(timeoutId)
+          img.onload = null
+          img.onerror = null
         }
+
+        const handleLoad = () => {
+          cleanup()
+          preloadedImages.current.add(src)
+          setLoadedCount(prev => prev + 1)
+          resolve()
+        }
+
+        const handleError = () => {
+          cleanup()
+          console.warn(`Failed to preload image: ${src}`)
+          resolve()
+        }
+
+        if (signal?.aborted) {
+          cleanup()
+          resolve()
+          return
+        }
+
+        signal?.addEventListener('abort', cleanup)
+
+        img.onload = handleLoad
+        img.onerror = handleError
+        img.src = src
+      } else {
+        // Use link preload in production for better optimization
+        const link = document.createElement('link')
+        link.rel = 'preload'
+        link.as = 'image'
+        link.href = src
+        
+        const timeoutId = setTimeout(() => {
+          console.warn(`Image preload timeout: ${src}`)
+          cleanup()
+          resolve()
+        }, timeout)
+
+        const cleanup = () => {
+          clearTimeout(timeoutId)
+          if (link.parentNode) {
+            document.head.removeChild(link)
+          }
+        }
+
+        const handleLoad = () => {
+          cleanup()
+          preloadedImages.current.add(src)
+          setLoadedCount(prev => prev + 1)
+          resolve()
+        }
+
+        const handleError = () => {
+          cleanup()
+          console.warn(`Failed to preload image: ${src}`)
+          resolve()
+        }
+
+        if (signal?.aborted) {
+          cleanup()
+          resolve()
+          return
+        }
+
+        signal?.addEventListener('abort', cleanup)
+
+        link.onload = handleLoad
+        link.onerror = handleError
+        
+        document.head.appendChild(link)
       }
-
-      const handleLoad = () => {
-        cleanup()
-        preloadedImages.current.add(src)
-        setLoadedCount(prev => prev + 1)
-        resolve()
-      }
-
-      const handleError = () => {
-        cleanup()
-        console.warn(`Failed to preload image: ${src}`)
-        resolve()
-      }
-
-      if (signal?.aborted) {
-        cleanup()
-        resolve()
-        return
-      }
-
-      signal?.addEventListener('abort', cleanup)
-
-      link.onload = handleLoad
-      link.onerror = handleError
-      
-      // Add to DOM to trigger preload
-      document.head.appendChild(link)
     })
   }, [timeout])
 
@@ -112,7 +159,7 @@ export const useImagePreloader = (
     try {
       const urls = uniqueImageUrls.current
       
-      // Use requestIdleCallback for better performance
+      // ✅ Simplified batch processing for better reliability
       const processNextBatch = (startIndex: number): Promise<void> => {
         return new Promise((resolve) => {
           const processBatch = () => {
@@ -128,7 +175,13 @@ export const useImagePreloader = (
               batch.map(url => preloadImage(url, abortControllerRef.current!.signal))
             ).then(() => {
               if (endIndex < urls.length) {
-                // Process next batch
+                processNextBatch(endIndex).then(resolve)
+              } else {
+                resolve()
+              }
+            }).catch(() => {
+              // Continue even if some images fail
+              if (endIndex < urls.length) {
                 processNextBatch(endIndex).then(resolve)
               } else {
                 resolve()
@@ -136,8 +189,8 @@ export const useImagePreloader = (
             })
           }
 
-          // Use requestIdleCallback if available, otherwise setTimeout
-          if ('requestIdleCallback' in window) {
+          // ✅ Use requestIdleCallback only in production for better dev experience
+          if ('requestIdleCallback' in window && process.env.NODE_ENV === 'production') {
             requestIdleCallback(processBatch, { timeout: 1000 })
           } else {
             setTimeout(processBatch, 0)
@@ -183,7 +236,6 @@ export const useImagePreloader = (
   // Auto-start preloading if eager
   useEffect(() => {
     if (eager && uniqueImageUrls.current.length > 0) {
-      // Delay slightly to avoid blocking initial render
       const timer = setTimeout(preloadAllImages, 100)
       return () => clearTimeout(timer)
     }

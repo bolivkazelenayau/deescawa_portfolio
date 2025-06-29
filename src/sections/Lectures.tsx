@@ -1,6 +1,6 @@
 // sections/Lectures.tsx (server component with SmartText support)
 import React, { memo } from 'react';
-import { lectures } from '@/lib/LecturesData';
+import { lectures } from '@/lib/LectureData';
 import { AppleStyleCarousel } from '@/components/apple-style-carousel';
 import { SquircleVideo } from '@/components/video/SquircleVideo';
 import { getHybridTranslations, type Locale } from '@/lib/translations/StaticTranslationsLoader';

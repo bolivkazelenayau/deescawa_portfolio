@@ -14,13 +14,12 @@ interface MusicCardProps {
   className?: string
   isHovered?: boolean
   isVisible?: boolean
+  isPreloaded?: boolean // ✅ Keep this new prop
   priority?: boolean
   onCardClick: (album: Album) => void
   onMouseEnter?: () => void
   onMouseLeave?: () => void
   locale: 'en' | 'ru'
-  allImagesPreloaded: boolean
-
 }
 
 const SCVaultPlaceholder: React.FC<{
@@ -70,7 +69,6 @@ const MUSIC_CARD_CONFIG = Object.freeze({
     backgroundImage: "absolute inset-0 transition-opacity duration-200 ease-out transform-gpu",
     backgroundGradient: "absolute inset-0 bg-gradient-to-b from-transparent via-white/3 to-white/8 dark:via-black/1 dark:to-black/5",
     imageContainer: "relative h-[60%] overflow-hidden flex items-center justify-center bg-white/5",
-
     blurredBackground: "absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ease-out transform-gpu",
     imageOverlay: "absolute inset-0 bg-white/15 dark:bg-black/8",
     mainImage: "max-w-full max-h-full object-contain transition-all duration-200 group-hover:scale-105 relative transform-gpu",
@@ -83,7 +81,6 @@ const MUSIC_CARD_CONFIG = Object.freeze({
     description: "text-base md:text-lg lg:text-xl text-muted-foreground leading-relaxed",
     buttonContainer: "mt-8",
     button: "w-full text-lg font-medium uppercase tracking-wide",
-    // Added: Placeholder styles
     imagePlaceholder: "w-full h-full bg-gradient-to-br from-muted/30 to-muted/10 flex items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded-lg",
     placeholderIcon: "w-20 h-20 bg-muted-foreground/10 rounded-lg flex items-center justify-center",
     scVaultContainer: "w-full h-full bg-gradient-to-br from-purple-500/10 to-orange-500/10 flex items-center justify-center border-2 border-dashed border-purple-500/30 rounded-lg",
@@ -113,49 +110,13 @@ const MUSIC_CARD_CONFIG = Object.freeze({
   }
 } as const);
 
-
-// Optimized image loading hook with error handling
-const useOptimizedImageLoading = (src: string, isVisible: boolean, priority: boolean, allImagesPreloaded: boolean, albumId?: number) => {
-  const [loaded, setLoaded] = useState(allImagesPreloaded);
-  const [shouldLoad, setShouldLoad] = useState(priority || allImagesPreloaded);
-  const [error, setError] = useState(false);
-  const [isSCVault, setIsSCVault] = useState(albumId === 4); // Detect SoundCloud Vault
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    if (isVisible && !shouldLoad && !allImagesPreloaded) {
-      timeoutRef.current = setTimeout(() => {
-        setShouldLoad(true);
-      }, priority ? 0 : MUSIC_CARD_CONFIG.PERFORMANCE.loadingDelay);
-    }
-
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [isVisible, shouldLoad, priority, allImagesPreloaded]);
-
-  const handleLoad = useCallback(() => {
-    setLoaded(true);
-    setError(false);
-  }, []);
-
-  const handleError = useCallback(() => {
-    setError(true);
-    setLoaded(false);
-  }, []);
-
-  return { loaded, shouldLoad, error, isSCVault, handleLoad, handleError };
-};
-
 // Fixed background image component
 const BackgroundImage = memo<{
   albumCover: string;
   loaded: boolean;
   isVisible: boolean;
   shouldLoad: boolean;
-  error: boolean; // Added error prop
+  error: boolean;
   onLoad: () => void;
 }>(({ albumCover, loaded, isVisible, shouldLoad, error, onLoad }) => {
   const backgroundStyle = useMemo(() => ({
@@ -199,30 +160,32 @@ const BackgroundImage = memo<{
 
 BackgroundImage.displayName = 'BackgroundImage';
 
-// Main optimized card component
+// ✅ Main optimized card component with fixed props
 export const MusicCard: React.FC<MusicCardProps> = memo(({
   album,
   className,
   isHovered = false,
-  isVisible = true,
+  isVisible = false,
+  isPreloaded = false, // ✅ Use this instead of allImagesPreloaded
   priority = false,
   onCardClick,
   onMouseEnter,
   onMouseLeave,
   locale,
-  allImagesPreloaded
 }) => {
   const { t } = useStableTranslation(locale, 'common');
-  const [shouldLoadImages, setShouldLoadImages] = useState(allImagesPreloaded);
+  
+  // ✅ Updated to use isPreloaded instead of allImagesPreloaded
+  const [shouldLoadImages, setShouldLoadImages] = useState(isPreloaded);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Remove the conflicting hook and use simple state management
-  const [imageLoaded, setImageLoaded] = useState(allImagesPreloaded);
+  // ✅ Updated to use isPreloaded
+  const [imageLoaded, setImageLoaded] = useState(isPreloaded);
   const [imageError, setImageError] = useState(false);
 
-  // Your original intersection observer (this was working fine)
+  // ✅ Updated intersection observer to use isPreloaded
   useLayoutEffect(() => {
-    if (allImagesPreloaded) {
+    if (isPreloaded) {
       setShouldLoadImages(true);
       return;
     }
@@ -245,7 +208,7 @@ export const MusicCard: React.FC<MusicCardProps> = memo(({
     }
 
     return () => observer.disconnect();
-  }, [allImagesPreloaded]);
+  }, [isPreloaded]); // ✅ Updated dependency
 
   const handleClick = useCallback(() => {
     onCardClick(album);
@@ -400,6 +363,5 @@ export const MusicCard: React.FC<MusicCardProps> = memo(({
     </div>
   );
 });
-
 
 MusicCard.displayName = 'MusicCard';

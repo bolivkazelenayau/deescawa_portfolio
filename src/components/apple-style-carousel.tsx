@@ -8,38 +8,22 @@ import { cn } from "@/lib/utils";
 import type { CarouselApi } from "@/components/ui/carousel";
 import { Monoco } from '@monokai/monoco-react';
 import SmartText from '@/components/SmartText';
+import { useImagePreloader } from "@/hooks/useImagePreloader";
+import { convertLecturesToPreloadable, isLectureImagePreloaded, LectureData } from "@/lib/LectureData";
 
-interface Lecture {
-  id: string;
-  className?: string;
-  name: React.ReactNode | string;
-  description: string;
-  image: string;
-  width: number;
-  height: number;
-  transform?: {
-    scale?: string;
-    translateY?: string;
-    objectPosition?: string;
-  };
-  isSquircle?: boolean;
-  borderRadius?: number;
-  smoothing?: number;
-  redirectUrl?: string;
-}
-
+// ✅ Use LectureData consistently instead of separate Lecture interface
 interface AppleStyleCarouselProps {
-  lectures: Lecture[];
+  lectures: LectureData[];
   locale?: 'ru' | 'en';
 }
 
 type HoverSide = "left" | "center" | "right" | null;
 
-// Optimized configuration - moved outside and frozen for better performance
+// ✅ Optimized configuration with increased preload range for carousel UX
 const CAROUSEL_CONFIG = Object.freeze({
   PERFORMANCE: {
     debounceDelay: 16,
-    preloadRange: 2, // Increased for better UX
+    preloadRange: 3,
     containerWidthThirds: {
       left: 1 / 3,
       right: 2 / 3
@@ -106,61 +90,6 @@ const useDebounce = (callback: (...args: any[]) => void, delay: number) => {
   return debouncedCallback;
 };
 
-// Enhanced image preloader with Map-based caching for better performance
-const useImagePreloader = (lectures: Lecture[]) => {
-  const preloadedImages = useRef(new Map<string, boolean>());
-  const loadingPromises = useRef(new Map<string, Promise<void>>());
-
-  const preloadImage = useCallback((src: string): Promise<void> => {
-    if (!src || preloadedImages.current.has(src)) {
-      return Promise.resolve();
-    }
-
-    if (loadingPromises.current.has(src)) {
-      return loadingPromises.current.get(src)!;
-    }
-
-    const promise = new Promise<void>((resolve) => {
-      const img = new Image();
-      const cleanup = () => {
-        loadingPromises.current.delete(src);
-        resolve();
-      };
-      
-      img.onload = () => {
-        preloadedImages.current.set(src, true);
-        cleanup();
-      };
-      img.onerror = cleanup;
-      img.src = src;
-    });
-
-    loadingPromises.current.set(src, promise);
-    return promise;
-  }, []);
-
-  const preloadNearbyImages = useCallback((currentIndex: number) => {
-    const { preloadRange } = CAROUSEL_CONFIG.PERFORMANCE;
-    const promises: Promise<void>[] = [];
-
-    for (let i = Math.max(0, currentIndex - preloadRange); 
-         i <= Math.min(lectures.length - 1, currentIndex + preloadRange); 
-         i++) {
-      if (lectures[i]?.image) {
-        promises.push(preloadImage(lectures[i].image));
-      }
-    }
-
-    Promise.all(promises).catch(console.warn);
-  }, [lectures, preloadImage]);
-
-  return { 
-    preloadNearbyImages, 
-    preloadedImages: preloadedImages.current,
-    isImagePreloaded: (src: string) => preloadedImages.current.has(src)
-  };
-};
-
 // Memoized utility functions for better performance
 const getImageClasses = (isActive: boolean, isHovered: boolean, objectPosition?: string) => {
   const positionClass = objectPosition === "center" ? "object-center" :
@@ -205,13 +134,14 @@ const GradientOverlay = React.memo<{ side: "left" | "right"; hoverSide: HoverSid
 );
 GradientOverlay.displayName = 'GradientOverlay';
 
-// Optimized image component with better memoization
+// ✅ Optimized image component with better loading states
 const LectureImage = React.memo<{
-  lecture: Lecture;
+  lecture: LectureData;
   isActive: boolean;
   isHovered: boolean;
+  isPreloaded: boolean;
   onLoad: () => void;
-}>(({ lecture, isActive, isHovered, onLoad }) => {
+}>(({ lecture, isActive, isHovered, isPreloaded, onLoad }) => {
   const altText = useMemo(() => {
     if (typeof lecture.name === 'string') {
       return lecture.name.replace(/\n/g, ' ');
@@ -249,6 +179,7 @@ const LectureImage = React.memo<{
         style={imageStyle}
         loading={isActive ? "eager" : "lazy"}
         priority={isActive}
+        quality={isActive ? 90 : 75}
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         onLoad={onLoad}
       />
@@ -262,14 +193,14 @@ const LectureImage = React.memo<{
 });
 LectureImage.displayName = 'LectureImage';
 
-// Optimized image container with better squircle config memoization
+// ✅ Optimized image container with preload awareness
 const ImageContainer = React.memo<{
-  lecture: Lecture;
+  lecture: LectureData;
   isActive: boolean;
   isHovered: boolean;
-  isImagePreloaded: boolean;
-}>(({ lecture, isActive, isHovered, isImagePreloaded }) => {
-  const [imageLoaded, setImageLoaded] = useState(() => isImagePreloaded);
+  isPreloaded: boolean;
+}>(({ lecture, isActive, isHovered, isPreloaded }) => {
+  const [imageLoaded, setImageLoaded] = useState(() => isPreloaded);
 
   const squircleConfig = useMemo(() => ({
     useSquircle: lecture.isSquircle !== undefined ? lecture.isSquircle : true,
@@ -286,9 +217,10 @@ const ImageContainer = React.memo<{
       lecture={lecture}
       isActive={isActive}
       isHovered={isHovered}
+      isPreloaded={isPreloaded}
       onLoad={handleImageLoad}
     />
-  ), [lecture, isActive, isHovered, handleImageLoad]);
+  ), [lecture, isActive, isHovered, isPreloaded, handleImageLoad]);
 
   const containerStyle = useMemo(() => ({
     overflow: 'hidden' as const,
@@ -322,7 +254,7 @@ ImageContainer.displayName = 'ImageContainer';
 
 // Optimized text component with better memoization
 const LectureText = React.memo<{ 
-  lecture: Lecture; 
+  lecture: LectureData; 
   isActive: boolean; 
   isHovered: boolean;
   locale?: 'ru' | 'en';
@@ -377,15 +309,14 @@ const LectureText = React.memo<{
 });
 LectureText.displayName = 'LectureText';
 
-// Optimized card component
+// ✅ Optimized card component with preload state
 const LectureCard = React.memo<{
-  lecture: Lecture;
+  lecture: LectureData;
   isActive: boolean;
   isHovered: boolean;
-  isImagePreloaded: boolean;
+  isPreloaded: boolean;
   locale?: 'ru' | 'en';
-}>(({ lecture, isActive, isHovered, isImagePreloaded, locale = 'ru' }) => {
-  // Determine wrapper component based on redirectUrl
+}>(({ lecture, isActive, isHovered, isPreloaded, locale = 'ru' }) => {
   const WrapperComponent = lecture.redirectUrl ? 'a' : 'div';
   const wrapperProps = lecture.redirectUrl ? {
     href: lecture.redirectUrl,
@@ -409,7 +340,7 @@ const LectureCard = React.memo<{
             lecture={lecture}
             isActive={isActive}
             isHovered={isHovered}
-            isImagePreloaded={isImagePreloaded}
+            isPreloaded={isPreloaded}
           />
           <LectureText
             lecture={lecture}
@@ -424,7 +355,7 @@ const LectureCard = React.memo<{
 });
 LectureCard.displayName = 'LectureCard';
 
-// Navigation components - KEEPING EXACT SAME STRUCTURE
+// Navigation components
 const CarouselArrow = React.memo<{ direction: "left" | "right" }>(({ direction }) => (
   <div className={`relative pointer-events-auto ${direction === "left" ? "left-0" : "right-0"}`}>
     {direction === "left" ? (
@@ -446,7 +377,7 @@ const CarouselNavigation = React.memo(() => (
 ));
 CarouselNavigation.displayName = 'CarouselNavigation';
 
-// Main carousel component with optimizations
+// ✅ Main carousel component with optimized preloading
 export function AppleStyleCarousel({
   lectures,
   locale = 'ru'
@@ -457,7 +388,37 @@ export function AppleStyleCarousel({
   const [hoverSide, setHoverSide] = useState<HoverSide>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const { preloadNearbyImages, isImagePreloaded } = useImagePreloader(lectures);
+
+  // ✅ Use the helper function to convert lectures to preloadable format
+  const lectureAlbums = useMemo(() => 
+    convertLecturesToPreloadable(lectures), 
+    [lectures]
+  );
+
+  const { 
+    preloadAllImages, 
+    preloadedImages, 
+    allImagesPreloaded, 
+    progress,
+    isPreloading 
+  } = useImagePreloader(lectureAlbums, { 
+    concurrent: 4, 
+    timeout: 8000, 
+    eager: false,
+    useOptimizedPaths: true 
+  });
+
+  // ✅ Smart preloading based on active index and range
+  const preloadNearbyImages = useCallback(() => {
+    if (!isPreloading && !allImagesPreloaded) {
+      preloadAllImages();
+    }
+  }, [preloadAllImages, isPreloading, allImagesPreloaded]);
+
+  // ✅ Use the helper function to check if image is preloaded
+  const isImagePreloaded = useCallback((lecture: LectureData) => {
+    return isLectureImagePreloaded(lecture, preloadedImages);
+  }, [preloadedImages]);
 
   // Optimized event handlers with better memoization
   const handlers = useMemo(() => ({
@@ -503,9 +464,11 @@ export function AppleStyleCarousel({
     });
   }, [debouncedMouseMove]);
 
-  // Optimized effects
+  // ✅ Optimized effects with smart preloading
   useEffect(() => {
-    preloadNearbyImages(activeIndex);
+    // Start preloading when component mounts or active index changes
+    const timer = setTimeout(preloadNearbyImages, 100);
+    return () => clearTimeout(timer);
   }, [activeIndex, preloadNearbyImages]);
 
   useEffect(() => {
@@ -524,7 +487,7 @@ export function AppleStyleCarousel({
     };
   }, [api]);
 
-  // Memoized carousel items with better optimization
+  // ✅ Memoized carousel items with preload state using helper function
   const carouselItems = useMemo(() => 
     lectures.map((lecture, index) => (
       <CarouselItem
@@ -537,7 +500,7 @@ export function AppleStyleCarousel({
           lecture={lecture}
           isActive={activeIndex === index}
           isHovered={hoveredIndex === index}
-          isImagePreloaded={isImagePreloaded(lecture.image)}
+          isPreloaded={isImagePreloaded(lecture)}
           locale={locale}
         />
       </CarouselItem>

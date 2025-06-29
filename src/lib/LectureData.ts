@@ -1,6 +1,8 @@
 // LectureData.ts
 
-
+export interface PreloadableImage {
+  cover: string;
+}
 // Define a type for the lecture data structure
 export interface LectureData {
   id: string;
@@ -224,4 +226,15 @@ export function openLectureInTelegram(lecture: LectureData): boolean {
     console.error('Failed to open Telegram link:', error);
     return false;
   }
+}
+
+export function convertLecturesToPreloadable(lectures: LectureData[]): PreloadableImage[] {
+  return lectures.map(lecture => ({ cover: lecture.image }));
+}
+
+export function isLectureImagePreloaded(lecture: LectureData, preloadedImages: Set<string>): boolean {
+  const optimizedSrc = process.env.NODE_ENV === 'production' 
+    ? `/nextImageExportOptimizer${lecture.image.replace(/\.(jpg|jpeg|png)$/i, '-opt-640.WEBP')}`
+    : lecture.image;
+  return preloadedImages.has(optimizedSrc);
 }
