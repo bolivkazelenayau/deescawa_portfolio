@@ -3,9 +3,9 @@
 import { type FC, useEffect, useRef, useState, useCallback, memo, useMemo } from "react"
 import { motion, useScroll, useTransform } from "motion/react"
 import Link from "next/link"
-import Button from "@/components/Button"
 import useTextRevealAnimation from "@/hooks/useTextRevealAnimation"
 import { useStableTranslation } from "@/hooks/useStableTranslation"
+import { useImagePreloader } from "@/hooks/useImagePreloader"
 import React from "react"
 import dynamic from 'next/dynamic'
 import ConditionalImage from "@/components/ConditionalImage"
@@ -30,8 +30,6 @@ const CONSTANTS = Object.freeze({
   // ✅ Адаптивные тайминги
   TIMING: {
     ANIMATION_DURATION: isMobileDevice() ? 0.3 : 0.4,
-    BUTTON_DELAY_1: isMobileDevice() ? 0.3 : 0.5,
-    BUTTON_DELAY_2: isMobileDevice() ? 0.5 : 0.7,
     SERVICE_BASE_DELAY: isMobileDevice() ? 0.2 : 0.3,
     SERVICE_STAGGER: isMobileDevice() ? 0.05 : 0.08,
     SERVICE_TEXT_DELAY: isMobileDevice() ? 0.1 : 0.15,
@@ -59,16 +57,6 @@ const CLASSES = Object.freeze({
 
 // ✅ Оптимизированные анимационные конфиги
 const ANIMATION_CONFIGS = Object.freeze({
-  button1: {
-    duration: CONSTANTS.TIMING.ANIMATION_DURATION,
-    delay: CONSTANTS.TIMING.BUTTON_DELAY_1,
-    ease: CONSTANTS.EASING
-  },
-  button2: {
-    duration: CONSTANTS.TIMING.ANIMATION_DURATION,
-    delay: CONSTANTS.TIMING.BUTTON_DELAY_2,
-    ease: CONSTANTS.EASING
-  },
   image: {
     duration: isMobileDevice() ? 0.4 : 0.6,
     ease: "easeOut"
@@ -163,7 +151,7 @@ const ServiceLink = memo<{
             ...ANIMATION_CONFIGS.serviceLine,
             delay: delays.line
           }}
-          className="border-t border-gray-400 mb-3 md:mb-2 xl:mb-4"
+          className="border-t border-gray-400 mb-2 md:mb-2 xl:mb-4"
         />
       )}
 
@@ -174,32 +162,24 @@ const ServiceLink = memo<{
           ...ANIMATION_CONFIGS.serviceText,
           delay: delays.text
         }}
-        className="py-3 md:py-2 xl:py-2 relative group/service overflow-hidden"
+        className="py-2 md:py-2 xl:py-2 relative group/service overflow-hidden"
       >
-        {/* ✅ Используем CSS Grid для идеального выравнивания */}
-        <div className="relative grid grid-cols-[1fr_auto] items-center gap-4">
+        <div className="relative flex items-center justify-between">
           <Link
             href={service.href}
             onClick={handleClick}
             target={service.external ? "_blank" : undefined}
             rel={service.external ? "noopener noreferrer" : undefined}
-            className="xs:text-xs md:text-xs xl:text-xl font-normal tracking-tight hover:text-gray-300 transition-all duration-200 cursor-pointer group uppercase group-hover/service:translate-x-2"
-            style={{ 
-              lineHeight: '1.2',
-              display: 'flex',
-              alignItems: 'center' // ✅ Центрируем текст внутри ссылки
-            }}
+            className="xs:text-xs md:text-xs xl:text-xl font-normal tracking-tight leading-relaxed hover:text-gray-300 transition-all duration-200 cursor-pointer group flex-1 uppercase group-hover/service:translate-x-2"
           >
-            <span style={{ display: 'inline-block' }}>
-              {renderServiceContent}
-              {service.external && (
-                <span className="inline-block ml-2 text-lg opacity-60 group-hover:opacity-100 transition-opacity duration-200">
-                  ↗
-                </span>
-              )}
-            </span>
+            {renderServiceContent}
+            {service.external && (
+              <span className="inline-block ml-0 text-lg opacity-60 group-hover:opacity-100 transition-opacity duration-200">
+                ↗
+              </span>
+            )}
           </Link>
-
+          
           <motion.div
             initial={{ opacity: 0, x: 15, scale: 0.9 }}
             animate={isAnimating ? { opacity: 1, x: 0, scale: 1 } : { opacity: 0, x: 15, scale: 0.9 }}
@@ -208,19 +188,15 @@ const ServiceLink = memo<{
               duration: 0.25,
               ease: CONSTANTS.EASING
             }}
-            className="group-hover/service:-translate-x-2 transition-transform duration-200 flex items-center justify-center"
-            style={{ 
-              width: '20px', 
-              height: '20px' // ✅ Фиксированный размер контейнера
-            }}
+            className="ml-4 group-hover/service:-translate-x-2 transition-transform duration-200"
           >
             <svg
-              width="16"
-              height="16"
+              width="24"
+              height="24"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth="1.5"
               strokeLinecap="round"
               strokeLinejoin="round"
               className="text-gray-400 group-hover/service:text-gray-300 transition-colors duration-200"
@@ -236,56 +212,6 @@ const ServiceLink = memo<{
 
 ServiceLink.displayName = 'ServiceLink';
 
-// ✅ Оптимизированные кнопки (закомментированы, но готовы к использованию)
-const ViewWorkButton = memo<{
-  isAnimating: boolean;
-  buttonText: string;
-  onClick: () => void;
-}>(({ isAnimating, buttonText, onClick }) => (
-  <motion.div
-    initial={{ opacity: 0, y: "100%" }}
-    animate={isAnimating ? { opacity: 1, y: 0 } : { opacity: 0, y: "100%" }}
-    transition={ANIMATION_CONFIGS.button1}
-  >
-    <Button
-      variant="secondary"
-      isSquircle
-      squircleSize="md"
-      fullWidth={false}
-      onClick={onClick}
-      iconAfter={<DoubleChevronIcon />}
-    >
-      <span>{buttonText}</span>
-    </Button>
-  </motion.div>
-));
-
-ViewWorkButton.displayName = 'ViewWorkButton';
-
-const ContactButton = memo<{
-  isAnimating: boolean;
-  buttonText: string;
-}>(({ isAnimating, buttonText }) => (
-  <motion.div
-    initial={{ opacity: 0, y: "100%" }}
-    animate={isAnimating ? { opacity: 1, y: 0 } : { opacity: 0, y: "100%" }}
-    transition={ANIMATION_CONFIGS.button2}
-  >
-    <Link href={`mailto:${CONSTANTS.EMAIL_ADDRESS}`} passHref className="inline-block">
-      <Button
-        variant="text"
-        isSquircle={true}
-        squircleSize="md"
-        fullWidth={false}
-      >
-        {buttonText}
-      </Button>
-    </Link>
-  </motion.div>
-));
-
-ContactButton.displayName = 'ContactButton';
-
 // ✅ Главный компонент
 const Hero: FC<HeroProps> = memo(({
   enableZoomAnimation = false,
@@ -297,10 +223,34 @@ const Hero: FC<HeroProps> = memo(({
   const [isVisible, setIsVisible] = useState(false);
   const hasTriggeredRef = useRef(false);
   const [animationReady, setAnimationReady] = useState(false);
-  const [hasImageLoaded, setHasImageLoaded] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
   const { t, isLoading } = useStableTranslation(locale, 'hero');
+
+  // ✅ Интеграция прелоадера
+  const heroImages = useMemo(() => [
+    { cover: CONSTANTS.HERO_IMAGE.src }
+  ], []);
+
+  const {
+    preloadOnVisible,
+    allImagesPreloaded,
+    progress,
+    isPreloading
+  } = useImagePreloader(heroImages, {
+    concurrent: 2,
+    timeout: 8000,
+    eager: false,
+    useOptimizedPaths: true
+  });
+
+  // ✅ Настройка прелоадинга при появлении компонента
+  useEffect(() => {
+    if (sectionRef.current) {
+      const cleanup = preloadOnVisible(sectionRef.current);
+      return cleanup;
+    }
+  }, [preloadOnVisible]);
 
   // ✅ Оптимизированная обработка сервисов
   const processServices = useCallback((servicesData: any): ServiceItem[] => {
@@ -347,8 +297,6 @@ const Hero: FC<HeroProps> = memo(({
       heading: t('heading'),
       subtitle: t('subtitle'),
       services: services,
-      viewWorkButton: t('viewWorkButton'),
-      contactButton: t('contactButton'),
       portraitAlt: t('portraitAlt')
     };
 
@@ -402,21 +350,13 @@ const Hero: FC<HeroProps> = memo(({
     locale
   );
 
-  // ✅ Запуск анимаций
+  // ✅ Запуск анимаций после загрузки изображений
   useEffect(() => {
-    if (isLoading || !isVisible || !isInitialized) return;
+    if (isLoading || !isVisible || !isInitialized || !allImagesPreloaded) return;
 
     setIsAnimating(true);
     entranceAnimation();
-  }, [isLoading, isVisible, isInitialized, entranceAnimation]);
-
-  // ✅ Условная загрузка изображения
-  useEffect(() => {
-    if (!hasImageLoaded) {
-      const timer = setTimeout(() => setHasImageLoaded(true), 100);
-      return () => clearTimeout(timer);
-    }
-  }, [hasImageLoaded]);
+  }, [isLoading, isVisible, isInitialized, allImagesPreloaded, entranceAnimation]);
 
   // ✅ Scroll анимация (только если включена)
   const { scrollYProgress } = useScroll({
@@ -429,10 +369,6 @@ const Hero: FC<HeroProps> = memo(({
     [0, 1],
     ["100%", enableZoomAnimation ? "240%" : "100%"]
   );
-
-  const handleScrollToProjects = useCallback(() => {
-    smoothScrollTo("projects");
-  }, []);
 
   return (
     <section
@@ -485,7 +421,7 @@ const Hero: FC<HeroProps> = memo(({
                       ...ANIMATION_CONFIGS.serviceLine,
                       delay: CONSTANTS.TIMING.SERVICE_BASE_DELAY - 0.1
                     }}
-                    className="border-t border-gray-400 mb-3 md:mb-2 lg:mb-4"
+                    className="border-t border-gray-400 mb-3 md:mb-2 lg:mb-3"
                   />
                 )}
 
@@ -517,7 +453,7 @@ const Hero: FC<HeroProps> = memo(({
         <div className={CLASSES.rightCol}>
           <motion.div
             initial={{ opacity: 0 }}
-            animate={{ opacity: hasImageLoaded ? 1 : 0 }}
+            animate={{ opacity: allImagesPreloaded ? 1 : 0 }}
             transition={ANIMATION_CONFIGS.image}
             className={CLASSES.imageWrapper}
             style={{ width: portraitWidth }}
@@ -528,12 +464,19 @@ const Hero: FC<HeroProps> = memo(({
               className={CLASSES.image}
               priority
               sizes="(max-width: 768px) 100vw, 50vw"
-              width={600} // ✅ Уменьшили с 800
-              height={900} // ✅ Уменьшили с 1200
+              width={600}
+              height={900}
             />
           </motion.div>
         </div>
       </div>
+      
+      {/* Preloader Progress (опционально, для дебага) */}
+      {isPreloading && process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-4 left-4 bg-black/80 text-white px-3 py-2 rounded text-sm">
+          Loading images: {Math.round(progress * 100)}%
+        </div>
+      )}
       
       {enableZoomAnimation && <div className="md:h-[150dvh]" ref={scrollingDiv}></div>}
     </section>
