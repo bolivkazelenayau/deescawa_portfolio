@@ -7,41 +7,22 @@ import useTextRevealAnimation from "@/hooks/useTextRevealAnimation"
 import { useStableTranslation } from "@/hooks/useStableTranslation"
 import { useImagePreloader } from "@/hooks/useImagePreloader"
 import React from "react"
-import dynamic from 'next/dynamic'
 import ConditionalImage from "@/components/ConditionalImage"
 
-// ✅ Lazy load icon с лучшим fallback
-const DoubleChevronIcon = dynamic(() => import('@/components/DoubleChevronIcon'), {
-  loading: () => <div className="w-4 h-4 bg-transparent" />,
-  ssr: false
-})
-
-// ✅ Объединенные константы с мобильной оптимизацией
-const isMobileDevice = () => {
-  if (typeof window === 'undefined') return false;
-  return window.innerWidth < 768 || 'ontouchstart' in window;
-};
-
+// ✅ Константы
 const CONSTANTS = Object.freeze({
   HEADER_OFFSET: 80,
-  EMAIL_ADDRESS: "hello@deescawa.com",
   HERO_IMAGE: { src: "/images/hero/hero_image.jpg" },
-  
-  // ✅ Адаптивные тайминги
   TIMING: {
-    ANIMATION_DURATION: isMobileDevice() ? 0.3 : 0.4,
-    SERVICE_BASE_DELAY: isMobileDevice() ? 0.2 : 0.3,
-    SERVICE_STAGGER: isMobileDevice() ? 0.05 : 0.08,
-    SERVICE_TEXT_DELAY: isMobileDevice() ? 0.1 : 0.15,
-    SERVICE_ARROW_DELAY: isMobileDevice() ? 0.05 : 0.1,
-    SERVICE_BOTTOM_DELAY: isMobileDevice() ? 0.1 : 0.15
+    CRITICAL_CONTENT_DELAY: 0.1, // Минимальная задержка для LCP
+    SERVICE_BASE_DELAY: 0.4,
+    SERVICE_STAGGER: 0.08,
+    SERVICE_ANIMATION_DURATION: 0.3
   },
-  
-  // ✅ Единый easing
   EASING: [0.25, 0.46, 0.45, 0.94] as const
 } as const);
 
-// ✅ Объединенные CSS классы
+// ✅ CSS классы
 const CLASSES = Object.freeze({
   section: "min-h-screen",
   grid: "grid md:grid-cols-12 h-screen items-stretch sticky top-0",
@@ -53,27 +34,6 @@ const CLASSES = Object.freeze({
   rightCol: "md:col-span-5 relative",
   imageWrapper: "h-full w-full md:absolute md:right-0",
   image: "size-full object-cover"
-} as const);
-
-// ✅ Оптимизированные анимационные конфиги
-const ANIMATION_CONFIGS = Object.freeze({
-  image: {
-    duration: isMobileDevice() ? 0.4 : 0.6,
-    ease: "easeOut"
-  },
-  subtitle: {
-    duration: CONSTANTS.TIMING.ANIMATION_DURATION,
-    delay: 0.3,
-    ease: CONSTANTS.EASING
-  },
-  serviceLine: {
-    duration: 0.25,
-    ease: CONSTANTS.EASING
-  },
-  serviceText: {
-    duration: 0.3,
-    ease: CONSTANTS.EASING
-  }
 } as const);
 
 // ✅ Интерфейсы
@@ -95,7 +55,6 @@ const smoothScrollTo = (targetId: string) => {
   if (targetElement) {
     const elementPosition = targetElement.getBoundingClientRect().top;
     const offsetPosition = elementPosition + window.pageYOffset - CONSTANTS.HEADER_OFFSET;
-
     window.scrollTo({
       top: offsetPosition,
       behavior: "smooth",
@@ -103,7 +62,7 @@ const smoothScrollTo = (targetId: string) => {
   }
 };
 
-// ✅ Оптимизированный ServiceLink
+// ✅ Компонент ServiceLink с правильным выравниванием
 const ServiceLink = memo<{
   service: ServiceItem;
   index: number;
@@ -134,47 +93,46 @@ const ServiceLink = memo<{
     return <span>{service.title}</span>;
   }, [service.title]);
 
-  // ✅ Мемоизированные задержки
-  const delays = useMemo(() => ({
-    line: CONSTANTS.TIMING.SERVICE_BASE_DELAY + (index * CONSTANTS.TIMING.SERVICE_STAGGER),
-    text: CONSTANTS.TIMING.SERVICE_BASE_DELAY + (index * CONSTANTS.TIMING.SERVICE_STAGGER) + CONSTANTS.TIMING.SERVICE_TEXT_DELAY,
-    arrow: CONSTANTS.TIMING.SERVICE_BASE_DELAY + (index * CONSTANTS.TIMING.SERVICE_STAGGER) + CONSTANTS.TIMING.SERVICE_TEXT_DELAY + CONSTANTS.TIMING.SERVICE_ARROW_DELAY
-  }), [index]);
+  const animationDelay = CONSTANTS.TIMING.SERVICE_BASE_DELAY + (index * CONSTANTS.TIMING.SERVICE_STAGGER);
 
   return (
     <div className="relative">
+      {/* Линия сверху */}
       {index > 0 && (
         <motion.div
           initial={{ width: 0 }}
           animate={isAnimating ? { width: '100%' } : { width: 0 }}
           transition={{
-            ...ANIMATION_CONFIGS.serviceLine,
-            delay: delays.line
+            duration: 0.25,
+            delay: animationDelay - 0.1,
+            ease: CONSTANTS.EASING
           }}
-          className="border-t border-gray-400 mb-2 md:mb-2 xl:mb-4"
+          className="border-t border-gray-400 absolute top-0 left-0 right-0"
         />
       )}
 
+      {/* Контент сервиса */}
       <motion.div
         initial={{ opacity: 0, x: -20, scale: 0.98 }}
         animate={isAnimating ? { opacity: 1, x: 0, scale: 1 } : { opacity: 0, x: -20, scale: 0.98 }}
         transition={{
-          ...ANIMATION_CONFIGS.serviceText,
-          delay: delays.text
+          duration: CONSTANTS.TIMING.SERVICE_ANIMATION_DURATION,
+          delay: animationDelay,
+          ease: CONSTANTS.EASING
         }}
-        className="py-2 md:py-2 xl:py-2 relative group/service overflow-hidden"
+        className="py-4 md:py-3 xl:py-4 relative group/service overflow-hidden flex items-center"
       >
-        <div className="relative flex items-center justify-between">
+        <div className="relative flex items-center justify-between w-full">
           <Link
             href={service.href}
             onClick={handleClick}
             target={service.external ? "_blank" : undefined}
             rel={service.external ? "noopener noreferrer" : undefined}
-            className="xs:text-xs md:text-xs xl:text-xl font-normal tracking-tight leading-relaxed hover:text-gray-300 transition-all duration-200 cursor-pointer group flex-1 uppercase group-hover/service:translate-x-2"
+            className="xs:text-xs md:text-xs xl:text-xl font-normal tracking-tight leading-relaxed hover:text-gray-300 transition-all duration-200 cursor-pointer group flex-1 uppercase group-hover/service:translate-x-2 flex items-center"
           >
             {renderServiceContent}
             {service.external && (
-              <span className="inline-block ml-0 text-lg opacity-60 group-hover:opacity-100 transition-opacity duration-200">
+              <span className="inline-block ml-2 text-lg opacity-60 group-hover:opacity-100 transition-opacity duration-200">
                 ↗
               </span>
             )}
@@ -184,11 +142,11 @@ const ServiceLink = memo<{
             initial={{ opacity: 0, x: 15, scale: 0.9 }}
             animate={isAnimating ? { opacity: 1, x: 0, scale: 1 } : { opacity: 0, x: 15, scale: 0.9 }}
             transition={{
-              delay: delays.arrow,
+              delay: animationDelay + 0.1,
               duration: 0.25,
               ease: CONSTANTS.EASING
             }}
-            className="ml-4 group-hover/service:-translate-x-2 transition-transform duration-200"
+            className="ml-4 group-hover/service:-translate-x-2 transition-transform duration-200 flex items-center"
           >
             <svg
               width="24"
@@ -212,7 +170,7 @@ const ServiceLink = memo<{
 
 ServiceLink.displayName = 'ServiceLink';
 
-// ✅ Главный компонент
+// ✅ Главный компонент Hero
 const Hero: FC<HeroProps> = memo(({
   enableZoomAnimation = false,
   locale,
@@ -223,11 +181,14 @@ const Hero: FC<HeroProps> = memo(({
   const [isVisible, setIsVisible] = useState(false);
   const hasTriggeredRef = useRef(false);
   const [animationReady, setAnimationReady] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
+  
+  // ✅ Разделяем состояния для критического и некритического контента
+  const [criticalContentReady, setCriticalContentReady] = useState(false);
+  const [servicesAnimationReady, setServicesAnimationReady] = useState(false);
 
   const { t, isLoading } = useStableTranslation(locale, 'hero');
 
-  // ✅ Интеграция прелоадера
+  // ✅ Прелоадер для изображений (некритический контент)
   const heroImages = useMemo(() => [
     { cover: CONSTANTS.HERO_IMAGE.src }
   ], []);
@@ -244,7 +205,7 @@ const Hero: FC<HeroProps> = memo(({
     useOptimizedPaths: true
   });
 
-  // ✅ Настройка прелоадинга при появлении компонента
+  // ✅ Настройка прелоадинга
   useEffect(() => {
     if (sectionRef.current) {
       const cleanup = preloadOnVisible(sectionRef.current);
@@ -252,7 +213,7 @@ const Hero: FC<HeroProps> = memo(({
     }
   }, [preloadOnVisible]);
 
-  // ✅ Оптимизированная обработка сервисов
+  // ✅ Обработка сервисов
   const processServices = useCallback((servicesData: any): ServiceItem[] => {
     if (!Array.isArray(servicesData)) return [];
 
@@ -277,7 +238,7 @@ const Hero: FC<HeroProps> = memo(({
     }).filter(Boolean) as ServiceItem[];
   }, []);
 
-  // ✅ Объединенная мемоизация
+  // ✅ Конфигурация контента
   const config = useMemo(() => {
     const headingStyle = {
       width: '100%',
@@ -321,9 +282,11 @@ const Hero: FC<HeroProps> = memo(({
     hasTriggeredRef.current = false;
     setIsVisible(false);
     setAnimationReady(false);
+    setCriticalContentReady(false);
+    setServicesAnimationReady(false);
   }, [locale]);
 
-  // ✅ Оптимизированный intersection observer
+  // ✅ Intersection Observer
   const observerCallback = useCallback(([entry]: IntersectionObserverEntry[]) => {
     if (entry.isIntersecting && !hasTriggeredRef.current) {
       setIsVisible(true);
@@ -350,15 +313,22 @@ const Hero: FC<HeroProps> = memo(({
     locale
   );
 
-  // ✅ Запуск анимаций после загрузки изображений
+  // ✅ Критический контент - показываем сразу после загрузки переводов
   useEffect(() => {
-    if (isLoading || !isVisible || !isInitialized || !allImagesPreloaded) return;
+    if (!isLoading && isVisible && isInitialized) {
+      setCriticalContentReady(true);
+      entranceAnimation();
+    }
+  }, [isLoading, isVisible, isInitialized, entranceAnimation]);
 
-    setIsAnimating(true);
-    entranceAnimation();
-  }, [isLoading, isVisible, isInitialized, allImagesPreloaded, entranceAnimation]);
+  // ✅ Некритические анимации - после загрузки изображений
+  useEffect(() => {
+    if (criticalContentReady && allImagesPreloaded) {
+      setServicesAnimationReady(true);
+    }
+  }, [criticalContentReady, allImagesPreloaded]);
 
-  // ✅ Scroll анимация (только если включена)
+  // ✅ Scroll анимация
   const { scrollYProgress } = useScroll({
     target: enableZoomAnimation ? scrollingDiv : undefined,
     offset: enableZoomAnimation ? ["start end", "end end"] : undefined,
@@ -377,8 +347,10 @@ const Hero: FC<HeroProps> = memo(({
       ref={sectionRef}
     >
       <div className={CLASSES.grid}>
+        {/* Левая колонка */}
         <div className={CLASSES.leftCol}>
           <div className={CLASSES.container}>
+            {/* Заголовок - критический контент */}
             <div className={CLASSES.headingWrapper} style={config.headingContainerStyle}>
               <div className={CLASSES.headingOverflow}>
                 <h1
@@ -392,12 +364,16 @@ const Hero: FC<HeroProps> = memo(({
               </div>
             </div>
 
-            {/* ✅ Subtitle */}
+            {/* Subtitle - критический контент для LCP */}
             {config.content.subtitle && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
-                animate={isAnimating ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-                transition={ANIMATION_CONFIGS.subtitle}
+                animate={criticalContentReady ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                transition={{
+                  duration: 0.4,
+                  delay: CONSTANTS.TIMING.CRITICAL_CONTENT_DELAY,
+                  ease: CONSTANTS.EASING
+                }}
               >
                 <p className="xs:text-2xl md:text-2xl xl:text-5xl max-w-4xl tracking-[-0.02em] font-normal leading-tight xl:-mt-3 xs:-mt-6">
                   {config.content.subtitle.split('\n').map((line, index, array) => (
@@ -410,16 +386,17 @@ const Hero: FC<HeroProps> = memo(({
               </motion.div>
             )}
 
-            {/* ✅ Services Block */}
+            {/* Сервисы - некритический контент */}
             {config.content.services && config.content.services.length > 0 && (
               <div className="mt-12 md:mt-8 relative">
                 {showServiceContainerLines && (
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={isAnimating ? { width: '100%' } : { width: 0 }}
+                    animate={servicesAnimationReady ? { width: '100%' } : { width: 0 }}
                     transition={{
-                      ...ANIMATION_CONFIGS.serviceLine,
-                      delay: CONSTANTS.TIMING.SERVICE_BASE_DELAY - 0.1
+                      duration: 0.25,
+                      delay: CONSTANTS.TIMING.SERVICE_BASE_DELAY - 0.1,
+                      ease: CONSTANTS.EASING
                     }}
                     className="border-t border-gray-400 mb-3 md:mb-2 lg:mb-3"
                   />
@@ -430,17 +407,18 @@ const Hero: FC<HeroProps> = memo(({
                     key={`${service.title}-${index}`}
                     service={service}
                     index={index}
-                    isAnimating={isAnimating}
+                    isAnimating={servicesAnimationReady}
                   />
                 ))}
 
                 {showServiceContainerLines && (
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={isAnimating ? { width: '100%' } : { width: 0 }}
+                    animate={servicesAnimationReady ? { width: '100%' } : { width: 0 }}
                     transition={{
-                      ...ANIMATION_CONFIGS.serviceLine,
-                      delay: CONSTANTS.TIMING.SERVICE_BASE_DELAY + (config.content.services.length * CONSTANTS.TIMING.SERVICE_STAGGER) + CONSTANTS.TIMING.SERVICE_BOTTOM_DELAY
+                      duration: 0.25,
+                      delay: CONSTANTS.TIMING.SERVICE_BASE_DELAY + (config.content.services.length * CONSTANTS.TIMING.SERVICE_STAGGER) + 0.15,
+                      ease: CONSTANTS.EASING
                     }}
                     className="border-b border-gray-400 mt-3 md:mt-2 lg:mt-4"
                   />
@@ -450,11 +428,15 @@ const Hero: FC<HeroProps> = memo(({
           </div>
         </div>
 
+        {/* Правая колонка - изображение */}
         <div className={CLASSES.rightCol}>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: allImagesPreloaded ? 1 : 0 }}
-            transition={ANIMATION_CONFIGS.image}
+            transition={{
+              duration: 0.6,
+              ease: "easeOut"
+            }}
             className={CLASSES.imageWrapper}
             style={{ width: portraitWidth }}
           >
@@ -471,7 +453,7 @@ const Hero: FC<HeroProps> = memo(({
         </div>
       </div>
       
-      {/* Preloader Progress (опционально, для дебага) */}
+      {/* Индикатор прогресса для разработки */}
       {isPreloading && process.env.NODE_ENV === 'development' && (
         <div className="fixed bottom-4 left-4 bg-black/80 text-white px-3 py-2 rounded text-sm">
           Loading images: {Math.round(progress * 100)}%
