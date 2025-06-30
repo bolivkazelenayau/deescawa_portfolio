@@ -12,6 +12,7 @@ interface FooterProps {
 
 import { type FC, useEffect, type MouseEvent, useCallback, useMemo, memo, useRef, useState } from "react"
 import Button from "@/components/Button"
+import SocialButton from "@/components/ui/add-social-button";
 import useTextRevealAnimation from "@/hooks/useTextRevealAnimation"
 import { useInView } from "react-intersection-observer"
 import Link from "next/link"
@@ -19,10 +20,7 @@ import { navItems } from "@/lib/navItems"
 import { useTheme } from "next-themes"
 import { useClientTranslation } from "@/hooks/useClientTranslation"
 import React from "react"
-import { FaTelegram, FaInstagram } from "react-icons/fa";
 
-// Static constants
-const EMAIL_ADDRESS = "deescawa@gmail.com"
 const COLORS = {
   footerColor: "#1c1917",
   lightModeColor: "#ffffff",
@@ -52,14 +50,14 @@ const CLIP_PATH_STYLE = {
 const CLASSES = {
   // Layout containers
   footerContainer: "h-[105dvh] md:h-[800px] 2xl:h-[1200px] footer-container md:mt-0",
-  footerContent: "fixed bottom-0 h-[105vh] md:h-[800px] 2xl:h-[1200px] w-full bg-stone-900 text-white xs:py-16 md:py-0 xl:py-16 2xl:py-32 3xl:py-50",
+  footerContent: "fixed bottom-0 h-[105vh] md:h-[800px] 2xl:h-[1200px] w-full bg-stone-900 text-white xs:py-16 md:py-12 xl:py-24 2xl:py-50 3xl:py-50",
   mainContainer: "md:py-32 xs:py-16 w-full px-4 md:px-8 2xl:py-48 mt-[-1vh]",
   innerContainer: "xl:py-48 2xl:py-32 xs:py-16",
 
   // Grid and content
   contentGrid: "grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-0 md:items-center",
   headingSection: "md:col-span-2 lg:ml-8 xs:ml-0",
-  navSection: "w-[94%] flex md:justify-end",
+  navSection: "xs:w-full lg:w-[90%] flex md:justify-end",
 
   // Status indicator
   statusContainer: "flex items-center gap-3 py-4 lg:ml-8 xs:ml-0",
@@ -70,14 +68,12 @@ const CLASSES = {
   heading: "text-5xl md:text-5xl xl:text-7xl 3xl:text-8xl py-12 -mt-6 font-extralight footer-text-hidden-initially",
 
   // Navigation
-  nav: "font-light flex flex-col items-start md:items-end gap-3 md:gap-4 lg:gap-6 mt-6 xs:-mt-0 md:mt-0 w-full", // <-- add w-full
-  navButton: "text-md font-light lg:text-xl w-auto tracking-normal",
+  nav: "font-light flex flex-col items-start md:items-end gap-3 md:gap-4 lg:gap-6 mt-6 xs:-mt-0 md:mt-0 w-full",
+  navButton: "text-md font-light xl:text-lg xs:text-xs w-auto tracking-normal",
 
   // Contact section
-  contactContainer: "flex items-center mt-4 xs:-mt-8 md:mt-0",
-  emailButton: "mt-4 xs-max-md:mt-0",
-  socialIcons: "flex items-center gap-2 ml-4 lg:gap-4 xl:translate-y-2 xs:translate-y-2",
-  socialIcon: "text-white/70 hover:text-white transition-colors duration-200 xs:text-5xl lg:text-5xl",
+  contactContainer: "flex items-center mt-4 xs:-mt-2 md:mt-0",
+  // Removed unused classes: emailButton, socialIcons, socialIcon
 
   // Copyright
   copyright: "py-10 text-white/30 text-sm z-10 lg:ml-8 xs:ml-0 col-span-full mt-8 xs:-mt-8 md:mt-0"
@@ -126,57 +122,18 @@ const FALLBACK_CONTENT = {
   }
 } as const
 
-// Simplified EmailButton with cleaner structure
-const EmailButton = memo(() => (
-  <Link href={`mailto:${EMAIL_ADDRESS}`} className="inline-block">
-    <Button
-      variant="secondary"
-      isSquircle
-      squircleSize="md"
-      fullWidth={false}
-      className={CLASSES.emailButton}
-    >
-      {EMAIL_ADDRESS}
-    </Button>
-  </Link>
-))
-EmailButton.displayName = 'EmailButton'
+// REMOVED: The EmailButton component is no longer needed.
+// REMOVED: The SocialIcons component is no longer needed.
 
-// Social icons as separate component using Fragment
-const SocialIcons = memo(() => (
-  <>
-    <Link
-      href="https://instagram.com/deescawa"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="hover:scale-110 transition-transform duration-200"
-    >
-      <FaInstagram className={CLASSES.socialIcon} />
-    </Link>
-    <Link
-      href="https://t.me/deescawa"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="hover:scale-110 transition-transform duration-200"
-    >
-      <FaTelegram className={CLASSES.socialIcon} />
-    </Link>
-  </>
-))
-SocialIcons.displayName = 'SocialIcons'
-
-// Contact section using Fragment to avoid wrapper div
+// CHANGED: The ContactSection now only renders the SocialButton.
 const ContactSection = memo(() => (
   <div className={CLASSES.contactContainer}>
-    <EmailButton />
-    <div className={CLASSES.socialIcons}>
-      <SocialIcons />
-    </div>
+    <SocialButton />
   </div>
 ))
 ContactSection.displayName = 'ContactSection'
 
-// Simplified FooterNav with better structure
+
 const FooterNav = memo(({
   handleClickNavItem,
   translations
@@ -219,7 +176,7 @@ const FooterNav = memo(({
 })
 FooterNav.displayName = 'FooterNav'
 
-// Simplified AnimatedHeading using Fragment
+
 const AnimatedHeading = memo(({
   headingLines,
   locale
@@ -286,7 +243,7 @@ const AnimatedHeading = memo(({
 })
 AnimatedHeading.displayName = 'AnimatedHeading'
 
-// Status indicator as separate component
+
 const StatusIndicator = memo(({ message }: { message: string }) => (
   <div className={CLASSES.statusContainer}>
     <div className={CLASSES.statusDot} />
@@ -295,7 +252,7 @@ const StatusIndicator = memo(({ message }: { message: string }) => (
 ))
 StatusIndicator.displayName = 'StatusIndicator'
 
-// Copyright component using Fragment for cleaner structure
+
 const Copyright = memo(({ copyright, shoutout }: { copyright: string; shoutout: string }) => (
   <p className={CLASSES.copyright}>
     {copyright}
@@ -432,7 +389,6 @@ const Footer: FC<FooterProps> = memo(({ locale }) => {
 
   return (
     <section id="contact">
-      {/* Invisible trigger elements using Fragment to avoid wrapper divs */}
       <>
         <div
           ref={headerBlurRef}
@@ -454,13 +410,11 @@ const Footer: FC<FooterProps> = memo(({ locale }) => {
                 <StatusIndicator message={content.sendMessage} />
 
                 <div className={CLASSES.contentGrid}>
-                  {/* Heading section */}
                   <div className={CLASSES.headingSection}>
                     <AnimatedHeading headingLines={headingLines} locale={locale} />
                     <ContactSection />
                   </div>
 
-                  {/* Navigation section */}
                   <div className={CLASSES.navSection}>
                     <FooterNav
                       handleClickNavItem={handleClickNavItem}
@@ -468,7 +422,6 @@ const Footer: FC<FooterProps> = memo(({ locale }) => {
                     />
                   </div>
 
-                  {/* Copyright section */}
                   <Copyright
                     copyright={content.copyright}
                     shoutout={content.shoutout}
