@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useCallback, memo, useEffect, useMemo, useRef } from "react"
+import React, { useState, useCallback, memo, useEffect, useMemo, useRef, useLayoutEffect } from "react"
 import { motion, useScroll, useTransform } from "motion/react"
 import Button from "@/components/Button"
 import ThemeToggle from "@/components/ui/themeToggle"
@@ -12,85 +12,76 @@ import LanguageSwitcher from "@/components/ui/header_nav/LanguageSwitcher"
 import { useClientTranslation } from "@/hooks/useClientTranslation"
 import { navItems } from "@/lib/navItems"
 
-// Static constants
-const EMAIL_ADDRESS = "deescawa@gmail.com"
+// ✅ Определение мобильного устройства
+const isMobileDevice = () => {
+  if (typeof window === 'undefined') return false;
+  return window.innerWidth < 768 || 'ontouchstart' in window;
+};
 
-// Consolidated class names for better maintainability
-const CLASSES = {
-  // Layout containers
+// ✅ Оптимизированные константы с мобильной адаптацией
+const CONSTANTS = Object.freeze({
+  EMAIL_ADDRESS: "deescawa@gmail.com",
+  HEADER_HEIGHT: 80,
+  SCROLL_THRESHOLD: isMobileDevice() ? 100 : 150, // ✅ Меньше на мобильных
+  TRANSITION_DURATION: isMobileDevice() ? 100 : 150, // ✅ Быстрее на мобильных
+  BLUR_MAX: isMobileDevice() ? 6 : 10 // ✅ Меньше blur на мобильных
+} as const);
+
+// ✅ Объединенные CSS классы
+const CLASSES = Object.freeze({
   logoContainer: "absolute top-0 left-0 h-20 z-20 bg-white bg-opacity-50 shadow-lg mix-blend-difference transition-all duration-150 ease-out",
   logo: "isolate z-25 transition-all duration-150 ease-out",
   blurContainer: "fixed top-0 left-0 w-full h-20 z-10",
   rightContainer: "fixed top-0 right-0 h-20 z-20 transition-all duration-150 ease-out",
-
-  // Inner containers
   innerContainer: "container max-w-full!",
   controlsContainer: "flex justify-end items-center h-20 gap-4 transition-all duration-150 ease-out",
-
-  // Contact button
   contactLink: "hidden md:inline-flex",
   contactButton: "hidden md:inline-flex uppercase min-w-[120px] justify-center transition-all duration-150 ease-out",
+  menuButton: "bg-white dark:bg-black border-stone-300/60 dark:border-stone-600/60 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all duration-150 ease-out"
+} as const);
 
-  // Menu button
-  menuButton: "bg-white dark:bg-black border-stone-300/60 dark:border-stone-600/60 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all duration-150 ease-out",
-
-  // Control containers
-  navControlsContainer: "nav-controls-container",
-  themeToggleContainer: "theme-toggle-container",
-  languageSwitcherContainer: "language-switcher-container",
-  contactButtonContainer: "contact-button-container"
-} as const
-
-// Fallback content
-const FALLBACK_CONTACT_TEXT = {
+// ✅ Fallback контент
+const FALLBACK_CONTACT_TEXT = Object.freeze({
   en: 'Contact Me',
   ru: 'Связаться'
-} as const
+} as const);
 
-// Enhanced debounce with RAF for smoother updates
+// ✅ Оптимизированный debounce с RAF
 const debounceRAF = (func: Function, delay: number = 0) => {
-  let rafId: number | null = null
-  let timeoutId: NodeJS.Timeout | null = null
+  let rafId: number | null = null;
+  let timeoutId: NodeJS.Timeout | null = null;
 
   return (...args: any[]) => {
-    if (rafId !== null) {
-      cancelAnimationFrame(rafId)
-    }
-    if (timeoutId !== null) {
-      clearTimeout(timeoutId)
-    }
+    if (rafId !== null) cancelAnimationFrame(rafId);
+    if (timeoutId !== null) clearTimeout(timeoutId);
 
     if (delay > 0) {
       timeoutId = setTimeout(() => {
-        rafId = requestAnimationFrame(() => func.apply(null, args))
-      }, delay)
+        rafId = requestAnimationFrame(() => func.apply(null, args));
+      }, delay);
     } else {
-      rafId = requestAnimationFrame(() => func.apply(null, args))
+      rafId = requestAnimationFrame(() => func.apply(null, args));
     }
-  }
-}
+  };
+};
 
-// Contact button component with cleaner structure
-const ContactButton = memo(({
-  locale,
-  serverTranslations,
-  clientT
-}: {
+// ✅ Оптимизированная кнопка контакта
+const ContactButton = memo<{
   locale: 'en' | 'ru';
   serverTranslations?: any;
   clientT: any;
-}) => {
+}>(({ locale, serverTranslations, clientT }) => {
   const contactText = useMemo(() => {
     if (serverTranslations?.contactButton) return serverTranslations.contactButton;
-
+    
     const clientText = clientT('header.contactButton');
     if (clientText && clientText !== 'header.contactButton') return clientText;
-
+    
     return FALLBACK_CONTACT_TEXT[locale];
   }, [serverTranslations?.contactButton, clientT, locale]);
 
   return (
-    <Link href={`mailto:${EMAIL_ADDRESS}`} className={CLASSES.contactLink}>
+    <Link href={`mailto:${CONSTANTS.EMAIL_ADDRESS}`} className={CLASSES.contactLink}>
       <Button
         variant="primary"
         isSquircle={true}
@@ -104,16 +95,12 @@ const ContactButton = memo(({
 });
 ContactButton.displayName = 'ContactButton';
 
-// Navigation controls with stable styling
-const NavigationControls = memo(({
-  isOpen,
-  handleSetIsOpen,
-  mounted
-}: {
+// ✅ Оптимизированные навигационные контролы
+const NavigationControls = memo<{
   isOpen: boolean;
   handleSetIsOpen: (value: boolean) => void;
   mounted: boolean;
-}) => {
+}>(({ isOpen, handleSetIsOpen, mounted }) => {
   if (!mounted) {
     return <div className="w-11 h-11 bg-transparent" />;
   }
@@ -128,18 +115,13 @@ const NavigationControls = memo(({
 });
 NavigationControls.displayName = 'NavigationControls';
 
-// Utility controls using Fragment to avoid wrapper divs
-const UtilityControls = memo(({
-  mounted,
-  locale,
-  serverTranslations,
-  clientT
-}: {
+// ✅ Оптимизированные утилитарные контролы
+const UtilityControls = memo<{
   mounted: boolean;
   locale: 'en' | 'ru';
   serverTranslations?: any;
   clientT: any;
-}) => {
+}>(({ mounted, locale, serverTranslations, clientT }) => {
   if (!mounted) {
     return (
       <>
@@ -164,12 +146,33 @@ const UtilityControls = memo(({
 });
 UtilityControls.displayName = 'UtilityControls';
 
-// Enhanced BlurBackground with smooth Framer Motion animation
+// ✅ Оптимизированный blur фон с адаптивными настройками
 const BlurBackground = memo(() => {
   const { scrollY } = useScroll();
+  const [isVisible, setIsVisible] = useState(false);
 
-  const blurOpacity = useTransform(scrollY, [0, 150], [0, 1]);
-  const blurAmount = useTransform(scrollY, [0, 150], [0, 10]);
+  // ✅ Адаптивные значения для мобильных
+  const blurOpacity = useTransform(
+    scrollY, 
+    [0, CONSTANTS.SCROLL_THRESHOLD], 
+    [0, 1]
+  );
+  
+  const blurAmount = useTransform(
+    scrollY, 
+    [0, CONSTANTS.SCROLL_THRESHOLD], 
+    [0, CONSTANTS.BLUR_MAX]
+  );
+
+  // ✅ Оптимизация - показываем blur только при скролле
+  useEffect(() => {
+    const unsubscribe = scrollY.on('change', (latest) => {
+      setIsVisible(latest > 10);
+    });
+    return unsubscribe;
+  }, [scrollY]);
+
+  if (!isVisible) return null;
 
   return (
     <motion.div
@@ -181,52 +184,66 @@ const BlurBackground = memo(() => {
         transform: 'translate3d(0, 0, 0)',
         maskImage: "linear-gradient(to bottom, black 0%, black 60%, rgba(0,0,0,0.8) 80%, transparent 100%)",
         WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 60%, rgba(0,0,0,0.8) 80%, transparent 100%)",
-        willChange: 'opacity, backdrop-filter',
+        willChange: isMobileDevice() ? 'opacity' : 'opacity, backdrop-filter', // ✅ Меньше will-change на мобильных
         backfaceVisibility: 'hidden',
-        contain: 'layout style paint',
-        transition: 'opacity 0.15s ease-out'
+        contain: 'layout style paint'
       }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2 }}
     />
   );
 });
 BlurBackground.displayName = 'BlurBackground';
 
+// ✅ Интерфейс
 interface HeaderProps {
   onNavToggle: (isOpen: boolean) => void;
   locale: 'en' | 'ru';
   serverTranslations?: any;
 }
 
-const Header = memo(({ onNavToggle, locale, serverTranslations }: HeaderProps) => {
+// ✅ Главный компонент с оптимизациями
+const Header = memo<HeaderProps>(({ onNavToggle, locale, serverTranslations }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isLocaleTransitioning, setIsLocaleTransitioning] = useState(false);
   const lastLocaleRef = useRef(locale);
+  const transitionTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const { t: clientT } = useClientTranslation(locale, 'common');
 
-  // Detect locale changes and add transition class
-  useEffect(() => {
+  // ✅ Оптимизированная обработка смены локали
+  useLayoutEffect(() => {
     if (lastLocaleRef.current !== locale) {
       setIsLocaleTransitioning(true);
       document.documentElement.classList.add('locale-transitioning');
 
-      const timer = setTimeout(() => {
+      // ✅ Очищаем предыдущий таймер
+      if (transitionTimerRef.current) {
+        clearTimeout(transitionTimerRef.current);
+      }
+
+      transitionTimerRef.current = setTimeout(() => {
         setIsLocaleTransitioning(false);
         document.documentElement.classList.remove('locale-transitioning');
         lastLocaleRef.current = locale;
-      }, 150);
-
-      return () => clearTimeout(timer);
+      }, CONSTANTS.TRANSITION_DURATION);
     }
+
+    return () => {
+      if (transitionTimerRef.current) {
+        clearTimeout(transitionTimerRef.current);
+      }
+    };
   }, [locale]);
 
-  // Fix hydration mismatch
+  // ✅ Исправление hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Memoized handlers
+  // ✅ Мемоизированные обработчики
   const handleSetIsOpen = useCallback((newIsOpen: boolean) => {
     setIsOpen(newIsOpen);
     onNavToggle(newIsOpen);
@@ -241,18 +258,26 @@ const Header = memo(({ onNavToggle, locale, serverTranslations }: HeaderProps) =
     const target = document.querySelector(hash);
 
     if (!target) return;
-    target.scrollIntoView({ behavior: "smooth" });
+    
+    // ✅ Оптимизированный скролл с учетом header высоты
+    const elementPosition = target.getBoundingClientRect().top;
+    const offsetPosition = elementPosition + window.pageYOffset - CONSTANTS.HEADER_HEIGHT;
+
+    window.scrollTo({
+      top: offsetPosition,
+      behavior: "smooth"
+    });
   }, [handleSetIsOpen]);
 
+  // ✅ Мемоизированные стили для переходов
+  const headerStyles = useMemo(() => ({
+    transition: isLocaleTransitioning ? `all ${CONSTANTS.TRANSITION_DURATION}ms ease-out` : 'none',
+    willChange: isLocaleTransitioning ? 'background-color, color' : 'auto'
+  }), [isLocaleTransitioning]);
+
   return (
-    <header
-      className="main-header"
-      style={{
-        transition: isLocaleTransitioning ? 'all 0.15s ease-out' : 'none',
-        willChange: isLocaleTransitioning ? 'background-color, color' : 'auto'
-      }}
-    >
-      {/* Mobile Navigation */}
+    <header className="main-header" style={headerStyles}>
+      {/* ✅ Мобильная навигация */}
       <MobileNav
         isOpen={isOpen}
         onNavItemClick={handleClickMobileNavItem}
@@ -260,15 +285,15 @@ const Header = memo(({ onNavToggle, locale, serverTranslations }: HeaderProps) =
         setIsOpen={handleSetIsOpen}
       />
 
-      {/* Logo Section */}
+      {/* ✅ Секция логотипа */}
       <div className={CLASSES.logoContainer}>
         <Logo className={CLASSES.logo} />
       </div>
 
-      {/* Blur Background */}
+      {/* ✅ Blur фон */}
       <BlurBackground />
 
-      {/* Right Controls Section - using Fragment to avoid nested containers */}
+      {/* ✅ Правые контролы */}
       <div className={CLASSES.rightContainer}>
         <div className={CLASSES.innerContainer}>
           <div className={CLASSES.controlsContainer}>
