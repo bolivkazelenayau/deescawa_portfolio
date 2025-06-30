@@ -122,13 +122,9 @@ const FALLBACK_CONTENT = {
   }
 } as const
 
-// REMOVED: The EmailButton component is no longer needed.
-// REMOVED: The SocialIcons component is no longer needed.
-
-// CHANGED: The ContactSection now only renders the SocialButton.
 const ContactSection = memo(() => (
   <div className={CLASSES.contactContainer}>
-    {/* <SocialButton /> */}
+    <SocialButton />
   </div>
 ))
 ContactSection.displayName = 'ContactSection'
