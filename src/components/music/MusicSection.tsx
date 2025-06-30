@@ -29,17 +29,17 @@ const MUSIC_SECTION_CONFIG = Object.freeze({
       zIndex: 10 // ✅ Поднимаем выше других элементов
     }),
     title: Object.freeze({ lineHeight: '0.9' }),
-    subtitle1: Object.freeze({
+ subtitle1: Object.freeze({
       lineHeight: '1.1',
       textWrap: 'nowrap' as const,
-      whiteSpace: 'normal' as const,
-      wordBreak: 'keep-all' as const
+      whiteSpace: 'normal' as const, // ✅ Вернули normal
+      wordBreak: 'normal' as const // ✅ Изменили с keep-all на normal
     }),
-    subtitle2: Object.freeze({
+ subtitle2: Object.freeze({
       lineHeight: '1.1',
-      textWrap: 'nowrap' as const,
-      whiteSpace: 'pre-line' as const,
-      wordBreak: 'keep-all' as const
+      textWrap: 'balance' as const, // ✅ Изменили с nowrap на balance
+      whiteSpace: 'normal' as const, // ✅ Изменили с pre-line на normal
+      wordBreak: 'normal' as const // ✅ Изменили с keep-all на normal
     })
   },
   SMART_TEXT: {
@@ -50,12 +50,12 @@ const MUSIC_SECTION_CONFIG = Object.freeze({
     }),
     subtitle1: Object.freeze({ 
       preserveLineBreaks: false, 
-      preventWordBreaking: true,
+      preventWordBreaking: false, // ✅ Изменили на false
       enablePerformanceOptimizations: true
     }),
     subtitle2: Object.freeze({ 
-      preserveLineBreaks: true, 
-      preventWordBreaking: true,
+      preserveLineBreaks: false, // ✅ Изменили на false для описаний без \n
+      preventWordBreaking: false, // ✅ Изменили на false
       enablePerformanceOptimizations: true
     })
   }

@@ -35,7 +35,7 @@ const MUSIC_CAROUSEL_CONFIG = Object.freeze({
     carouselWrapper: "w-full",
     carousel: "w-full overflow-visible",
     // ✅ Возвращаемся к стандартной структуре Embla с правильными отступами
-    carouselContent: "-ml-0 md:-ml-4 lg:-ml-6 xl:-ml-2 py-12 pb-24 overflow-visible",
+    carouselContent: "-ml-0 md:-ml-4 lg:-ml-6 xl:-ml-2 xs:-ml-1 py-12 pb-24 overflow-visible",
     // ✅ Адаптивные отступы с особым вниманием к мобильным
     carouselItem: "pl-2 md:pl-4 lg:pl-6 xl:pl-8 flex items-center justify-center transform-gpu will-change-transform overflow-visible",
     navigationContainer: "flex justify-center items-center gap-4 mt-6 mb-4",

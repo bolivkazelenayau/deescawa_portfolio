@@ -7,7 +7,7 @@ import Button from '@/components/Button'
 import { cn } from "@/lib/utils"
 import type { Album } from '@/lib/MusicData'
 import ConditionalImage from '../ConditionalImage'
-import { renderTextWithFragments } from '@/lib/MusicUtils'
+import SmartText from '../SmartText'
 
 interface MusicCardProps {
   album: Album
@@ -75,10 +75,10 @@ const MUSIC_CARD_CONFIG = Object.freeze({
     // ✅ Адаптивные отступы для контента
     contentContainer: "flex-1 p-4 sm:p-6 md:p-8 lg:p-10 flex flex-col justify-between bg-gradient-to-t from-card via-card/95 to-card/80",
     // ✅ Уменьшаем отступы между элементами на мобильных
-    textContainer: "space-y-2 sm:space-y-4",
+textContainer: "space-y-2 sm:space-y-4 min-w-0",
     // ✅ Адаптивные размеры текста
     title: "text-xl sm:text-2xl md:text-3xl lg:text-4xl xs:text-2xl font-medium tracking-[-1px] text-left",
-    description: "text-sm sm:text-base xs:text-nd md:text-lg lg:text-xl text-muted-foreground leading-relaxed",
+ description: "text-sm sm:text-base md:text-lg lg:text-xl text-muted-foreground leading-relaxed text-balance",
     buttonContainer: "mt-4 sm:mt-8",
     button: "w-full text-base sm:text-lg font-medium uppercase tracking-wide",
     imagePlaceholder: "w-full h-full bg-gradient-to-br from-muted/30 to-muted/10 flex items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded-lg",
@@ -339,11 +339,32 @@ export const MusicCard: React.FC<MusicCardProps> = memo(({
           <div className={MUSIC_CARD_CONFIG.CLASSES.contentContainer}>
             <div className={MUSIC_CARD_CONFIG.CLASSES.textContainer}>
               <h3 className={MUSIC_CARD_CONFIG.CLASSES.title}>
-                {renderTextWithFragments(album.title[locale])}
+                <SmartText
+                  language={locale}
+                  preserveLineBreaks={false}
+                  preventWordBreaking={true}
+                >
+                  {album.title[locale]}
+                </SmartText>
               </h3>
-              <p className={MUSIC_CARD_CONFIG.CLASSES.description}>
-                {renderTextWithFragments(album.description[locale])}
-              </p>
+
+              {/* ✅ Заменяем renderTextWithFragments на SmartText */}
+              <SmartText
+                language={locale}
+                preserveLineBreaks={false}
+                preventWordBreaking={false}
+                enablePerformanceOptimizations={true}
+                className={MUSIC_CARD_CONFIG.CLASSES.description}
+                style={{
+                  whiteSpace: 'normal',
+                  wordBreak: 'normal',
+                  lineHeight: '1.6',
+                  textWrap: 'balance', // ✅ Добавляем для лучшего переноса
+                  overflowWrap: 'break-word' // ✅ Добавляем для длинных слов
+                }}
+              >
+                {album.description[locale]}
+              </SmartText>
             </div>
 
             <div className={MUSIC_CARD_CONFIG.CLASSES.buttonContainer}>

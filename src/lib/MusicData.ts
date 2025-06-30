@@ -42,7 +42,7 @@ export const musicData = [
       en: "Tower"
     },
     description: {
-      ru: "Сочетание техно, британского рейва и русского вокала. Трек о внутреннем освобождении и возможности выйти в мир",
+      ru: "Сочетание техно, британского рейва \nи русского вокала. Трек о внутреннем освобождении и возможности выйти в мир",
       en: "A combination of techno, British rave and Russian vocals. A track about inner liberation and the opportunity to go out into the world"
     },
     bandLink: "https://vibedep.band.link/svetbashni"
