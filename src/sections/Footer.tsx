@@ -128,7 +128,7 @@ const FALLBACK_CONTENT = {
 // CHANGED: The ContactSection now only renders the SocialButton.
 const ContactSection = memo(() => (
   <div className={CLASSES.contactContainer}>
-    <SocialButton />
+    {/* <SocialButton /> */}
   </div>
 ))
 ContactSection.displayName = 'ContactSection'
