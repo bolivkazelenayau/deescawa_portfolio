@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef, useEffect, useCallback, useMemo, memo, useTransition } from 'react'
+import React, { useState, useCallback, useMemo, memo, useLayoutEffect } from 'react'
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel"
 import { cn } from "@/lib/utils"
 import { type Album } from '@/lib/MusicData'
@@ -16,129 +16,143 @@ interface MusicCarouselProps {
   onError?: () => void
 }
 
-// Simplified configuration for your specific needs
+// ✅ Исправленная конфигурация с правильным центрированием и без обрезки
 const MUSIC_CAROUSEL_CONFIG = Object.freeze({
   HOVER: {
-    debounceDelay: 8,
-    throttleDelay: 4
+    debounceDelay: 0,
+    throttleDelay: 0
   },
   PERFORMANCE: {
     intersectionThreshold: 0.1,
-    preloadRange: 3,
-    initialLoadCount: 5
+    preloadRange: 5,
+    initialLoadCount: 8,
+    eagerPreload: true
   },
   CLASSES: {
-    container: "relative w-full overflow-visible",
-    carousel: "w-full",
-    carouselContent: "-ml-2 md:-ml-4 py-12 pb-16",
-    carouselItem: "pl-2 md:pl-4 flex items-center justify-center transform-gpu",
+    // ✅ Убираем ограничения контейнера для показа боковых карточек
+    container: "relative w-full overflow-visible pb-16",
+    // ✅ Центрируем только контент, а не весь контейнер
+    carouselWrapper: "w-full",
+    carousel: "w-full overflow-visible",
+    // ✅ Возвращаемся к стандартной структуре Embla с правильными отступами
+    carouselContent: "-ml-0 md:-ml-4 lg:-ml-6 xl:-ml-2 py-12 pb-24 overflow-visible",
+    // ✅ Адаптивные отступы с особым вниманием к мобильным
+    carouselItem: "pl-2 md:pl-4 lg:pl-6 xl:pl-8 flex items-center justify-center transform-gpu will-change-transform overflow-visible",
     navigationContainer: "flex justify-center items-center gap-4 mt-6 mb-4",
-    shadowWrapper: "relative overflow-visible p-4"
+    shadowWrapper: "relative overflow-visible p-4 pb-12"
   },
   CAROUSEL_OPTIONS: Object.freeze({
     skipSnaps: false,
     dragFree: false,
-    containScroll: 'trimSnaps' as const,
+    containScroll: false, // ✅ Отключаем для показа боковых карточек
     slidesToScroll: 1,
-    duration: 15,
+    duration: 25,
     startIndex: 0,
-    loop: true
+    loop: true,
+    watchDrag: true,
+    inViewThreshold: 0.7,
+    align: 'center' as const // ✅ Центрируем слайды
   }),
   SLIDE_BASIS: Object.freeze({
-    1: "basis-full",
+    // ✅ Исправляем центрирование на мобильных
+    1: "basis-full flex justify-center",
     2: "basis-full sm:basis-1/2",
     3: "basis-full sm:basis-1/2 lg:basis-1/2 xl:basis-1/3"
   })
 } as const);
 
-// Simple responsive slides hook
-const useResponsiveSlides = () => {
-  const [slidesToShow, setSlidesToShow] = useState(3);
+// ✅ Обновленные статические стили
+const STATIC_STYLES = Object.freeze({
+  carouselItem: {
+    contain: 'layout style',
+    willChange: 'transform',
+    transform: 'translateZ(0)',
+    backfaceVisibility: 'hidden' as const,
+    perspective: 1000,
+    overflow: 'visible'
+  },
+  carouselContainer: {
+    transform: 'translateZ(0)',
+    willChange: 'transform',
+    overflow: 'visible',
+    display: 'flex',
+    alignItems: 'center'
+  },
+  // ✅ Убираем статичные тени - теперь только базовые стили
+  shadowWrapper: {
+    position: 'relative' as const,
+    overflow: 'visible',
+    padding: '1rem',
+    paddingBottom: '3rem',
+    transition: 'filter 0.3s ease'
+  },
+  shadowWrapperHovered: {
+    position: 'relative' as const,
+    overflow: 'visible',
+    padding: '1rem',
+    paddingBottom: '3rem',
+    // ✅ Тень только при hover
+    filter: 'drop-shadow(0 20px 40px rgba(0, 0, 0, 0.15)) drop-shadow(0 8px 12px rgba(0, 0, 0, 0.1))',
+    transition: 'filter 0.3s ease'
+  }
+});
 
-  useEffect(() => {
+// ✅ Адаптивные слайды
+const useResponsiveSlides = () => {
+  const [slidesToShow, setSlidesToShow] = useState(() => {
+    if (typeof window === 'undefined') return 3;
+    const width = window.innerWidth;
+    if (width < 640) return 1;
+    if (width < 1024) return 2;
+    if (width < 1280) return 2;
+    return 3;
+  });
+
+  useLayoutEffect(() => {
     const updateSlides = () => {
       const width = window.innerWidth;
+      let newSlides: number;
       
       if (width < 640) {
-        setSlidesToShow(1);
+        newSlides = 1;
       } else if (width < 1024) {
-        setSlidesToShow(2);
+        newSlides = 2;
       } else if (width < 1280) {
-        setSlidesToShow(2);
+        newSlides = 2;
       } else {
-        setSlidesToShow(3);
+        newSlides = 3;
       }
+      
+      setSlidesToShow(prev => prev !== newSlides ? newSlides : prev);
     };
 
-    updateSlides();
-    
-    let timeoutId: NodeJS.Timeout;
-    const debouncedUpdate = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(updateSlides, 150);
-    };
-    
-    window.addEventListener('resize', debouncedUpdate, { passive: true });
+    window.addEventListener('resize', updateSlides, { passive: true });
     
     return () => {
-      window.removeEventListener('resize', debouncedUpdate);
-      clearTimeout(timeoutId);
+      window.removeEventListener('resize', updateSlides);
     };
   }, []);
 
   return slidesToShow;
 };
 
-// Optimized throttle with immediate execution
-const throttleImmediate = (func: Function, delay: number = 4) => {
-  let lastRun = 0;
-  let rafId: number;
-  
-  return function executedFunction(...args: any[]) {
-    const now = performance.now();
-    
-    if (now - lastRun >= delay) {
-      lastRun = now;
-      func(...args);
-    } else {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        if (performance.now() - lastRun >= delay) {
-          lastRun = performance.now();
-          func(...args);
-        }
-      });
-    }
-  };
-};
-
-// Ultra-optimized hover state with useTransition
+// ✅ Оптимизированный hover state
 const useOptimizedHoverState = () => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [isPending, startTransition] = useTransition();
-  
-  const throttledSetHover = useMemo(() =>
-    throttleImmediate((index: number | null) => {
-      startTransition(() => {
-        setHoveredIndex(index);
-      });
-    }, MUSIC_CAROUSEL_CONFIG.HOVER.throttleDelay),
-    []
-  );
 
   const handlers = useMemo(() => ({
     mouseEnter: (index: number) => {
-      throttledSetHover(index);
+      setHoveredIndex(index);
     },
     mouseLeave: () => {
-      throttledSetHover(null);
+      setHoveredIndex(null);
     }
-  }), [throttledSetHover]);
+  }), []);
 
-  return { hoveredIndex, handlers, isPending };
+  return { hoveredIndex, handlers };
 };
 
-// ✅ Helper function to check if album image is preloaded
+// ✅ Проверка предзагрузки изображений
 const isAlbumImagePreloaded = (album: Album, preloadedImages: Set<string>): boolean => {
   const optimizedSrc = process.env.NODE_ENV === 'production' 
     ? `/nextImageExportOptimizer${album.cover.replace(/\.(jpg|jpeg|png)$/i, '-opt-640.WEBP')}`
@@ -146,14 +160,36 @@ const isAlbumImagePreloaded = (album: Album, preloadedImages: Set<string>): bool
   return preloadedImages.has(optimizedSrc);
 };
 
-// Optimized carousel item with better memoization
+// ✅ Агрессивная предзагрузка изображений
+const useEagerImagePreloader = (albums: readonly Album[]) => {
+  const { 
+    preloadAllImages, 
+    preloadedImages, 
+    allImagesPreloaded, 
+    progress,
+    isPreloading 
+  } = useImagePreloader(albums, { 
+    concurrent: 8,
+    timeout: 5000,
+    eager: true,
+    useOptimizedPaths: true 
+  });
+
+  useLayoutEffect(() => {
+    preloadAllImages();
+  }, [preloadAllImages]);
+
+  return { preloadedImages, allImagesPreloaded, progress, isPreloading };
+};
+
+// ✅ Оптимизированный carousel item с исправленным центрированием
 const MusicCarouselItem = memo<{
   album: Album;
   index: number;
   slidesToShow: number;
   isHovered: boolean;
   isVisible: boolean;
-  isPreloaded: boolean; // ✅ Add preload state
+  isPreloaded: boolean;
   onMouseEnter: (index: number) => void;
   onMouseLeave: () => void;
   onCardClick: (album: Album) => void;
@@ -170,32 +206,36 @@ const MusicCarouselItem = memo<{
   onCardClick,
   locale
 }) => {
-  const itemClasses = useMemo(() =>
-    cn(
-      MUSIC_CAROUSEL_CONFIG.CLASSES.carouselItem,
-      MUSIC_CAROUSEL_CONFIG.SLIDE_BASIS[slidesToShow as keyof typeof MUSIC_CAROUSEL_CONFIG.SLIDE_BASIS] || "basis-1/3"
-    ),
-    [slidesToShow]
-  );
+  const itemClasses = useMemo(() => {
+    const baseClasses = MUSIC_CAROUSEL_CONFIG.CLASSES.carouselItem;
+    const basisClasses = MUSIC_CAROUSEL_CONFIG.SLIDE_BASIS[slidesToShow as keyof typeof MUSIC_CAROUSEL_CONFIG.SLIDE_BASIS] || "basis-1/3";
+    
+    // ✅ Дополнительное центрирование для мобильных
+    const centeringClasses = slidesToShow === 1 ? "justify-center" : "";
+    
+    return cn(baseClasses, basisClasses, centeringClasses);
+  }, [slidesToShow]);
 
   const handleMouseEnter = useCallback(() => {
     onMouseEnter(index);
   }, [index, onMouseEnter]);
 
-  const itemStyle = useMemo(() => ({
-    contain: 'layout style' as const,
-    willChange: isHovered ? 'transform, opacity' : 'auto',
-    transform: 'translateZ(0)'
-  }), [isHovered]);
+  const shadowStyle = isHovered ? STATIC_STYLES.shadowWrapperHovered : STATIC_STYLES.shadowWrapper;
 
   return (
-    <CarouselItem className={itemClasses} style={itemStyle}>
-      <div className={MUSIC_CAROUSEL_CONFIG.CLASSES.shadowWrapper}>
+    <CarouselItem 
+      className={itemClasses} 
+      style={STATIC_STYLES.carouselItem}
+    >
+      <div 
+        className={MUSIC_CAROUSEL_CONFIG.CLASSES.shadowWrapper}
+        style={shadowStyle}
+      >
         <MusicCard
           album={album}
           isHovered={isHovered}
           isVisible={isVisible}
-          isPreloaded={isPreloaded} // ✅ Pass preload state
+          isPreloaded={isPreloaded}
           priority={index < MUSIC_CAROUSEL_CONFIG.PERFORMANCE.initialLoadCount}
           onCardClick={onCardClick}
           onMouseEnter={handleMouseEnter}
@@ -210,14 +250,14 @@ const MusicCarouselItem = memo<{
     prevProps.album.id === nextProps.album.id &&
     prevProps.isHovered === nextProps.isHovered &&
     prevProps.isVisible === nextProps.isVisible &&
-    prevProps.isPreloaded === nextProps.isPreloaded && // ✅ Add to comparison
+    prevProps.isPreloaded === nextProps.isPreloaded &&
     prevProps.slidesToShow === nextProps.slidesToShow
   );
 });
 
 MusicCarouselItem.displayName = 'MusicCarouselItem';
 
-// Navigation controls remain the same
+// ✅ Навигационные контролы
 const NavigationControls = memo<{
   canScrollPrev: boolean;
   canScrollNext: boolean;
@@ -227,42 +267,22 @@ const NavigationControls = memo<{
   currentSlide: number;
   totalSlides: number;
 }>(({ canScrollPrev, canScrollNext, scrollPrev, scrollNext, scrollToIndex, currentSlide, totalSlides }) => {
-  const [isPending, startTransition] = useTransition();
-
-  const handleScrollPrev = useCallback(() => {
-    startTransition(() => {
-      scrollPrev();
-    });
-  }, [scrollPrev]);
-
-  const handleScrollNext = useCallback(() => {
-    startTransition(() => {
-      scrollNext();
-    });
-  }, [scrollNext]);
-
-  const handleDotClick = useCallback((index: number) => {
-    startTransition(() => {
-      scrollToIndex(index);
-    });
-  }, [scrollToIndex]);
-
   return (
     <div className={MUSIC_CAROUSEL_CONFIG.CLASSES.navigationContainer}>
       <NavigationButton
         direction="left"
-        onClick={handleScrollPrev}
-        disabled={!canScrollPrev || isPending}
+        onClick={scrollPrev}
+        disabled={!canScrollPrev}
       />
       <DotIndicators
         count={totalSlides}
         activeIndex={currentSlide}
-        onDotClick={handleDotClick}
+        onDotClick={scrollToIndex}
       />
       <NavigationButton
         direction="right"
-        onClick={handleScrollNext}
-        disabled={!canScrollNext || isPending}
+        onClick={scrollNext}
+        disabled={!canScrollNext}
       />
     </div>
   );
@@ -270,19 +290,17 @@ const NavigationControls = memo<{
 
 NavigationControls.displayName = 'NavigationControls';
 
-// Smart visibility tracking with preloading
+// ✅ Умное отслеживание видимости
 const useSmartVisibility = (activeIndex: number, slidesToShow: number, totalItems: number) => {
   return useMemo(() => {
     const visibleIndices = new Set<number>();
     const preloadRange = MUSIC_CAROUSEL_CONFIG.PERFORMANCE.preloadRange;
     
-    // Current visible items
     for (let i = 0; i < slidesToShow; i++) {
       const index = (activeIndex + i) % totalItems;
       visibleIndices.add(index);
     }
     
-    // Preload adjacent items
     for (let i = -preloadRange; i <= preloadRange; i++) {
       const index = (activeIndex + i + totalItems) % totalItems;
       visibleIndices.add(index);
@@ -292,13 +310,13 @@ const useSmartVisibility = (activeIndex: number, slidesToShow: number, totalItem
   }, [activeIndex, slidesToShow, totalItems]);
 };
 
-// ✅ Main component with optimized preloading
+// ✅ Главный компонент с исправленным центрированием
 export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
   albums,
   locale,
   onError
 }) => {
-  const { hoveredIndex, handlers, isPending } = useOptimizedHoverState();
+  const { hoveredIndex, handlers } = useOptimizedHoverState();
   const slidesToShow = useResponsiveSlides();
   
   const {
@@ -312,30 +330,10 @@ export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
     scrollToIndex
   } = useCarouselState();
 
-  // ✅ Use your optimized image preloader hook
-  const { 
-    preloadAllImages, 
-    preloadedImages, 
-    allImagesPreloaded, 
-    progress,
-    isPreloading 
-  } = useImagePreloader(albums, { 
-    concurrent: 4, 
-    timeout: 8000, 
-    eager: false,
-    useOptimizedPaths: true 
-  });
+  const { preloadedImages, allImagesPreloaded, progress, isPreloading } = useEagerImagePreloader(albums);
 
   const visibleIndices = useSmartVisibility(activeIndex, slidesToShow, albums.length);
 
-  // ✅ Smart preloading based on active index
-  const preloadNearbyImages = useCallback(() => {
-    if (!isPreloading && !allImagesPreloaded) {
-      preloadAllImages();
-    }
-  }, [preloadAllImages, isPreloading, allImagesPreloaded]);
-
-  // ✅ Check if specific album image is preloaded
   const isImagePreloaded = useCallback((album: Album) => {
     return isAlbumImagePreloaded(album, preloadedImages);
   }, [preloadedImages]);
@@ -353,13 +351,6 @@ export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
     }
   }), [onError]);
 
-  // ✅ Start preloading when component mounts or active index changes
-  useEffect(() => {
-    const timer = setTimeout(preloadNearbyImages, 100);
-    return () => clearTimeout(timer);
-  }, [activeIndex, preloadNearbyImages]);
-
-  // ✅ Updated carousel items with preload state
   const carouselItems = useMemo(() =>
     albums.map((album: Album, index: number) => (
       <MusicCarouselItem
@@ -369,7 +360,7 @@ export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
         slidesToShow={slidesToShow}
         isHovered={hoveredIndex === index}
         isVisible={visibleIndices.has(index)}
-        isPreloaded={isImagePreloaded(album)} // ✅ Pass preload state
+        isPreloaded={isImagePreloaded(album)}
         onMouseEnter={handlers.mouseEnter}
         onMouseLeave={handlers.mouseLeave}
         onCardClick={eventHandlers.cardClick}
@@ -380,7 +371,7 @@ export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
       slidesToShow,
       hoveredIndex,
       visibleIndices,
-      isImagePreloaded, // ✅ Add to dependencies
+      isImagePreloaded,
       handlers.mouseEnter,
       handlers.mouseLeave,
       eventHandlers.cardClick,
@@ -390,25 +381,30 @@ export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
 
   return (
     <div className={MUSIC_CAROUSEL_CONFIG.CLASSES.container}>
-      <Carousel
-        setApi={setApi}
-        opts={MUSIC_CAROUSEL_CONFIG.CAROUSEL_OPTIONS}
-        className={MUSIC_CAROUSEL_CONFIG.CLASSES.carousel}
-      >
-        <CarouselContent className={MUSIC_CAROUSEL_CONFIG.CLASSES.carouselContent}>
-          {carouselItems}
-        </CarouselContent>
-      </Carousel>
-      
-      <NavigationControls
-        canScrollPrev={canScrollPrev}
-        canScrollNext={canScrollNext}
-        scrollPrev={scrollPrev}
-        scrollNext={scrollNext}
-        scrollToIndex={scrollToIndex}
-        currentSlide={activeIndex}
-        totalSlides={albums.length}
-      />
+      <div className={MUSIC_CAROUSEL_CONFIG.CLASSES.carouselWrapper}>
+        <Carousel
+          setApi={setApi}
+          opts={MUSIC_CAROUSEL_CONFIG.CAROUSEL_OPTIONS}
+          className={MUSIC_CAROUSEL_CONFIG.CLASSES.carousel}
+        >
+          <CarouselContent 
+            className={MUSIC_CAROUSEL_CONFIG.CLASSES.carouselContent}
+            style={STATIC_STYLES.carouselContainer}
+          >
+            {carouselItems}
+          </CarouselContent>
+        </Carousel>
+        
+        <NavigationControls
+          canScrollPrev={canScrollPrev}
+          canScrollNext={canScrollNext}
+          scrollPrev={scrollPrev}
+          scrollNext={scrollNext}
+          scrollToIndex={scrollToIndex}
+          currentSlide={activeIndex}
+          totalSlides={albums.length}
+        />
+      </div>
     </div>
   );
 });

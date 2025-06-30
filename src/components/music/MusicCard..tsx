@@ -57,30 +57,30 @@ const SCVaultPlaceholder: React.FC<{
 
 // Fixed configuration with proper button styling
 const MUSIC_CARD_CONFIG = Object.freeze({
-  PERFORMANCE: {
-    intersectionThreshold: 0.1,
-    loadingDelay: 50,
-    animationDuration: 200
-  },
   CLASSES: {
-    card: "music-card h-[600px] md:h-[700px] lg:h-[800px] overflow-hidden group cursor-pointer relative transition-all duration-200 ease-out will-change-transform transition-all duration-200 ease-out transform-gpu",
+    // ✅ Делаем высоту более адаптивной для мобильных
+    card: "music-card h-[500px] sm:h-[600px] md:h-[700px] lg:h-[800px] overflow-hidden group cursor-pointer relative transition-all duration-200 ease-out will-change-transform transition-all duration-200 ease-out transform-gpu",
     cardHovered: "shadow-xl",
     cardContent: "p-0 h-full flex flex-col relative",
     backgroundImage: "absolute inset-0 transition-opacity duration-200 ease-out transform-gpu",
     backgroundGradient: "absolute inset-0 bg-gradient-to-b from-transparent via-white/3 to-white/8 dark:via-black/1 dark:to-black/5",
-    imageContainer: "relative h-[60%] overflow-hidden flex items-center justify-center bg-white/5",
+    // ✅ Уменьшаем высоту изображения на мобильных
+    imageContainer: "relative h-[55%] sm:h-[60%] overflow-visible flex items-center justify-center bg-white/5",
     blurredBackground: "absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ease-out transform-gpu",
     imageOverlay: "absolute inset-0 bg-white/15 dark:bg-black/8",
     mainImage: "max-w-full max-h-full object-contain transition-all duration-200 group-hover:scale-105 relative transform-gpu",
     hoverGradient: "absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-150",
     loadingContainer: "w-full h-full bg-muted animate-pulse flex items-center justify-center",
     loadingPlaceholder: "w-64 h-64 bg-muted-foreground/20 rounded-lg",
-    contentContainer: "flex-1 p-6 md:p-8 lg:p-10 flex flex-col justify-between bg-gradient-to-t from-card via-card/95 to-card/80",
-    textContainer: "space-y-4",
-    title: "text-2xl md:text-3xl lg:text-4xl font-medium tracking-[-1px] text-left",
-    description: "text-base md:text-lg lg:text-xl text-muted-foreground leading-relaxed",
-    buttonContainer: "mt-8",
-    button: "w-full text-lg font-medium uppercase tracking-wide",
+    // ✅ Адаптивные отступы для контента
+    contentContainer: "flex-1 p-4 sm:p-6 md:p-8 lg:p-10 flex flex-col justify-between bg-gradient-to-t from-card via-card/95 to-card/80",
+    // ✅ Уменьшаем отступы между элементами на мобильных
+    textContainer: "space-y-2 sm:space-y-4",
+    // ✅ Адаптивные размеры текста
+    title: "text-xl sm:text-2xl md:text-3xl lg:text-4xl xs:text-2xl font-medium tracking-[-1px] text-left",
+    description: "text-sm sm:text-base xs:text-nd md:text-lg lg:text-xl text-muted-foreground leading-relaxed",
+    buttonContainer: "mt-4 sm:mt-8",
+    button: "w-full text-base sm:text-lg font-medium uppercase tracking-wide",
     imagePlaceholder: "w-full h-full bg-gradient-to-br from-muted/30 to-muted/10 flex items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded-lg",
     placeholderIcon: "w-20 h-20 bg-muted-foreground/10 rounded-lg flex items-center justify-center",
     scVaultContainer: "w-full h-full bg-gradient-to-br from-purple-500/10 to-orange-500/10 flex items-center justify-center border-2 border-dashed border-purple-500/30 rounded-lg",
@@ -174,7 +174,7 @@ export const MusicCard: React.FC<MusicCardProps> = memo(({
   locale,
 }) => {
   const { t } = useStableTranslation(locale, 'common');
-  
+
   // ✅ Updated to use isPreloaded instead of allImagesPreloaded
   const [shouldLoadImages, setShouldLoadImages] = useState(isPreloaded);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -320,7 +320,7 @@ export const MusicCard: React.FC<MusicCardProps> = memo(({
                   </div>
                 </div>
               ) : (
-                <SCVaultPlaceholder 
+                <SCVaultPlaceholder
                   text="IMG"
                   size="lg"
                 />
