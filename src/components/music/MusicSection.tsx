@@ -13,7 +13,7 @@ interface MusicSectionProps {
 // ✅ Обновленная конфигурация с выходом за границы верстки
 const MUSIC_SECTION_CONFIG = Object.freeze({
   CLASSES: {
-    section: "section -mb-64 music-section relative overflow-visible",
+    section: "section -mb-64 music-section relative overflow-",
     container: "container overflow-visible",
     title: "kern text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-medium tracking-[-1px] py-72",
     subtitlesContainer: "flex flex-col gap-8 -mt-60 lg:w-[80%]",

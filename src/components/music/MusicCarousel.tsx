@@ -16,7 +16,15 @@ interface MusicCarouselProps {
   onError?: () => void
 }
 
-// ✅ Исправленная конфигурация без блюра текста
+// ✅ Определение мобильного устройства
+const isMobileDevice = () => {
+  if (typeof window === 'undefined') return false;
+  return window.innerWidth < 768 || 
+         'ontouchstart' in window || 
+         navigator.maxTouchPoints > 0;
+};
+
+// ✅ Оптимизированная конфигурация для мобильных
 const MUSIC_CAROUSEL_CONFIG = Object.freeze({
   HOVER: {
     debounceDelay: 0,
@@ -24,18 +32,18 @@ const MUSIC_CAROUSEL_CONFIG = Object.freeze({
   },
   PERFORMANCE: {
     intersectionThreshold: 0.1,
-    preloadRange: 5,
-    initialLoadCount: 8,
-    eagerPreload: true
+    preloadRange: isMobileDevice() ? 3 : 5, // ✅ Меньше предзагрузки на мобильных
+    initialLoadCount: isMobileDevice() ? 4 : 8, // ✅ Меньше начальной загрузки
+    eagerPreload: !isMobileDevice() // ✅ Отключаем eager на мобильных
   },
   CLASSES: {
-    container: "relative w-full overflow-visible pb-16",
+    container: "relative w-full overflow-visible pb-16 -mt-16 xs:-mt-24",
     carouselWrapper: "w-full",
     carousel: "w-full overflow-visible",
-    carouselContent: "-ml-0 md:-ml-4 lg:-ml-6 xl:-ml-2 xs:-ml-1 py-12 pb-24 overflow-visible",
-    carouselItem: "pl-2 md:pl-4 lg:pl-6 xl:pl-8 flex items-center justify-center transform-gpu will-change-transform overflow-visible",
-    navigationContainer: "flex justify-center items-center gap-4 mt-6 mb-4",
-    // ✅ Убираем тени из wrapper - они будут в карточке
+    carouselContent: "-ml-0 md:-ml-4 lg:-ml-6 xl:-ml-2 py-12 pb-24 overflow-visible",
+    // ✅ Убираем will-change на мобильных
+    carouselItem: "pl-2 md:pl-4 lg:pl-6 xl:pl-8 flex items-center justify-center overflow-visible md:transform-gpu md:will-change-transform",
+    navigationContainer: "flex justify-center items-center gap-4 -mt-16 xs:-mt-24",
     shadowWrapper: "relative overflow-visible p-4 pb-12"
   },
   CAROUSEL_OPTIONS: Object.freeze({
@@ -43,7 +51,7 @@ const MUSIC_CAROUSEL_CONFIG = Object.freeze({
     dragFree: false,
     containScroll: false,
     slidesToScroll: 1,
-    duration: 25,
+    duration: isMobileDevice() ? 15 : 25, // ✅ Быстрее на мобильных
     startIndex: 0,
     loop: true,
     watchDrag: true,
@@ -57,24 +65,23 @@ const MUSIC_CAROUSEL_CONFIG = Object.freeze({
   })
 } as const);
 
-// ✅ Упрощенные статические стили без теней
+// ✅ Адаптивные статические стили
 const STATIC_STYLES = Object.freeze({
   carouselItem: {
     contain: 'layout style',
-    willChange: 'transform',
+    willChange: isMobileDevice() ? 'auto' : 'transform', // ✅ Отключаем will-change на мобильных
     transform: 'translateZ(0)',
     backfaceVisibility: 'hidden' as const,
-    perspective: 1000,
+    perspective: isMobileDevice() ? 'none' : 1000, // ✅ Отключаем perspective на мобильных
     overflow: 'visible'
   },
   carouselContainer: {
     transform: 'translateZ(0)',
-    willChange: 'transform',
+    willChange: isMobileDevice() ? 'auto' : 'transform',
     overflow: 'visible',
     display: 'flex',
     alignItems: 'center'
   },
-  // ✅ Только базовые стили без filter
   shadowWrapper: {
     position: 'relative' as const,
     overflow: 'visible',
@@ -83,7 +90,7 @@ const STATIC_STYLES = Object.freeze({
   }
 });
 
-// ✅ Адаптивные слайды
+// ✅ Адаптивные слайды с оптимизацией
 const useResponsiveSlides = () => {
   const [slidesToShow, setSlidesToShow] = useState(() => {
     if (typeof window === 'undefined') return 3;
@@ -112,28 +119,46 @@ const useResponsiveSlides = () => {
       setSlidesToShow(prev => prev !== newSlides ? newSlides : prev);
     };
 
-    window.addEventListener('resize', updateSlides, { passive: true });
+    // ✅ Debounce для resize на мобильных
+    let timeoutId: NodeJS.Timeout;
+    const debouncedUpdate = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(updateSlides, isMobileDevice() ? 150 : 0);
+    };
+
+    window.addEventListener('resize', debouncedUpdate, { passive: true });
 
     return () => {
-      window.removeEventListener('resize', updateSlides);
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', debouncedUpdate);
     };
   }, []);
 
   return slidesToShow;
 };
 
-// ✅ Оптимизированный hover state
+// ✅ Оптимизированный hover state (отключен на мобильных)
 const useOptimizedHoverState = () => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  const handlers = useMemo(() => ({
-    mouseEnter: (index: number) => {
-      setHoveredIndex(index);
-    },
-    mouseLeave: () => {
-      setHoveredIndex(null);
+  const handlers = useMemo(() => {
+    // ✅ Отключаем hover на мобильных
+    if (isMobileDevice()) {
+      return {
+        mouseEnter: () => {},
+        mouseLeave: () => {}
+      };
     }
-  }), []);
+
+    return {
+      mouseEnter: (index: number) => {
+        setHoveredIndex(index);
+      },
+      mouseLeave: () => {
+        setHoveredIndex(null);
+      }
+    };
+  }, []);
 
   return { hoveredIndex, handlers };
 };
@@ -146,8 +171,8 @@ const isAlbumImagePreloaded = (album: Album, preloadedImages: Set<string>): bool
   return preloadedImages.has(optimizedSrc);
 };
 
-// ✅ Агрессивная предзагрузка изображений
-const useEagerImagePreloader = (albums: readonly Album[]) => {
+// ✅ Условная предзагрузка изображений
+const useConditionalImagePreloader = (albums: readonly Album[]) => {
   const {
     preloadAllImages,
     preloadedImages,
@@ -155,20 +180,26 @@ const useEagerImagePreloader = (albums: readonly Album[]) => {
     progress,
     isPreloading
   } = useImagePreloader(albums, {
-    concurrent: 8,
+    concurrent: isMobileDevice() ? 4 : 8, // ✅ Меньше concurrent на мобильных
     timeout: 5000,
-    eager: true,
+    eager: MUSIC_CAROUSEL_CONFIG.PERFORMANCE.eagerPreload,
     useOptimizedPaths: true
   });
 
   useLayoutEffect(() => {
-    preloadAllImages();
+    // ✅ Задержка предзагрузки на мобильных
+    const delay = isMobileDevice() ? 500 : 0;
+    const timer = setTimeout(() => {
+      preloadAllImages();
+    }, delay);
+
+    return () => clearTimeout(timer);
   }, [preloadAllImages]);
 
   return { preloadedImages, allImagesPreloaded, progress, isPreloading };
 };
 
-// ✅ Оптимизированный carousel item без теней
+// ✅ Оптимизированный carousel item
 const MusicCarouselItem = memo<{
   album: Album;
   index: number;
@@ -201,8 +232,16 @@ const MusicCarouselItem = memo<{
   }, [slidesToShow]);
 
   const handleMouseEnter = useCallback(() => {
-    onMouseEnter(index);
+    if (!isMobileDevice()) {
+      onMouseEnter(index);
+    }
   }, [index, onMouseEnter]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (!isMobileDevice()) {
+      onMouseLeave();
+    }
+  }, [onMouseLeave]);
 
   return (
     <CarouselItem
@@ -215,13 +254,13 @@ const MusicCarouselItem = memo<{
       >
         <MusicCard
           album={album}
-          isHovered={isHovered}
+          isHovered={!isMobileDevice() && isHovered} // ✅ Отключаем hover на мобильных
           isVisible={isVisible}
           isPreloaded={isPreloaded}
           priority={index < MUSIC_CAROUSEL_CONFIG.PERFORMANCE.initialLoadCount}
           onCardClick={onCardClick}
           onMouseEnter={handleMouseEnter}
-          onMouseLeave={onMouseLeave}
+          onMouseLeave={handleMouseLeave}
           locale={locale}
         />
       </div>
@@ -272,7 +311,7 @@ const NavigationControls = memo<{
 
 NavigationControls.displayName = 'NavigationControls';
 
-// ✅ Умное отслеживание видимости
+// ✅ Умное отслеживание видимости с адаптивным диапазоном
 const useSmartVisibility = (activeIndex: number, slidesToShow: number, totalItems: number) => {
   return useMemo(() => {
     const visibleIndices = new Set<number>();
@@ -292,7 +331,7 @@ const useSmartVisibility = (activeIndex: number, slidesToShow: number, totalItem
   }, [activeIndex, slidesToShow, totalItems]);
 };
 
-// ✅ Главный компонент
+// ✅ Главный компонент с мобильными оптимизациями
 export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
   albums,
   locale,
@@ -312,7 +351,7 @@ export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
     scrollToIndex
   } = useCarouselState();
 
-  const { preloadedImages, allImagesPreloaded, progress, isPreloading } = useEagerImagePreloader(albums);
+  const { preloadedImages, allImagesPreloaded, progress, isPreloading } = useConditionalImagePreloader(albums);
 
   const visibleIndices = useSmartVisibility(activeIndex, slidesToShow, albums.length);
 
@@ -333,6 +372,7 @@ export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
     }
   }), [onError]);
 
+  // ✅ Мемоизация элементов карусели с проверкой мобильного устройства
   const carouselItems = useMemo(() =>
     albums.map((album: Album, index: number) => (
       <MusicCarouselItem
@@ -358,8 +398,7 @@ export const MusicCarousel: React.FC<MusicCarouselProps> = memo(({
     handlers.mouseLeave,
     eventHandlers.cardClick,
     locale
-  ]
-  );
+  ]);
 
   return (
     <div className={MUSIC_CAROUSEL_CONFIG.CLASSES.container}>
